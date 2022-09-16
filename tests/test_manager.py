@@ -1,0 +1,66 @@
+import os
+
+import numpy as np
+
+from scenario_gym.manager import ScenarioManager
+from scenario_gym.metrics import Metric
+from scenario_gym.scenario_gym import ScenarioGym
+
+
+class EgoMaxSpeedMetric(Metric):
+    """Measures the max speed achieved by the ego in the scenario."""
+
+    def __init__(self):
+        self.max_speed = 0.0
+
+    def _reset(self, state):
+        """Reset the metric."""
+        self.ego = state.scenario.agents["ego"]
+        self.max_speed = 0.0
+
+    def _step(self, state):
+        """Update the max speed."""
+        self.max_speed = np.maximum(
+            np.linalg.norm(self.ego.entity.velocity[:2]),
+            self.max_speed,
+        )
+
+    def get_state(self) -> float:
+        """Return current max speed."""
+        return self.max_speed
+
+
+def test_manager():
+    """Test that custom arguments can be supplied to the config."""
+    manager = ScenarioManager()
+
+    # change the timestep
+    timestep = manager.timestep
+    new_manager = ScenarioManager(timestep=timestep + 1)
+    assert (
+        new_manager.timestep == timestep + 1
+    ), f"Should be {timestep+1} but got {new_manager.timestep}."
+
+    # try adding a random argument
+    new_manager = ScenarioManager(test_argument_12345="test")
+    assert hasattr(new_manager, "test_argument_12345"), "Custom arg not assigned."
+    assert new_manager.test_argument_12345 == "test", "Arg incorrectly assigned."
+
+
+def test_add_metric():
+    """Test adding a metric to the scenario."""
+    # try adding a metric
+    base = "./tests/input_files/Scenarios/"
+    files = [
+        "3fee6507-fd24-432f-b781-ca5676c834ef.xosc",
+        "41dac6fa-6f83-461e-a145-08692da5f3c7.xosc",
+        "9c324146-be03-4d4e-8112-eaf36af15c17.xosc",
+    ]
+    manager = ScenarioManager()
+    manager.add_metric(EgoMaxSpeedMetric())
+    output = manager.run_scenarios([os.path.join(base, f) for f in files])
+    assert len(output) == 3, "Should have returned results for 3 scenarios."
+
+    gym = ScenarioGym()
+    gym.load_scenario(os.path.join(base, files[0]))
+    gym.rollout()

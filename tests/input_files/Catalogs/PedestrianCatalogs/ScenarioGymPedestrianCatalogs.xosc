@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="0" date="2020-06-10T00:23:06" description="dRISK Intro Pedestrian Catalog" author="dRISK" />
+  <Catalog name="ScenarioGymPedestrianCatalog">
+    <Pedestrian pedestrianCategory="pedestrian" name="pedestrian1" mass="80">
+      <BoundingBox>
+        <Center x="0" y="0" z="0.825" />
+        <Dimensions width="0.69" length="0.7" height="1.65" />
+      </BoundingBox>
+    </Pedestrian>
+  </Catalog>
+</OpenSCENARIO>

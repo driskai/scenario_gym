@@ -1,0 +1,3 @@
+[submodule "paper/driving-gym-paper"]
+	path = paper/driving-gym-paper
+	url = https://github.com/driskai/driving-gym-paper
