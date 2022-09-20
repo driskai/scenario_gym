@@ -45,7 +45,8 @@ class PedestrianAgent(Agent):
         Parameters
         ----------
         state : State
-            Driving gym state. All info from environment.
+            Global state.
+
         observation : PedestrianObservation
             All info from environment within perception radius.
 

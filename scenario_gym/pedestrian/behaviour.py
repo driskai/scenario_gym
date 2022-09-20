@@ -35,7 +35,7 @@ class PedestrianBehaviour:
         Parameters
         ----------
         state : State
-            Driving gym state.
+           Global state.
 
         observation : PedestrianObservation
             The observation for the pedestrian.

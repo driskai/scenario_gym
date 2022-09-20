@@ -29,7 +29,7 @@ class PedestrianController(Controller):
         Parameters
         ----------
         state : State
-            Driving gym state. All info from environment.
+            Global state.
 
         action : PedestrianAction
             The action. Contains speed and heading angle.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <OpenSCENARIO>
-  <FileHeader revMajor="1" revMinor="0" date="2020-07-06T11:08:08" description="Vehicle catalog for the Driving Gym" author="dRISK" />
+  <FileHeader revMajor="1" revMinor="0" date="2020-07-06T11:08:08" description="Vehicle catalog for the Scenario Gym" author="dRISK" />
   <Catalog name="ScenarioGymVehicleCatalog">
     <Vehicle vehicleCategory="car" name="car1" mass="1350">
       <Properties />

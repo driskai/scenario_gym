@@ -28,7 +28,7 @@ class PedestrianObservation(Observation):
             (0 means looking forward).
 
         state : State
-            Driving gym state.
+            Global state.
 
         """
         super().__init__()
