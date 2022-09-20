@@ -4,7 +4,7 @@ from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.trajectory import Trajectory
 
 
-def test_recorder() -> None:
+def test_recorder(all_scenarios) -> None:
     """
     Rollout a single scenario with recording enabled.
 
@@ -12,9 +12,7 @@ def test_recorder() -> None:
     recorded version.
 
     """
-    scenario_path = (
-        "./tests/input_files/Scenarios/a5e43fe4-646a-49ba-82ce-5f0063776566.xosc"
-    )
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
     out_path = scenario_path.replace("Scenarios", "Recordings").replace(
         ".xosc", "_test.xosc"
     )
@@ -66,11 +64,9 @@ def test_recorder() -> None:
     ), "Ego should have no recorded poses."
 
 
-def test_recorder_with_resetting() -> None:
+def test_recorder_with_resetting(all_scenarios) -> None:
     """Test the recording behaviour when resetting, closing etc."""
-    scenario_path = (
-        "./tests/input_files/Scenarios/a5e43fe4-646a-49ba-82ce-5f0063776566.xosc"
-    )
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
     gym = ScenarioGym()
     gym.record()
 
@@ -106,11 +102,9 @@ def test_recorder_with_resetting() -> None:
     assert not gym.is_recording, "Gym should not be recording."
 
 
-def test_all_stationary() -> None:
+def test_all_stationary(all_scenarios) -> None:
     """Enusre the recorder works when all entities are stationary."""
-    scenario_path = (
-        "./tests/input_files/Scenarios/a5e43fe4-646a-49ba-82ce-5f0063776566.xosc"
-    )
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
     gym = ScenarioGym()
     gym.record()
     gym.load_scenario(scenario_path)

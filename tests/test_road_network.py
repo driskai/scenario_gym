@@ -16,6 +16,12 @@ from scenario_gym.road_network import (
 
 
 @pt.fixture
+def empty_road_network():
+    """Create an empty road network."""
+    return RoadNetwork()
+
+
+@pt.fixture
 def road_network():
     """Load the 6-way road network."""
     filepath = os.path.join(
@@ -68,9 +74,30 @@ def z_road_network():
     )
 
 
+def test_empty(empty_road_network):
+    """Test that the empty road network is empty."""
+    assert (
+        not empty_road_network.roads and not empty_road_network.intersections
+    ), "Should all be empty."
+
+
 def test_roads(road_network):
     """Check that roads have been loaded."""
     assert len(road_network.roads) > 0, "No roads."
+
+
+def test_add_objects(empty_road_network, road_network):
+    """Test adding a new road to the road network."""
+    road = road_network.roads[0]
+    empty_road_network.add_new_road_object([road], "new_objects")
+    try:
+        empty_road_network.new_objects
+        empty_road_network._new_objects
+        empty_road_network.add_new_objects
+    except AttributeError as e:
+        raise e
+
+    assert empty_road_network.new_objects, "Object not added."
 
 
 def test_intersections(road_network):
@@ -211,12 +238,12 @@ def test_clear_cache(road_network):
             "roads" not in road_network.__dict__,
         )
     ), "Cached objects found."
-    assert all(
-        (
-            RoadNetwork.create_from_json.__func__.cache_info().currsize == 0,
-            road_network.get_lane_parent.__func__.cache_info().currsize == 0,
-        )
+    assert (
+        road_network.get_lane_parent.__func__.cache_info().currsize == 0
     ), "Lru caches not cleared."
+    assert (
+        RoadNetwork.create_from_json.__func__.cache_info().currsize != 0
+    ), "Class method caches cleared."
 
 
 def test_elevation(road_network, z_road_network):

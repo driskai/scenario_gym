@@ -1,5 +1,3 @@
-import os
-
 from scenario_gym.metrics import (
     CollisionMetric,
     EgoAvgSpeed,
@@ -10,11 +8,9 @@ from scenario_gym.metrics.base import cache_mean
 from scenario_gym.scenario_gym import ScenarioGym
 
 
-def test_add_metric():
+def test_add_metric(all_scenarios):
     """Test adding a metric to the scenario."""
-    # try adding a metric
-    base = "./tests/input_files/Scenarios/"
-    s = "3fee6507-fd24-432f-b781-ca5676c834ef.xosc"
+    s = all_scenarios["3fee6507-fd24-432f-b781-ca5676c834ef"]
     gym = ScenarioGym(
         metrics=[
             EgoAvgSpeed(),
@@ -23,7 +19,7 @@ def test_add_metric():
             CollisionMetric(),
         ]
     )
-    gym.load_scenario(os.path.join(base, s))
+    gym.load_scenario(s)
     gym.rollout()
     mets = [m.get_state() for m in gym.metrics]
     assert 4.0 <= mets[0] <= 5.0, "Avg speed incorrect"
@@ -36,13 +32,11 @@ def test_add_metric():
     assert len(data) == 4, "Incrorect number of metrics returned."
 
 
-def test_cache_mean():
+def test_cache_mean(all_scenarios):
     """Test the cache_mean decorator."""
-    # try adding a metric
-    base = "./tests/input_files/Scenarios/"
     s_ids = [
-        "3fee6507-fd24-432f-b781-ca5676c834ef.xosc",
-        "41dac6fa-6f83-461e-a145-08692da5f3c7.xosc",
+        "3fee6507-fd24-432f-b781-ca5676c834ef",
+        "41dac6fa-6f83-461e-a145-08692da5f3c7",
     ]
 
     # get mean
@@ -52,11 +46,11 @@ def test_cache_mean():
         ]
     )
 
-    gym.load_scenario(os.path.join(base, s_ids[0]))
+    gym.load_scenario(all_scenarios[s_ids[0]])
     gym.rollout()
     m1 = gym.metrics[0].get_state()
 
-    gym.load_scenario(os.path.join(base, s_ids[1]))
+    gym.load_scenario(all_scenarios[s_ids[1]])
     gym.rollout()
     m2 = gym.metrics[0].get_state()
 
@@ -71,10 +65,10 @@ def test_cache_mean():
     assert gym.metrics[0].previous_value == 0.0
     assert gym.metrics[0]._prev_count == 0.0
 
-    gym.load_scenario(os.path.join(base, s_ids[0]))
+    gym.load_scenario(all_scenarios[s_ids[0]])
     gym.rollout()
 
-    gym.load_scenario(os.path.join(base, s_ids[1]))
+    gym.load_scenario(all_scenarios[s_ids[1]])
     gym.rollout()
 
     assert gym.metrics[0].previous_value == avg

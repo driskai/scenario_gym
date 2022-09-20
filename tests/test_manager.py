@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 
 from scenario_gym.manager import ScenarioManager
@@ -47,20 +45,21 @@ def test_manager():
     assert new_manager.test_argument_12345 == "test", "Arg incorrectly assigned."
 
 
-def test_add_metric():
+def test_add_metric(all_scenarios):
     """Test adding a metric to the scenario."""
-    # try adding a metric
-    base = "./tests/input_files/Scenarios/"
     files = [
-        "3fee6507-fd24-432f-b781-ca5676c834ef.xosc",
-        "41dac6fa-6f83-461e-a145-08692da5f3c7.xosc",
-        "9c324146-be03-4d4e-8112-eaf36af15c17.xosc",
+        all_scenarios[s]
+        for s in [
+            "3fee6507-fd24-432f-b781-ca5676c834ef",
+            "41dac6fa-6f83-461e-a145-08692da5f3c7",
+            "9c324146-be03-4d4e-8112-eaf36af15c17",
+        ]
     ]
     manager = ScenarioManager()
     manager.add_metric(EgoMaxSpeedMetric())
-    output = manager.run_scenarios([os.path.join(base, f) for f in files])
+    output = manager.run_scenarios(files)
     assert len(output) == 3, "Should have returned results for 3 scenarios."
 
     gym = ScenarioGym()
-    gym.load_scenario(os.path.join(base, files[0]))
+    gym.load_scenario(files[0])
     gym.rollout()
