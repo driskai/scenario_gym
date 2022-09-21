@@ -1,5 +1,3 @@
-import os
-
 import pytest as pt
 
 from scenario_gym.callback import StateCallback
@@ -8,16 +6,9 @@ from scenario_gym.scenario_gym import ScenarioGym
 
 
 @pt.fixture
-def scenario_path():
+def scenario_path(all_scenarios):
     """Get a path for a scenario to test."""
-    s_id = "3e39a079-5653-440c-bcbe-24dc9f6bf0e6"
-    path = os.path.join(
-        os.path.dirname(__file__),
-        "input_files",
-        "Scenarios",
-        f"{s_id}.xosc",
-    )
-    return path
+    return all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"]
 
 
 class TestCallback(StateCallback):

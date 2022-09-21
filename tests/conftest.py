@@ -40,3 +40,22 @@ def all_scenarios():
     base = os.path.join(os.path.dirname(__file__), "input_files", "Scenarios")
     scenarios = {f: os.path.join(base, f + ".xosc") for f in scenarios}
     return scenarios
+
+
+@pt.fixture(scope="module")
+def all_road_networks():
+    """Get all road networks as a dictionary."""
+    base = os.path.join(
+        os.path.dirname(__file__),
+        "input_files",
+        "Road_Networks",
+    )
+    road_networks = [
+        "Greenwich_Road_Network_002",
+        "Greenwich_Road_Network_003",
+        "Roundabout_Road_Network_001",
+        "Rural_Road_Network",
+        "Y_Intersection_Road_Network_001",
+        "dRisk Unity 6-lane Intersection",
+    ]
+    return {r: os.path.join(base, r + ".json") for r in road_networks}

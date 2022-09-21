@@ -22,16 +22,11 @@ def empty_road_network():
 
 
 @pt.fixture
-def road_network():
+def road_network(all_road_networks):
     """Load the 6-way road network."""
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "input_files",
-        "Road_Networks",
-        "dRisk Unity 6-lane Intersection.json",
+    return RoadNetwork.create_from_json(
+        all_road_networks["dRisk Unity 6-lane Intersection"]
     )
-    road_network = RoadNetwork.create_from_json(filepath)
-    return road_network
 
 
 @pt.fixture
@@ -306,26 +301,16 @@ def test_new_geometry(road_network):
     ), "Road marking not found."
 
 
-def test_all_road_networks():
+def test_all_road_networks(all_road_networks):
     """Test all road networks in the tests directory."""
-    base = os.path.join(os.path.dirname(__file__), "input_files", "Road_Networks")
-    road_networks = [
-        "Greenwich_Road_Network_002.json",
-        "Greenwich_Road_Network_003.json",
-        "Roundabout_Road_Network_001.json",
-        "Rural_Road_Network.json",
-        "Y_Intersection_Road_Network_001.json",
-        "dRisk Unity 6-lane Intersection.json",
-    ]
     failed = []
-    for f in road_networks:
-        path = os.path.join(base, f)
+    for r, path in all_road_networks.items():
         if not os.path.exists(path):
-            continue
+            failed.append((r, FileNotFoundError(path)))
         try:
             RoadNetwork.create_from_json(path)
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            failed.append((f, e))
+            failed.append((r, e))
     assert len(failed) == 0, f"Road networks failed: {failed}."

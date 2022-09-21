@@ -1,15 +1,9 @@
-import os
-
 from scenario_gym.environment import ScenarioGym
 
 
-def test_env() -> None:
+def test_env(all_scenarios) -> None:
     """Test the gym environment."""
-    base = os.path.dirname(__file__)
-    scenario_path = os.path.join(
-        base,
-        "input_files/Scenarios/a5e43fe4-646a-49ba-82ce-5f0063776566.xosc",
-    )
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
 
     env = ScenarioGym()
     env.load_scenario(scenario_path)
