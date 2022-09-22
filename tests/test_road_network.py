@@ -16,16 +16,17 @@ from scenario_gym.road_network import (
 
 
 @pt.fixture
-def road_network():
+def empty_road_network():
+    """Create an empty road network."""
+    return RoadNetwork()
+
+
+@pt.fixture
+def road_network(all_road_networks):
     """Load the 6-way road network."""
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "input_files",
-        "Road_Networks",
-        "dRisk Unity 6-lane Intersection.json",
+    return RoadNetwork.create_from_json(
+        all_road_networks["dRisk Unity 6-lane Intersection"]
     )
-    road_network = RoadNetwork.create_from_json(filepath)
-    return road_network
 
 
 @pt.fixture
@@ -68,9 +69,30 @@ def z_road_network():
     )
 
 
+def test_empty(empty_road_network):
+    """Test that the empty road network is empty."""
+    assert (
+        not empty_road_network.roads and not empty_road_network.intersections
+    ), "Should all be empty."
+
+
 def test_roads(road_network):
     """Check that roads have been loaded."""
     assert len(road_network.roads) > 0, "No roads."
+
+
+def test_add_objects(empty_road_network, road_network):
+    """Test adding a new road to the road network."""
+    road = road_network.roads[0]
+    empty_road_network.add_new_road_object([road], "new_objects")
+    try:
+        empty_road_network.new_objects
+        empty_road_network._new_objects
+        empty_road_network.add_new_objects
+    except AttributeError as e:
+        raise e
+
+    assert empty_road_network.new_objects, "Object not added."
 
 
 def test_intersections(road_network):
@@ -211,12 +233,12 @@ def test_clear_cache(road_network):
             "roads" not in road_network.__dict__,
         )
     ), "Cached objects found."
-    assert all(
-        (
-            RoadNetwork.create_from_json.__func__.cache_info().currsize == 0,
-            road_network.get_lane_parent.__func__.cache_info().currsize == 0,
-        )
+    assert (
+        road_network.get_lane_parent.__func__.cache_info().currsize == 0
     ), "Lru caches not cleared."
+    assert (
+        RoadNetwork.create_from_json.__func__.cache_info().currsize != 0
+    ), "Class method caches cleared."
 
 
 def test_elevation(road_network, z_road_network):
@@ -279,26 +301,16 @@ def test_new_geometry(road_network):
     ), "Road marking not found."
 
 
-def test_all_road_networks():
+def test_all_road_networks(all_road_networks):
     """Test all road networks in the tests directory."""
-    base = os.path.join(os.path.dirname(__file__), "input_files", "Road_Networks")
-    road_networks = [
-        "Greenwich_Road_Network_002.json",
-        "Greenwich_Road_Network_003.json",
-        "Roundabout_Road_Network_001.json",
-        "Rural_Road_Network.json",
-        "Y_Intersection_Road_Network_001.json",
-        "dRisk Unity 6-lane Intersection.json",
-    ]
     failed = []
-    for f in road_networks:
-        path = os.path.join(base, f)
+    for r, path in all_road_networks.items():
         if not os.path.exists(path):
-            continue
+            failed.append((r, FileNotFoundError(path)))
         try:
             RoadNetwork.create_from_json(path)
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            failed.append((f, e))
+            failed.append((r, e))
     assert len(failed) == 0, f"Road networks failed: {failed}."

@@ -2,10 +2,10 @@ from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.sensor import RasterizedMapSensor
 
 
-def test_sensor():
+def test_sensor(all_scenarios):
     """Test the rasterized sensor module."""
     # load a test scenario
-    s = "./tests/input_files/Scenarios/a5e43fe4-646a-49ba-82ce-5f0063776566.xosc"
+    s = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
     gym = ScenarioGym()
     gym.load_scenario(s)
     e = gym.state.scenario.entities[0]

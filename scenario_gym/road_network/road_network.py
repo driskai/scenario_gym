@@ -1,5 +1,6 @@
 import json
 from functools import _lru_cache_wrapper, cached_property, lru_cache
+from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -110,36 +111,60 @@ class RoadNetwork:
             passed.
 
         """
-        assert ("roads" in road_objects and road_objects["roads"]) or (
-            ("intersections" in road_objects and road_objects["intersections"])
-        ), "At least one road or intersection is required."
         self._elevation_func: Optional[Callable[[float, float], float]] = None
         self.path = path
-        self.object_names = self._default_object_names.copy()
 
+        self.object_names = self._default_object_names.copy()
+        self.object_classes = {v: k for k, v in self.object_names.items()}
         all_object_names = list(
             set(self.object_names.keys())
             .union(road_objects.keys())
             .difference(["roads", "intersections"])
         )
         for object_name in ["roads", "intersections"] + all_object_names:
-            if object_name in road_objects:
-                objects = road_objects[object_name]
-                assert all(
-                    (isinstance(obj, RoadObject) for obj in objects)
-                ), "Only lists of RoadObject subclasses should be provided"
-            else:
-                objects = []
+            objects = (
+                road_objects[object_name] if object_name in road_objects else []
+            )
+            assert all(
+                (isinstance(obj, RoadObject) for obj in objects)
+            ), "Only lists of RoadObject subclasses should be provided"
+
             if object_name not in self.object_names:
-                if len(objects) == 0:
-                    continue
-                else:
-                    self.object_names[object_name] = objects[0].__class__
-            setattr(self, f"_{object_name}", objects)
-            try:
-                getattr(self, object_name)
-            except AttributeError:
-                setattr(self, object_name, objects)
+                self.object_names[object_name] = (
+                    objects[0].__class__ if objects else RoadObject
+                )
+            self.add_new_road_object(objects, object_name)
+
+    def add_new_road_object(
+        self, objs: Union[RoadObject, List[RoadObject]], obj_name: str
+    ) -> None:
+        """
+        Add a new object type to the road network.
+
+        This will add an attribute for the raw objects as a list as well
+        as a public attribute if it does not already exist. It will also add
+        an add_{obj_name} method to add new objects to the list.
+        """
+        if hasattr(self, f"_{obj_name}"):
+            raise ValueError(
+                f"Road network already has {obj_name}. Use self.add_{obj_name}."
+            )
+        setattr(self, f"_{obj_name}", objs)
+        try:
+            getattr(self, obj_name)
+        except AttributeError:
+            setattr(self, obj_name, objs)
+        try:
+            getattr(self, f"add_{obj_name}")
+        except AttributeError:
+
+            def add_obj(self, objs):
+                getattr(self, f"_{obj_name}").extend(
+                    objs if isinstance(objs, list) else [objs]
+                )
+                self.clear_cache()
+
+            setattr(self, f"add_{obj_name}", MethodType(add_obj, self))
 
     @cached_property
     def roads(self) -> List[Road]:
@@ -288,13 +313,17 @@ class RoadNetwork:
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
             if isinstance(obj, cached_property) and (method in self.__dict__):
+                # clear cached properties
                 del self.__dict__[method]
             elif isinstance(obj, _lru_cache_wrapper):
+                # clear lru caches of self
                 getattr(self, method).__func__.cache_clear()
             else:
                 try:
                     func = getattr(obj, "__func__")
-                    if isinstance(func, _lru_cache_wrapper):
+                    if isinstance(func, _lru_cache_wrapper) and (
+                        obj.__self__ is self
+                    ):
                         func.cache_clear()
                 except AttributeError:
                     continue

@@ -1,11 +1,9 @@
-import os
-
 import numpy as np
 
 from scenario_gym import Metric, ScenarioGym, Trajectory
 
 
-def test_recorded_poses():
+def test_recorded_poses(all_scenarios):
     """Test that all poses get recorded by the gym."""
 
     class CheckPose(Metric):
@@ -24,12 +22,7 @@ def test_recorded_poses():
             """Return None."""
             return None
 
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        "input_files",
-        "Scenarios",
-        "3fee6507-fd24-432f-b781-ca5676c834ef.xosc",
-    )
+    filepath = all_scenarios["3fee6507-fd24-432f-b781-ca5676c834ef"]
     gym = ScenarioGym(
         timestep=0.10001,
         terminal_conditions=[lambda s: s.t >= 1],
