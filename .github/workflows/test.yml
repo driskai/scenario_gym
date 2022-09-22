@@ -25,8 +25,8 @@ jobs:
           pip install .[gym,dev,testing]
       - name: cv2 dependencies
         run: |
-          apt-get update
-          apt-get install ffmpeg libsm6 libxext6  -y
+          sudo apt-get update
+          sudo apt-get install ffmpeg libsm6 libxext6  -y
           
       - name: Lint with flake8
         run: >-
