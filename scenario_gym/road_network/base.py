@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from shapely.geometry import LineString, Polygon
@@ -18,7 +18,15 @@ class RoadObject:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """Create from dictionary."""
-        return cls(data["id"])
+        args, kwargs = cls.load_data_from_dict(data)
+        return cls(*args, **kwargs)
+
+    @classmethod
+    def load_data_from_dict(
+        cls, data: Dict[str, Any]
+    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        """Load raw data from dictionary."""
+        return (data["Id" if "Id" in data else "id"],), {}
 
     def __init__(self, id: str):
         self.id = id
@@ -61,13 +69,17 @@ class RoadGeometry(RoadObject):
     impenetrable = False
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        """Create from dictionary."""
+    def load_data_from_dict(
+        cls, data: Dict[str, Any]
+    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        """Load raw data from dictionary."""
+        (obj_id,), _ = super().load_data_from_dict(data)
         boundary, _ = load_road_geometry_from_json(data)
-        return cls(
-            data["id"],
-            boundary,
-        )
+        if "Elevation" in data and data["Elevation"] is not None:
+            elevation = np.array(data["Elevation"])
+        else:
+            elevation = None
+        return (obj_id, boundary), {"elevation": elevation}
 
     def __init__(
         self, id: str, boundary: Polygon, elevation: Optional[np.ndarray] = None
@@ -88,6 +100,9 @@ class RoadGeometry(RoadObject):
         """Return a dictionary with id and boundary."""
         data = super().to_dict()
         data["Boundary"] = polygon_to_data(self.boundary)
+        data["Elevation"] = (
+            self.elevation.tolist() if self.elevation is not None else None
+        )
         return data
 
 
@@ -97,6 +112,20 @@ class RoadLike(RoadGeometry):
 
     Used for roads, lanes, pavements, etc.
     """
+
+    @classmethod
+    def load_data_from_dict(
+        cls, data: Dict[str, Any]
+    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        """Load raw data from dictionary."""
+        boundary, center = load_road_geometry_from_json(data)
+        if "Elevation" in data and data["Elevation"] is not None:
+            elevation = np.array(data["Elevation"])
+        else:
+            elevation = None
+        return (data["Id" if "Id" in data else "id"], boundary, center), {
+            "elevation": elevation
+        }
 
     def __init__(
         self,
@@ -111,7 +140,7 @@ class RoadLike(RoadGeometry):
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary with id, boundary and center."""
         data = super().to_dict()
-        data["center"] = [
+        data["Center"] = [
             {"x": float(x), "y": float(y)} for x, y in self.center.coords
         ]
         return data
