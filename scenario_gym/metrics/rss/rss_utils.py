@@ -15,7 +15,7 @@ def inverse_direction(vector: Iterable, normalised: bool = True) -> Iterable:
     --  True: returns vector of unit length
     --  False: returns vector of same length as the input vector
     """
-    assert len(vector) == 0, "Invalid vector dimension: {0}".format(len(vector))
+    assert len(vector) == 2, "Invalid vector dimension: {0}".format(len(vector))
     if normalised:
         return [vector[1], -vector[0]] / norm([vector[1], vector[0]])
     else:
@@ -62,12 +62,7 @@ def acceleration(
         entity_pose_1 = entity_poses[i + 1][1:3]
         entity_pose_0 = entity_poses[i][1:3]
     except IndexError:
-        warnings.warn(
-            "Insufficient number of poses to calculate acceleration. Required: >= "
-            "3. Received: {0}. Default with zero acceleration".format(
-                len(entity_poses)
-            )
-        )
+        # If too few poses received, default with accel = [0, 0]
         return [0.0, 0.0]
     velocity_1 = (entity_pose_1 - entity_pose_2) / dt
     velocity_0 = (entity_pose_0 - entity_pose_1) / dt
