@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 from numpy.linalg import norm
+from shapely.geometry import LineString, Polygon
+
 from scenario_gym.callback import StateCallback
 from scenario_gym.metrics.rss.rss_utils import (
     acceleration,
@@ -12,11 +14,11 @@ from scenario_gym.metrics.rss.rss_utils import (
     inverse_direction,
 )
 from scenario_gym.state import Entity, State
-from shapely.geometry import LineString, Polygon
 
 
 class RSSParameters:
-    # Parameters to be adjusted.
+    """RSS parameters."""
+
     RESPONSE_TIME = 0.6  # SECONDS
     MIN_LONG_ACCEL = 1.2 * 9.81  # METRES PER SECONDS SQUARED
     MAX_LONG_ACCEL = 1.2 * 9.81  # METRES PER SECONDS SQUARED
@@ -29,7 +31,7 @@ class RSSParameters:
 
 class RSSDistances(StateCallback):
     """
-    Determines if the ego-entity distance has become unsafe
+    Determine if the ego-entity distance has become unsafe.
 
     This is the per-timestep pre-computation for the first two rules of the
     RSS metric. Raw values are calculated and attached to the global state or
@@ -38,7 +40,7 @@ class RSSDistances(StateCallback):
     """
 
     def reset(self, state: State):
-        """resets callback and declares variables"""
+        """Reset callback and declares variables."""
         super().reset(state)
         assert len(state.scenario.entities) > 0, "Scenario contains zero entities."
         self.ego = state.scenario.entities[0]
@@ -53,7 +55,7 @@ class RSSDistances(StateCallback):
 
     def __call__(self, state: State):
         """
-        label each entity to specify if its distances to the ego are unsafe.
+        Label each entity to specify if its distances to the ego are unsafe.
 
         Collates current timestep data for each entity, and determines the
         safety of the ego with respect to its longitudinal and lateral distance
@@ -81,9 +83,9 @@ class RSSDistances(StateCallback):
         except IndexError:
             # Ego has invalid pose
             warnings.warn(
-                "RSSDistances _step: Error in handling of ego at time {0}. Invalid pose: {1}. RSSDistances callback skips this timestep.".format(
-                    state._t, entity.pose
-                )
+                "RSSDistances _step: Error in handling of ego at time {0}. "
+                "Invalid pose: {1}. RSSDistances callback skips this "
+                "timestep.".format(state._t, ego.pose)
             )
             return
         # Create a dictionary for each entity of form:
@@ -96,9 +98,9 @@ class RSSDistances(StateCallback):
             )
             if entity_dictionary is None:
                 warnings.warn(
-                    "RSSDistances _step: Error in handling of entity {0} at time {1}. Invalid pose: {2}. RSS metric skips entity at this timestep.".format(
-                        entity, state._t, entity.pose
-                    )
+                    "RSSDistances _step: Error in handling of entity {0} at time "
+                    "{1}. Invalid pose: {2}. RSS metric skips entity at this "
+                    "timestep.".format(entity, state._t, entity.pose)
                 )
                 continue
             else:
@@ -140,9 +142,9 @@ class RSSDistances(StateCallback):
             if state.intersect[i] is None:
                 # Entity trimmed poses results in IndexError, go to next entity
                 warnings.warn(
-                    "safe_longitudinal: IndexError in handling of entity number: {0} at timestep: {1} seconds. Continue to next entity.".format(
-                        i, state._t
-                    )
+                    "safe_longitudinal: IndexError in handling of entity number: "
+                    "{0} at timestep: {1} seconds. Continue to next "
+                    "entity.".format(i, state._t)
                 )
 
     @staticmethod
@@ -150,7 +152,7 @@ class RSSDistances(StateCallback):
         entity: Entity, ego: Dict, haz: Dict, safe_distances: List[float]
     ) -> None:
         """
-        Attaches safe_distance ratios to entity
+        Attach safe_distance ratios to entity.
 
         safe ratio defined as actual_distance / safe_distance -> larger ratio safer
         """
@@ -166,7 +168,8 @@ class RSSDistances(StateCallback):
         except IndexError:
             # safe_distances not calculated
             warnings.warn(
-                "RSSDistances safe_ratios: Safe distances not calculated. Default safe distances as ego dimensions"
+                "RSSDistances safe_ratios: Safe distances not calculated. Default "
+                "safe distances as ego dimensions"
             )
             safe_lat = 0.5 * ego["width"]
             safe_long = 0.5 * ego["length"]
@@ -196,7 +199,7 @@ class RSSDistances(StateCallback):
         ego: Dict, haz: Dict, intersect: List[str], safe_distances: List[float]
     ) -> str:
         """
-        Determines if longitudinal or lateral distance is hazardous to ego
+        Determine if longitudinal or lateral distance is hazardous to ego.
 
         This method is called per timestep per entity, and returns a flag to be
         attached to the global state.
@@ -207,7 +210,6 @@ class RSSDistances(StateCallback):
             unsafe, and the longitudinal distance became unsafe after the lateral
             distance.
         """
-
         if "unsafe_lateral" in intersect or "unsafe_longitudinal" in intersect:
             # Already found
             intersect.append("found")
@@ -256,9 +258,7 @@ class RSSDistances(StateCallback):
 
     @staticmethod
     def safe_longitudinal_distance(ego: Dict, haz: Dict) -> float:
-        """
-        Determines if the longitudinal distance is safe
-        """
+        """Determine if the longitudinal distance is safe."""
         MAX_LONG_ACCEL = RSSParameters.MAX_LONG_ACCEL
         MIN_LONG_ACCEL = RSSParameters.MIN_LONG_ACCEL
         MIN_SAFE_CLEARANCE = RSSParameters.MIN_SAFE_CLEARANCE
@@ -299,9 +299,7 @@ class RSSDistances(StateCallback):
 
     @staticmethod
     def safe_lateral_distance(ego: Dict, haz: Dict) -> float:
-        """
-        Determines if the lateral distance is safe
-        """
+        """Determine if the lateral distance is safe."""
         MAX_LONG_ACCEL = RSSParameters.MAX_LONG_ACCEL
         MIN_LONG_ACCEL = RSSParameters.MIN_LONG_ACCEL
         MIN_SAFE_CLEARANCE = RSSParameters.MIN_SAFE_CLEARANCE
@@ -339,7 +337,9 @@ class RSSDistances(StateCallback):
         haz_dict: Dict,
     ) -> str:
         """
-        For ego and another entity, checks if the entity has a smaller distance in
+        Flag buffer intersection direction.
+
+        For ego and another entity, check if the entity has a smaller distance in
         the longitudinal or lateral direction than the corresponding safe distance,
         and appends this to the recorded list.
         """
@@ -374,13 +374,12 @@ class RSSDistances(StateCallback):
         ego_position: List[float],
         dt: float,
     ) -> Dict:
-        """Calculates entity parameters and returns these as a dictionary."""
+        """Calculate entity parameters and returns these as a dictionary."""
         entity_pose = entity.pose
         if len(entity_pose) != 6:
             warnings.warn(
-                "Entity pose should have six elements, [x, y, z, h, r, p]. Received {0} elements.".format(
-                    len(entity_pose)
-                )
+                "Entity pose should have six elements, [x, y, z, h, r, p]. "
+                "Received {0} elements.".format(len(entity_pose))
             )
             return
         ego_position = np.array(ego_position)
@@ -418,7 +417,7 @@ class RSSDistances(StateCallback):
         ego: Dict, safe_distances: List
     ) -> Tuple[Polygon, List[LineString]]:
         """
-        Generate ego safe buffer corresponding to entity's safe distances
+        Generate ego safe buffer corresponding to entity's safe distances.
 
         Generates a rectangular buffer around the entity with length and width
         corresponding to safe longitudinal and lateral distances with respect to
@@ -432,7 +431,9 @@ class RSSDistances(StateCallback):
         except IndexError:
             # Safe distances not calculated
             warnings.warn(
-                "RSSDistances generate_buffer: Safe distances not calculated: Buffer cannot be instantiated. Default safe distances as 3 metres lateral, 5 metres safe longitudinal"
+                "RSSDistances generate_buffer: Safe distances not calculated: "
+                "Buffer cannot be instantiated. Default safe distances as 3 "
+                "metres lateral, 5 metres safe longitudinal"
             )
             safe_longitudinal_distance = 5
             safe_lateral_distance = 3
@@ -485,9 +486,7 @@ class RSSDistances(StateCallback):
         RESPONSE_TIME: float,
         MIN_LONG_ACCEL: float,
     ) -> float:
-        """
-        Returns the minimum safe longitudinal distance for same directions.
-        """
+        """Return the minimum safe longitudinal distance for same directions."""
         return max(
             0,
             vr * RESPONSE_TIME
@@ -507,9 +506,7 @@ class RSSDistances(StateCallback):
         RESPONSE_TIME: float,
         MIN_LONG_ACCEL: float,
     ) -> float:
-        """
-        Returns the minimum safe longitudinal distance for opposing directions.
-        """
+        """Return the minimum safe longitudinal distance for opposing directions."""
         return max(
             0,
             (
@@ -525,9 +522,7 @@ class RSSDistances(StateCallback):
     def lat_dist(
         v: float, max_lat_accel: float, min_lat_accel: float, RESPONSE_TIME: float
     ):
-        """
-        Returns the minimum safe lateral distance between the entity and ego.
-        """
+        """Return the minimum safe lateral distance between the entity and ego."""
         return max(
             0,
             0.5 * RESPONSE_TIME * (2 * v + RESPONSE_TIME * max_lat_accel)

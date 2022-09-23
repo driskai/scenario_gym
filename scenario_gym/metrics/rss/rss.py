@@ -22,9 +22,7 @@ from .callback import RSSDistances
 
 
 class Rules(Enum):
-    """
-    Enumerates the five rules
-    """
+    """Enumerate the five rules."""
 
     safe_longitudinal = 0
     safe_lateral = 1
@@ -32,7 +30,7 @@ class Rules(Enum):
 
 class RSSBehaviourDetection:
     """
-    Finds behaviours corresponding to the five RSS rules
+    Find behaviours corresponding to the five RSS rules.
 
     Instantiates class based on current timestep state and
     parameters. Calls each of the behaviour methods, one per
@@ -64,9 +62,7 @@ class RSSBehaviourDetection:
         self.collisions = collisions
 
     def __call__(self):
-        """
-        call behaviour methods for current timestep
-        """
+        """Call behaviour methods for current timestep."""
         outcomes = {}
         for rule in Rules:
             outcome = getattr(self, rule.name)
@@ -77,7 +73,7 @@ class RSSBehaviourDetection:
     # Behaviour functions
     def safe_longitudinal(self) -> bool:
         """
-        Rule 1: ego at a safe longitudinal distance
+        Rule 1: ego at a safe longitudinal distance.
 
         Returns True if longitudinal distance is less than the minimum
         safe distance when the lateral distance is also unsafe, with the safe
@@ -94,7 +90,7 @@ class RSSBehaviourDetection:
 
     def safe_lateral(self) -> bool:
         """
-        Rule 2: ego at a safe lateral distance
+        Rule 2: ego at a safe lateral distance.
 
         Returns True if lateral distance is less than the minimum
         safe distance when the longitudinal distance is also unsafe, with the
@@ -112,7 +108,7 @@ class RSSBehaviourDetection:
 
 class RSS(Metric):
     """
-    Determines if the ego follow the 5 rules of RSS
+    Determine if the ego follow the 5 rules of RSS.
 
     _reset() resets state with each rule set to True by default
 
@@ -130,7 +126,7 @@ class RSS(Metric):
     required_callbacks = [RSSDistances]
 
     def _reset(self, state: State) -> None:
-        """Resets behaviour"""
+        """Reset behaviour."""
         self.behaviour = None
         self.ego = state.scenario.entities[0]
         for entity in state.scenario.entities:
@@ -139,8 +135,7 @@ class RSS(Metric):
         self.metrics_ = {rule.name: True for rule in Rules}
 
     def _step(self, state: State) -> None:
-        """Update the metric to find behaviour at the point of interest"""
-
+        """Update the metric to find behaviour at the point of interest."""
         if state._t == 0.0:
             # Require at least two poses to calculate velocity
             return
@@ -173,5 +168,5 @@ class RSS(Metric):
             )
 
     def get_state(self) -> Dict[str, bool]:
-        """Returns state"""
+        """Return state."""
         return self.metrics_

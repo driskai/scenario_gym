@@ -7,7 +7,7 @@ from numpy.linalg import norm
 
 def inverse_direction(vector: Iterable, normalised: bool = True) -> Iterable:
     """
-    returns the inverse of a 2D vector, Iterable -> Iterable
+    Return the inverse of a 2D vector, Iterable -> Iterable.
 
     Uses clockwise-rotating sign convention: (x, y) --> (y, -x)
 
@@ -26,7 +26,7 @@ def coord_change(
     vector: List[float], direction: List[float], centre=[0, 0]
 ) -> List[float]:
     """
-    Changes vector coordinates to new frame of reference.
+    Change vector coordinates to new frame of reference.
 
     Uses Galilean transformation to change the components of <vector> to a new
     coordinate system defined by an origin at <centre> and with components parallel
@@ -51,7 +51,7 @@ def acceleration(
     i: int = 0,
 ) -> List[float]:
     """
-    Finds entity acceleration from three consecutive poses
+    Find entity acceleration from three consecutive poses.
 
     Optional argument parallel_velocity (default False):
     --  True: acceleration is resolved in coords para and perp to velocity
@@ -63,7 +63,8 @@ def acceleration(
         entity_pose_0 = entity_poses[i][1:3]
     except IndexError:
         warnings.warn(
-            "Insufficient number of poses to calculate acceleration. Required: >= 3. Received: {0}. Default with zero acceleration".format(
+            "Insufficient number of poses to calculate acceleration. Required: >= "
+            "3. Received: {0}. Default with zero acceleration".format(
                 len(entity_poses)
             )
         )
@@ -82,7 +83,7 @@ def acceleration(
 
 def ahead(ego: Dict, haz: Dict) -> bool:
     """
-    Determines if ego is ahead of hazard
+    Determine if ego is ahead of hazard.
 
     Takes two entities (ego and hazard) and returns True if the ego is ahead
     of the hazard when using ego's preferential frame of reference such that:
@@ -97,7 +98,7 @@ def ahead(ego: Dict, haz: Dict) -> bool:
 
 def direction(heading: float) -> list:
     """
-    Turns heading into normalised direction vector.
+    Turn heading into normalised direction vector.
 
     angle (rad) --> [x component, y component]
     Where 0 rad corresponds to positive x unit vector, and a positively
