@@ -13,18 +13,27 @@ requires = [
 ]
 extras = {
     "gym": ["gym>=0.21.0"],
-    "dev": [
+    "hooks": [
         "black~=22.3.0",
         "flake8~=3.9.2",
         "isort~=5.10.1",
         "pre-commit~=2.16.0",
         "pydocstyle~=6.1.1",
-        "Sphinx~=4.4.0",
     ],
+    "docs": ["Sphinx~=4.4.0"],
     "integrations": ["pandas~=1.3.4"],
     "examples": ["torch~=1.11.0"],
     "testing": ["pytest~=6.2.4"],
 }
+extras["dev"] = list(
+    set().union(
+        extras["gym"],
+        extras["hooks"],
+        extras["docs"],
+        extras["testing"],
+        extras["integrations"],
+    )
+)
 extras["all"] = list(set().union(*extras.values()))
 
 with open("README.md", "r") as f:
