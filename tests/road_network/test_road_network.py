@@ -319,7 +319,8 @@ def test_all_road_networks(all_road_networks):
 def test_io(z_road_network):
     """Test that a we can save and load a road network from json."""
     output_path = os.path.join(
-        os.path.dirname(__file__),  # scenario_gym/tests
+        os.path.dirname(__file__),
+        "..",
         "input_files",
         "Road_Networks",
         "tmp_z_road_network.json",

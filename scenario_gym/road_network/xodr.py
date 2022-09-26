@@ -39,7 +39,7 @@ def xodr_lane_to_sg(
     lane_boundary = Polygon(boundary)
     lane_type = LaneType[lane.type]
 
-    sg_lane = Lane(
+    return Lane(
         str(uuid4()),
         lane_boundary,
         lane_center,
@@ -48,7 +48,6 @@ def xodr_lane_to_sg(
         lane_type,
         elevation=elevation,
     )
-    return sg_lane
 
 
 def road_to_sg(

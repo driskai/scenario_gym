@@ -360,7 +360,8 @@ class RoadNetwork:
         data = {}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
-        json.dump(data, open(filepath, "w"))
+        with open(filepath, "w") as f:
+            json.dump(data, f)
 
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""

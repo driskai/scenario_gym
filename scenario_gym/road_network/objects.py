@@ -20,7 +20,7 @@ class LaneType(Enum):
     exit = 8
     median = 9
     offRamp = 10
-    onramp = 11
+    onRamp = 11
     parking = 12
     restricted = 13
     sidewalk = 14
