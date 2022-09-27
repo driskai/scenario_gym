@@ -1,5 +1,3 @@
-import os
-import random
 from math import inf
 from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
@@ -54,7 +52,6 @@ class ScenarioGym(ScenarioGym, Env):
             Callable[[Scenario, Entity], Optional[Agent]]
         ] = None,
         select_scenario: Optional[Callable[[Gym], Union[Scenario, str]]] = None,
-        scenarios: Optional[List[str]] = None,
         **kwargs,
     ):
         """
@@ -86,13 +83,9 @@ class ScenarioGym(ScenarioGym, Env):
 
         select_scenario : Optional[Callable[[], Union[Scenario, str]]]
             Function that selects the scenario to be run each time `reset()` is
-            called. Takes no arguments and should return either the xosc filepath
-            or the scenario object. If not given then `ScenarioGym.select_scenario`
-            will be used.
-
-        scenarios : Optional[List[str]]
-            A list of filepaths to xosc files to use. Default behaviour will sample
-            randomly from these eachtime `reset` is called.
+            called. Takes just self as argument and should return either the xosc
+            filepath or the scenario object. If not given then
+            `ScenarioGym.select_scenario` will be used.
 
         """
         if terminal_conditions is None:
@@ -117,15 +110,6 @@ class ScenarioGym(ScenarioGym, Env):
         self.action_space = action_space
         self.observation_space = observation_space
         self.reward_range = reward_range
-        if scenarios is None:
-            scenarios = [
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "../tests/input_files/Scenarios/"
-                    "1518e754-318f-4847-8a30-2dce552b4504.xosc",
-                )
-            ]
-        self.scenarios = scenarios
         if create_agent is not None:
             self.create_agent = create_agent
         if select_scenario is not None:
@@ -156,10 +140,13 @@ class ScenarioGym(ScenarioGym, Env):
             s = options["scenario"]
         else:
             s = self.select_scenario()
-        if isinstance(s, Scenario):
-            self._set_scenario(s)
-        else:
-            self.load_scenario(s)
+        if s is not None:
+            if isinstance(s, Scenario):
+                self._set_scenario(s)
+            else:
+                self.load_scenario(s)
+        elif self.state.scenario is None:
+            raise ValueError("No scenario has been set.")
 
         try:
             self.ego_agent = self.state.scenario.agents["ego"]
@@ -265,7 +252,7 @@ class ScenarioGym(ScenarioGym, Env):
 
     def select_scenario(self) -> Union[str, Scenario]:
         """Update the scenario when reset is called."""
-        return random.choice(self.scenarios)
+        return None
 
     @staticmethod
     def create_agent(scenario: Scenario, entity: Entity) -> Optional[Agent]:
