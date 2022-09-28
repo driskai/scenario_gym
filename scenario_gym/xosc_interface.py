@@ -30,7 +30,7 @@ def import_scenario(osc_file: str, relabel: bool = True) -> Scenario:
 
     """
     if not os.path.exists(osc_file):
-        raise FileNotFoundError
+        raise FileNotFoundError(f"Could not find file: {osc_file}.")
 
     cwd = os.path.dirname(osc_file)
     et = etree.parse(osc_file)

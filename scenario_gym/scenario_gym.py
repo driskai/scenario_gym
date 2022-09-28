@@ -8,6 +8,7 @@ from scenario_gym.recorder import ScenarioRecorder
 from scenario_gym.scenario import Scenario
 from scenario_gym.state import State
 from scenario_gym.viewer import Viewer
+from scenario_gym.viewer.opencv import OpenCVViewer
 from scenario_gym.xosc_interface import import_scenario
 
 
@@ -17,7 +18,7 @@ class ScenarioGym:
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
-        viewer_class: Type[Viewer] = Viewer,
+        viewer_class: Type[Viewer] = OpenCVViewer,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
         ] = None,
@@ -27,6 +28,9 @@ class ScenarioGym:
     ):
         """
         Init the gym.
+
+        All arguments for the constructor of the viewer class should be
+        passed as keyword arguments which will be stored.
 
         Parameters
         ----------
@@ -46,7 +50,7 @@ class ScenarioGym:
             List of metrics to measure.
 
         viewer_parameters:
-            Keyword arguments for `scenario_gym.viewer.Viewer`.
+            Keyword arguments for viewer_class.
 
         """
         self.timestep = timestep
@@ -54,6 +58,7 @@ class ScenarioGym:
             "headless_rendering": True,
             "render_layers": ["driveable_surface"],
             "render_entity": "ego",
+            "fps": int(1 / self.timestep),
             **viewer_parameters,
         }
 
@@ -79,9 +84,7 @@ class ScenarioGym:
 
         Closes the viewer, removes any metrics and unloads the scenario.
         """
-        if self.viewer is not None:
-            self.viewer.close()
-        self.viewer = None
+        self.close_viewer()
         self.state = State(
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
@@ -175,6 +178,7 @@ class ScenarioGym:
 
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
+        self.close_viewer()
         self.state.is_done = False
         self.state.t = Entity.INIT_PREV_T
         self.state.t = 0.0
@@ -206,18 +210,17 @@ class ScenarioGym:
         self.state.update_callbacks()
         self.state.is_done = self.state.check_terminal()
 
-        # rendering and metrics
-        if self.viewer is not None:
-            self.state.last_keystroke = self.render()
+        # metrics and rendering
         for m in self.metrics:
             m.step(self.state)
+        if self.viewer is not None:
+            self.state.last_keystroke = self.render()
 
     def rollout(self, render: bool = False, **kwargs) -> None:
         """Rollout the current scenario fully."""
         self.reset_scenario()
         if render:
-            k = self.render(**kwargs)
-            self.state.last_keystroke = k
+            self.state.last_keystroke = self.render(**kwargs)
         while not self.state.is_done:
             self.step()
         for agent in self.state.scenario.agents.values():
@@ -227,36 +230,39 @@ class ScenarioGym:
     def render(self, video_path: Optional[str] = None) -> Optional[int]:
         """Render the state of the gym."""
         if self.viewer is None:
-            if self.viewer_parameters["headless_rendering"]:
-                if not video_path:
-                    path = self.state.scenario.scenario_path
-                    video_dir = os.path.join(os.path.dirname(path), "../Recordings")
-                    if os.path.exists(video_dir):
-                        video_path = os.path.join(
-                            video_dir,
-                            os.path.splitext(
-                                os.path.basename(path),
-                            )[0]
-                            + ".mp4",
-                        )
-                    else:
-                        video_path = (
-                            os.path.splitext(self.state.scenario.scenario_path)[0]
-                            + ".mp4"
-                        )
-            fps = int(1 / self.timestep)
+            self.setup_viewer()
+        return self.viewer.render(self.state)
 
-            self.viewer = self.viewer_class(
-                output_path=video_path, fps=fps, **self.viewer_parameters
-            )
-        key = self.viewer.render(self.state)
-        return key
+    def setup_viewer(self, video_path: Optional[str] = None) -> None:
+        """Create the viewer when rendering is started."""
+        if self.viewer_parameters["headless_rendering"]:
+            if video_path is None:
+                path = self.state.scenario.scenario_path
+                video_dir = os.path.join(os.path.dirname(path), "../Recordings")
+                if os.path.exists(video_dir):
+                    video_path = os.path.join(
+                        video_dir,
+                        os.path.splitext(
+                            os.path.basename(path),
+                        )[0]
+                        + ".mp4",
+                    )
+                else:
+                    video_path = (
+                        os.path.splitext(self.state.scenario.scenario_path)[0]
+                        + ".mp4"
+                    )
+        self.viewer = self.viewer_class(video_path, **self.viewer_parameters)
 
-    def close(self) -> None:
+    def close_viewer(self) -> None:
         """Close the viewer if it exists."""
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+
+    def close(self) -> None:
+        """Close the gym."""
+        self.close_viewer()
 
     def record(self, close: bool = False) -> None:
         """

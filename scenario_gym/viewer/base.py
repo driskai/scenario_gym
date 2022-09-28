@@ -13,7 +13,7 @@ class Viewer(ABC):
     which will render the rollout and then be destroyed.
     """
 
-    def __init__(self, output_path: Optional[str] = None):
+    def __init__(self, output_path: Optional[str]):
         self.output_path = output_path
 
     @abstractmethod
