@@ -31,7 +31,7 @@ def road_network(all_road_networks):
 
 @pt.fixture
 def z_road_network():
-    """Create a basic road network if elevation."""
+    """Create a basic road network with elevation."""
     center = LineString(
         [
             [0.0, 0.0],
@@ -314,3 +314,38 @@ def test_all_road_networks(all_road_networks):
         except Exception as e:
             failed.append((r, e))
     assert len(failed) == 0, f"Road networks failed: {failed}."
+
+
+def test_io(z_road_network):
+    """Test that a we can save and load a road network from json."""
+    output_path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "input_files",
+        "Road_Networks",
+        "tmp_z_road_network.json",
+    )
+    z_road_network.to_json(output_path)
+
+    loaded_road_network = RoadNetwork.create_from_json(output_path)
+    assert all(
+        (
+            len(loaded_road_network.roads) == len(z_road_network.roads),
+            len(loaded_road_network.intersections)
+            == len(z_road_network.intersections),
+        )
+    ), "Incorrect roads and intersections in new road network."
+
+    new_r = loaded_road_network.roads[0]
+    old_r = z_road_network.roads[0]
+
+    assert np.allclose(
+        new_r.boundary.difference(old_r.boundary).area, 0.0
+    ), "Different road boundaries."
+    assert np.allclose(
+        new_r.center.difference(old_r.center).area, 0.0
+    ), "Different road centers."
+    assert new_r.elevation is not None, "Elevation missing."
+    assert np.allclose(
+        new_r.elevation, old_r.elevation
+    ), "Different elevation profiles."

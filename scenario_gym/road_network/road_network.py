@@ -1,10 +1,12 @@
 import json
 from functools import _lru_cache_wrapper, cached_property, lru_cache
+from pathlib import Path
 from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from odr_importer.road_objects.network import RoadNetwork as xodrRoadNetwork
 from scipy.interpolate import interp2d
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
@@ -19,6 +21,7 @@ from .objects import (
     Pavement,
     Road,
 )
+from .xodr import xodr_to_sg_roads
 
 
 class RoadNetwork:
@@ -56,6 +59,57 @@ class RoadNetwork:
         with open(filepath) as f:
             data = json.load(f)
         return cls.create_from_dict(data, path=filepath)
+
+    @classmethod
+    @lru_cache(maxsize=15)
+    def create_from_xodr(
+        cls,
+        filepath: str,
+        resolution: float = 0.1,
+        simplify_tolerance: float = 0.2,
+        right_hand_drive: bool = True,
+    ):
+        """
+        Import a road network from an OpenDRIVE file.
+
+        Will first parse the road network and then convert it to
+        a scenario_gym road network. Every lane section of the file
+        is converted to a road and each lane within the section is
+        converted to a lane. Connectivity information is stored in
+        the lanes. Any lane of type None is ignored.
+
+        Parameters
+        ----------
+        filepath : str
+            The filepath to the xodr file.
+
+        resolution : float
+            Resolution for importing the base OpenDRIVE file.
+
+        simplify_tolerance : float
+            Points per m for simplifying center and boundary lines.
+
+        right_hand_drive : bool
+            Whether the roads are right hand drive.
+
+        """
+        path = Path(filepath).absolute()
+        if not path.exists():
+            raise FileNotFoundError(f"File not found at: {path}.")
+
+        # parse OpenDRIVE file
+        xodr_network = xodrRoadNetwork(
+            str(path),
+            fail_on_key_error=False,
+            resolution=resolution,
+        )
+
+        roads = xodr_to_sg_roads(
+            xodr_network,
+            right_hand_drive,
+            simplify_tolerance,
+        )
+        return cls(roads=roads, path=str(path))
 
     @classmethod
     def create_from_dict(cls, data: Dict, **kwargs):
@@ -306,7 +360,8 @@ class RoadNetwork:
         data = {}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
-        json.dump(data, open(filepath, "w"))
+        with open(filepath, "w") as f:
+            json.dump(data, f)
 
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""

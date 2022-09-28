@@ -5,7 +5,6 @@ import numpy as np
 from shapely.geometry import LineString, Polygon
 
 from .base import RoadGeometry, RoadLike
-from .utils import load_road_geometry_from_json
 
 
 class LaneType(Enum):
@@ -21,7 +20,7 @@ class LaneType(Enum):
     exit = 8
     median = 9
     offRamp = 10
-    onramp = 11
+    onRamp = 11
     parking = 12
     restricted = 13
     sidewalk = 14
@@ -40,17 +39,17 @@ class Lane(RoadLike):
     walkable = False
 
     @classmethod
-    def from_dict(cls, l: Dict[str, Any]):
+    def load_data_from_dict(cls, l: Dict[str, Any]):
         """Create from dictionary."""
+        args, kwargs = super().load_data_from_dict(l)
         typ = l["type"] if "type" in l else "driving"
         lane_type = LaneType[typ if typ in LaneType.__members__ else "driving"]
-        return cls(
-            l["id"],
-            *load_road_geometry_from_json(l),
+        return (
+            *args,
             l["successors"] if "successors" in l else [],
             l["predecessors"] if "predecessors" in l else [],
             lane_type,
-        )
+        ), kwargs
 
     def __init__(
         self,
@@ -82,12 +81,9 @@ class Lane(RoadLike):
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary of the objects data."""
-        data = super().to_json()
+        data = super().to_dict()
         data.update(
             {
-                "center": [
-                    {"x": float(x), "y": float(y)} for x, y in self.center.coords
-                ],
                 "successors": self.successors,
                 "predecessors": self.predecessors,
                 "type": self.type.name,
@@ -106,10 +102,11 @@ class Road(RoadLike):
     walkable = False
 
     @classmethod
-    def from_dict(cls, r: Dict[str, Any]):
+    def load_data_from_dict(cls, r: Dict[str, Any]):
         """Create from dictionary."""
+        args, kwargs = super().load_data_from_dict(r)
         lanes = [Lane.from_dict(l) for l in r["lanes" if "lanes" in r else "Lanes"]]
-        return cls(r["id"], *load_road_geometry_from_json(r), lanes)
+        return (*args, lanes), kwargs
 
     def __init__(
         self,
@@ -124,15 +121,8 @@ class Road(RoadLike):
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary of the objects data."""
-        data = super().to_json()
-        data.update(
-            {
-                "center": [
-                    {"x": float(x), "y": float(y)} for x, y in self.center.coords
-                ],
-                "lanes": [l.to_dict() for l in self.lanes],
-            }
-        )
+        data = super().to_dict()
+        data["lanes"] = [l.to_dict() for l in self.lanes]
         return data
 
 
@@ -148,11 +138,11 @@ class Intersection(RoadGeometry):
     walkable = False
 
     @classmethod
-    def from_dict(cls, i: Dict[str, Any]):
+    def load_data_from_dict(cls, i: Dict[str, Any]):
         """Create from dictionary."""
-        boundary, _ = load_road_geometry_from_json(i)
+        args, kwargs = super().load_data_from_dict(i)
         lanes = [Lane.from_dict(l) for l in i["lanes" if "lanes" in i else "Lanes"]]
-        return cls(i["id"], boundary, lanes, i["connecting_roads"])
+        return (*args, lanes, i["connecting_roads"]), kwargs
 
     def __init__(
         self,
@@ -168,7 +158,7 @@ class Intersection(RoadGeometry):
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary of the objects data."""
-        data = super().to_json()
+        data = super().to_dict()
         data.update(
             {
                 "lanes": [l.to_dict() for l in self.lanes],
@@ -187,20 +177,6 @@ class Pavement(RoadLike):
 
     driveable = False
 
-    @classmethod
-    def from_dict(cls, p: Dict[str, Any]):
-        """Create from dictionary."""
-        boundary, center = load_road_geometry_from_json(p)
-        return cls(p["id"], boundary, center)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Return a dictionary of the objects data."""
-        data = super().to_json()
-        data["center"] = [
-            {"x": float(x), "y": float(y)} for x, y in self.center.coords
-        ]
-        return data
-
 
 class Crossing(RoadLike):
     """
@@ -212,15 +188,13 @@ class Crossing(RoadLike):
     driveable = False
 
     @classmethod
-    def from_dict(cls, c: Dict[str, Any]):
+    def load_data_from_dict(cls, c: Dict[str, Any]):
         """Create from dictionary."""
-        boundary, center = load_road_geometry_from_json(c)
-        return cls(
-            c["id"],
-            boundary,
-            center,
+        args, kwargs = super().load_data_from_dict(c)
+        return (
+            *args,
             c["pavements" if "pavements" in c else "Pavements"],
-        )
+        ), kwargs
 
     def __init__(
         self,
@@ -235,10 +209,7 @@ class Crossing(RoadLike):
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary of the objects data."""
-        data = super().to_json()
-        data["center"] = [
-            {"x": float(x), "y": float(y)} for x, y in self.center.coords
-        ]
+        data = super().to_dict()
         data["pavements"] = self.pavements
         return data
 

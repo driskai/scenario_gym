@@ -59,3 +59,20 @@ def all_road_networks():
         "dRisk Unity 6-lane Intersection",
     ]
     return {r: os.path.join(base, r + ".json") for r in road_networks}
+
+
+@pt.fixture(scope="module")
+def all_xodr_networks():
+    """Get all OpenDRIVE road networks as a dictionary."""
+    base = os.path.join(
+        os.path.dirname(__file__),
+        "input_files",
+        "Road_Networks",
+    )
+    road_networks = [
+        "Ex_LHT-Complex-X-Junction",
+        "UC_LHT_Complex-TrafficLights",
+        "UC_Motorway-Exit-Entry",
+        "UC_Simple-X-Junction-TrafficLights",
+    ]
+    return {r: os.path.join(base, r + ".xodr") for r in road_networks}
