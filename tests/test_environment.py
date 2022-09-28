@@ -11,5 +11,5 @@ def test_env(all_scenarios) -> None:
     obs, done = env.reset(seed=123), False
     while not done:
         action = env.action_space.sample()
-        obs, reward, done, _ = env.step(action)
+        obs, _, done, _ = env.step(action)
         assert obs in env.observation_space

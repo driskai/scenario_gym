@@ -8,46 +8,10 @@ from shapely.geometry import LineString, Polygon
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.state import State
 
-
-def rotate_coords(
-    X: np.ndarray,
-    theta: float,
-) -> np.ndarray:
-    """Rotate xy coordinates in X by angle theta."""
-    R = np.array(
-        [
-            [math.cos(theta), -math.sin(theta)],
-            [math.sin(theta), math.cos(theta)],
-        ]
-    )
-    return X.dot(R.T)
+from .base import Viewer
 
 
-def vec2pix(
-    X: np.ndarray, mag: int = 20, h: float = 100.0, w: float = 100.0
-) -> np.ndarray:
-    """Convert xy coordinates to pixel values."""
-    return (mag * (X + np.array([h / 2, w / 2]))).astype(np.int32)
-
-
-def to_ego_frame(
-    coords: np.ndarray,
-    ego_pose: np.ndarray,
-    vertical: bool = True,
-) -> np.ndarray:
-    """
-    Convert coordinates in the global frame to the ego's frame.
-
-    If vertical then the frame is rotated so the ego is aligned
-    vertically (pi/2).
-    """
-    return rotate_coords(
-        coords - ego_pose[None, :2],
-        -ego_pose[3] - (math.pi / 2 if vertical else 0.0),
-    )
-
-
-class Viewer:
+class OpenCVViewer(Viewer):
     """
     General display class to visualise the Scenario Gym.
 
@@ -68,16 +32,17 @@ class Viewer:
 
     def __init__(
         self,
+        output_path: Optional[str],
         magnification: int = 10,
         fps: float = 30,
         headless_rendering: bool = True,
-        output_path: Optional[str] = None,
         render_entity: str = "ego",
-        render_layers: List[str] = ["driveable_surface", "walkable_surface"],
+        render_layers: Optional[List[str]] = None,
         codec: str = "avc1",
         line_thickness: int = 3,
         width: int = 100,
         height: int = 100,
+        window_name: str = "frame",
         **colors,
     ):
         """
@@ -116,15 +81,20 @@ class Viewer:
         height : int
             Height of the camera window in meters.
 
+        window_name : str
+            Name for the rendering window in non-headless mode.
+
         colors
             Color changes as keyword arguments.
 
         """
+        super().__init__(output_path)
         self.w = width
         self.h = height
         self.mag = magnification
         self.fps = fps
         self.entity_ref = render_entity
+        self.window_name = window_name
 
         self.background_color = (255, 255, 255)
         self.r_center_color = None
@@ -135,6 +105,9 @@ class Viewer:
         self.pavement_color = None
         self.crossing_color = None
         self.building_color = None
+
+        if render_layers is None:
+            render_layers = ["driveable_surface", "walkable_surface"]
 
         self.set_colors(render_layers, **colors)
         self.line_thickness = line_thickness
@@ -196,7 +169,7 @@ class Viewer:
         """Reset the frame to a black image."""
         return self.base_frame.copy()
 
-    def render(self, state: State, window_name: str = "frame") -> None:
+    def render(self, state: State) -> Optional[int]:
         """
         Display the state of the gym at a given time.
 
@@ -210,7 +183,7 @@ class Viewer:
         if self.headless_rendering:
             self.video_writer.write(frame)
         else:
-            cv2.imshow(window_name, frame)
+            cv2.imshow(self.window_name, frame)
             wait_time = 0 if self.fps == 0 else 1000 // self.fps
             key = cv2.waitKey(wait_time)
 
@@ -324,3 +297,41 @@ class Viewer:
         cv2.destroyAllWindows()
         if self.video_writer:
             self.video_writer.release()
+
+
+def rotate_coords(
+    X: np.ndarray,
+    theta: float,
+) -> np.ndarray:
+    """Rotate xy coordinates in X by angle theta."""
+    R = np.array(
+        [
+            [math.cos(theta), -math.sin(theta)],
+            [math.sin(theta), math.cos(theta)],
+        ]
+    )
+    return X.dot(R.T)
+
+
+def vec2pix(
+    X: np.ndarray, mag: int = 20, h: float = 100.0, w: float = 100.0
+) -> np.ndarray:
+    """Convert xy coordinates to pixel values."""
+    return (mag * (X + np.array([h / 2, w / 2]))).astype(np.int32)
+
+
+def to_ego_frame(
+    coords: np.ndarray,
+    ego_pose: np.ndarray,
+    vertical: bool = True,
+) -> np.ndarray:
+    """
+    Convert coordinates in the global frame to the ego's frame.
+
+    If vertical then the frame is rotated so the ego is aligned
+    vertically (pi/2).
+    """
+    return rotate_coords(
+        coords - ego_pose[None, :2],
+        -ego_pose[3] - (math.pi / 2 if vertical else 0.0),
+    )
