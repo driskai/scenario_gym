@@ -1,6 +1,6 @@
 from math import inf
 from types import MethodType
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from packaging import version
@@ -23,8 +23,6 @@ except ImportError:
     raise ImportError(
         "gym is required for this module. Install it with `pip install gym`."
     )
-
-Gym = TypeVar("ScenarioGym")
 
 
 class ScenarioGym(ScenarioGym, Env):
@@ -51,7 +49,9 @@ class ScenarioGym(ScenarioGym, Env):
         create_agent: Optional[
             Callable[[Scenario, Entity], Optional[Agent]]
         ] = None,
-        select_scenario: Optional[Callable[[Gym], Union[Scenario, str]]] = None,
+        select_scenario: Optional[
+            Callable[[ScenarioGym], Union[Scenario, str]]
+        ] = None,
         **kwargs,
     ):
         """
@@ -147,6 +147,8 @@ class ScenarioGym(ScenarioGym, Env):
                 self.load_scenario(s)
         elif self.state.scenario is None:
             raise ValueError("No scenario has been set.")
+        else:
+            self.reset_scenario()
 
         try:
             self.ego_agent = self.state.scenario.agents["ego"]
@@ -230,7 +232,9 @@ class ScenarioGym(ScenarioGym, Env):
         """Render the environment."""
         return super().render(video_path=video_path)
 
-    def load_scenario(self, *args, create_agent: Optional = None, **kwargs):
+    def load_scenario(
+        self, *args, create_agent: Optional[Callable] = None, **kwargs
+    ):
         """
         Load a scenario from an OpenScenario file.
 
@@ -240,7 +244,9 @@ class ScenarioGym(ScenarioGym, Env):
             create_agent = self.create_agent
         super().load_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def _set_scenario(self, *args, create_agent: Optional = None, **kwargs):
+    def _set_scenario(
+        self, *args, create_agent: Optional[Callable] = None, **kwargs
+    ):
         """
         Set the scenario explicitly.
 

@@ -178,6 +178,7 @@ class ScenarioGym:
         self.state.is_done = False
         self.state.t = Entity.INIT_PREV_T
         self.state.t = 0.0
+        self.state.next_t = self.state.t + self.timestep
         if self.state.scenario is not None:
             for agent in self.state.scenario.agents.values():
                 agent.reset()
