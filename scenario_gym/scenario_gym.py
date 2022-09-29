@@ -54,13 +54,9 @@ class ScenarioGym:
 
         """
         self.timestep = timestep
-        self.viewer_parameters = {
-            "headless_rendering": True,
-            "render_layers": ["driveable_surface"],
-            "render_entity": "ego",
-            "fps": int(1 / self.timestep),
-            **viewer_parameters,
-        }
+        if viewer_class is OpenCVViewer and "fps" not in viewer_parameters:
+            viewer_parameters["fps"] = int(1.0 / self.timestep)
+        self.viewer_parameters = viewer_parameters.copy()
 
         if terminal_conditions is None:
             terminal_conditions = ["max_length"]
@@ -235,23 +231,21 @@ class ScenarioGym:
 
     def setup_viewer(self, video_path: Optional[str] = None) -> None:
         """Create the viewer when rendering is started."""
-        if self.viewer_parameters["headless_rendering"]:
-            if video_path is None:
-                path = self.state.scenario.scenario_path
-                video_dir = os.path.join(os.path.dirname(path), "../Recordings")
-                if os.path.exists(video_dir):
-                    video_path = os.path.join(
-                        video_dir,
-                        os.path.splitext(
-                            os.path.basename(path),
-                        )[0]
-                        + ".mp4",
-                    )
-                else:
-                    video_path = (
-                        os.path.splitext(self.state.scenario.scenario_path)[0]
-                        + ".mp4"
-                    )
+        if video_path is None:
+            path = self.state.scenario.scenario_path
+            video_dir = os.path.join(os.path.dirname(path), "../Recordings")
+            if os.path.exists(video_dir):
+                video_path = os.path.join(
+                    video_dir,
+                    os.path.splitext(
+                        os.path.basename(path),
+                    )[0]
+                    + ".mp4",
+                )
+            else:
+                video_path = (
+                    os.path.splitext(self.state.scenario.scenario_path)[0] + ".mp4"
+                )
         self.viewer = self.viewer_class(video_path, **self.viewer_parameters)
 
     def close_viewer(self) -> None:

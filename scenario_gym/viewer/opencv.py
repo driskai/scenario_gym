@@ -107,7 +107,7 @@ class OpenCVViewer(Viewer):
         self.building_color = None
 
         if render_layers is None:
-            render_layers = ["driveable_surface", "walkable_surface"]
+            render_layers = ["driveable_surface"]
 
         self.set_colors(render_layers, **colors)
         self.line_thickness = line_thickness
