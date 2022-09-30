@@ -80,7 +80,7 @@ class ScenarioGym:
 
         Closes the viewer, removes any metrics and unloads the scenario.
         """
-        self.close_viewer()
+        self.close()
         self.state = State(
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
@@ -174,7 +174,7 @@ class ScenarioGym:
 
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
-        self.close_viewer()
+        self.close()
         self.state.is_done = False
         self.state.t = Entity.INIT_PREV_T
         self.state.t = 0.0
@@ -223,14 +223,18 @@ class ScenarioGym:
             agent.finish(self.state)
         self.close()
 
-    def render(self, video_path: Optional[str] = None) -> Optional[int]:
+    def render(self, video_path: Optional[str] = None) -> None:
         """Render the state of the gym."""
         if self.viewer is None:
-            self.setup_viewer()
+            self.reset_viewer(video_path=video_path)
         return self.viewer.render(self.state)
 
-    def setup_viewer(self, video_path: Optional[str] = None) -> None:
-        """Create the viewer when rendering is started."""
+    def reset_viewer(self, video_path: Optional[str] = None) -> None:
+        """Reset the viewer at the start of a new rollout."""
+        if self.viewer is None:
+            self.viewer = self.viewer_class(**self.viewer_parameters)
+        else:
+            self.viewer.close()
         if video_path is None:
             path = self.state.scenario.scenario_path
             video_dir = os.path.join(os.path.dirname(path), "../Recordings")
@@ -246,17 +250,13 @@ class ScenarioGym:
                 video_path = (
                     os.path.splitext(self.state.scenario.scenario_path)[0] + ".mp4"
                 )
-        self.viewer = self.viewer_class(video_path, **self.viewer_parameters)
-
-    def close_viewer(self) -> None:
-        """Close the viewer if it exists."""
-        if self.viewer is not None:
-            self.viewer.close()
-            self.viewer = None
+        self.viewer.reset(video_path)
 
     def close(self) -> None:
         """Close the gym."""
-        self.close_viewer()
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
 
     def record(self, close: bool = False) -> None:
         """

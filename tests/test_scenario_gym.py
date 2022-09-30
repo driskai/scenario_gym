@@ -44,10 +44,23 @@ def test_render(all_scenarios):
 
     gym = ScenarioGym(timestep=0.1)
     gym.load_scenario(scenario_path)
-    gym.reset_scenario()
     gym.rollout(render=True)
+    gym.rollout(
+        render=True,
+        video_path=scenario_path.replace("Scenarios", "Recordings").replace(
+            ".xosc", "_2.mp4"
+        ),
+    )
 
-    gym = ScenarioGym(timestep=0.1, render_layers=["driveable_surface", "centers"])
+
+def test_manual_rollout(all_scenarios):
+    """Test rollout manually."""
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
+
+    gym = ScenarioGym(timestep=0.2)
     gym.load_scenario(scenario_path)
-    gym.reset_scenario()
-    gym.rollout(render=True)
+    gym.render()
+    while not gym.state.is_done:
+        gym.step()
+        gym.render()
+    gym.close()

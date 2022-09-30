@@ -197,6 +197,8 @@ class Entity(ABC):
         """
         Compute the bounding box coordinates in the global frame for the given pose.
 
+        Returns in the order: RR, FR, FL, RL.
+
         Parameters
         ----------
         pose : Optional[ArrayLike]
