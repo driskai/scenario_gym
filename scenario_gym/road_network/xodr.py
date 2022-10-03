@@ -75,7 +75,6 @@ def road_to_sg(
         road_elevation = xyz_centre
 
         lanes = []
-        old_to_new_lanes = {}
         for lane in xodr_lane_section.lanes:
             sg_lane = xodr_lane_to_sg(lane, right_hand_drive, simplify_tolerance)
             if sg_lane is not None:
