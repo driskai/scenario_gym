@@ -126,6 +126,7 @@ class OpenCVViewer(Viewer):
 
         for k, v in {
             "background": (0, 0, 0),
+            "entity_front": (250, 250, 250),
             **self._renderable_layers,
             **colors,
         }.items():
@@ -202,7 +203,6 @@ class OpenCVViewer(Viewer):
         if self.video_writer:
             self.video_writer.release()
 
-    # @profile
     def draw_frame(self, state: State, e_ref: Optional[str] = "ego") -> None:
         """Render the given state around a given entity (by reference)."""
         ego_pose = self.get_center_pose(state, e_ref)
@@ -213,8 +213,6 @@ class OpenCVViewer(Viewer):
 
         for entity_idx, entity in enumerate(state.scenario.entities):
             self.draw_entity(entity_idx, entity, ego_pose)
-
-        # self._frame = np.ascontiguousarray(np.flip(self._frame, axis=1))
 
         if "text" in self.render_layers:
             self.render_text(state)
@@ -274,7 +272,7 @@ class OpenCVViewer(Viewer):
         xy = vec2pix(bbox_in_ego, mag=self.mag, h=self.h, w=self.w)
         xy_front = vec2pix(front_bbox, mag=self.mag, h=self.h, w=self.w)
         cv2.fillPoly(self._frame, [xy], c)
-        cv2.fillPoly(self._frame, [xy_front], (250, 250, 250))
+        cv2.fillPoly(self._frame, [xy_front], self.entity_front_color)
 
     def render_text(self, state: State) -> None:
         """Add text to the frame."""
@@ -290,7 +288,6 @@ class OpenCVViewer(Viewer):
             2,  # line type
         )
 
-    # @profile
     def draw_geom(
         self,
         geom: Union[Polygon, LineString],
