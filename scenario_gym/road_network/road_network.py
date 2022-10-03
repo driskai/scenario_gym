@@ -100,7 +100,6 @@ class RoadNetwork:
         # parse OpenDRIVE file
         xodr_network = xodrRoadNetwork(
             str(path),
-            fail_on_key_error=False,
             resolution=resolution,
         )
 
