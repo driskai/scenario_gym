@@ -48,7 +48,7 @@ def test_render(all_scenarios):
     gym.rollout(
         render=True,
         video_path=scenario_path.replace("Scenarios", "Recordings").replace(
-            ".xosc", "_2.mp4"
+            ".xosc", ".mp4"
         ),
     )
 
