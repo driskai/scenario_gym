@@ -104,6 +104,7 @@ class OpenCVViewer(Viewer):
         self.line_thickness = line_thickness
         self.centring_position = np.array([self.w / 2, self.w / 2])
         self.origin = np.array([0.0, 0.0])
+        self._coords_cache = {}
 
         if render_layers is None:
             render_layers = [
@@ -144,7 +145,7 @@ class OpenCVViewer(Viewer):
 
         self.base_frame = (
             np.ones(
-                [int(self.mag * self.h), int(self.mag * self.w), 3],
+                [int(self.mag * self.w), int(self.mag * self.h), 3],
                 dtype=np.uint8,
             )
             * np.array(self.background_color, dtype=np.uint8)[None, None, :]
@@ -185,6 +186,7 @@ class OpenCVViewer(Viewer):
         self._frame = self.reset_frame()
         self._state = self._entity_colour_dict = None
         self.video_writer = None
+        self._coords_cache = {}
         if self.headless_rendering:
             fourcc = cv2.VideoWriter_fourcc(*self.codec)
             self.video_writer = cv2.VideoWriter(
@@ -200,6 +202,7 @@ class OpenCVViewer(Viewer):
         if self.video_writer:
             self.video_writer.release()
 
+    # @profile
     def draw_frame(self, state: State, e_ref: Optional[str] = "ego") -> None:
         """Render the given state around a given entity (by reference)."""
         ego_pose = self.get_center_pose(state, e_ref)
@@ -211,7 +214,7 @@ class OpenCVViewer(Viewer):
         for entity_idx, entity in enumerate(state.scenario.entities):
             self.draw_entity(entity_idx, entity, ego_pose)
 
-        self._frame = np.flip(self._frame, axis=1).copy()
+        # self._frame = np.ascontiguousarray(np.flip(self._frame, axis=1))
 
         if "text" in self.render_layers:
             self.render_text(state)
@@ -287,6 +290,7 @@ class OpenCVViewer(Viewer):
             2,  # line type
         )
 
+    # @profile
     def draw_geom(
         self,
         geom: Union[Polygon, LineString],
@@ -294,19 +298,21 @@ class OpenCVViewer(Viewer):
         c: Color,
     ) -> None:
         """Render a polygon or linestring to the frame."""
+        if id(geom) not in self._coords_cache:
+            self._coords_cache[id(geom)] = np.array(
+                geom.exterior.xy if isinstance(geom, Polygon) else geom.xy
+            ).T
+        xy = to_ego_frame(self._coords_cache[id(geom)], ego_pose)
+        xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
+        cv2.fillPoly(self._frame, [xy], c)
+
         if isinstance(geom, Polygon):
-            xy = to_ego_frame(np.array(geom.exterior.xy).T, ego_pose)
-            xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-            cv2.fillPoly(self._frame, [xy], c)
             for interior in geom.interiors:
-                xy = to_ego_frame(np.array(interior.xy).T, ego_pose)
+                if id(interior) not in self._coords_cache:
+                    self._coords_cache[id(interior)] = np.array(interior.xy).T
+                xy = to_ego_frame(self._coords_cache[id(interior)], ego_pose)
                 xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
                 cv2.fillPoly(self._frame, [xy], self.background_color)
-
-        elif isinstance(geom, LineString):
-            xy = to_ego_frame(np.array(geom.xy).T, ego_pose)
-            xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-            cv2.polylines(self._frame, [xy], False, c, self.line_thickness)
 
     def render_driveable_surface(
         self,
