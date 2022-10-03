@@ -67,7 +67,6 @@ class RoadNetwork:
         filepath: str,
         resolution: float = 0.1,
         simplify_tolerance: float = 0.2,
-        right_hand_drive: bool = True,
     ):
         """
         Import a road network from an OpenDRIVE file.
@@ -105,7 +104,6 @@ class RoadNetwork:
 
         roads = xodr_to_sg_roads(
             xodr_network,
-            right_hand_drive,
             simplify_tolerance,
         )
         return cls(roads=roads, path=str(path))
