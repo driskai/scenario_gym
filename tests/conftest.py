@@ -69,10 +69,5 @@ def all_xodr_networks():
         "input_files",
         "Road_Networks",
     )
-    road_networks = [
-        "Ex_LHT-Complex-X-Junction",
-        "UC_LHT_Complex-TrafficLights",
-        "UC_Motorway-Exit-Entry",
-        "UC_Simple-X-Junction-TrafficLights",
-    ]
+    road_networks = []
     return {r: os.path.join(base, r + ".xodr") for r in road_networks}
