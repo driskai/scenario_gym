@@ -98,7 +98,7 @@ def xodr_to_sg_roads(
     simplify_tolerance: float,
 ) -> List[Road]:
     """
-    Convert an pyxodr road network to a list of roads.
+    Convert a pyxodr road network to a list of roads.
 
     Parameters
     ----------
