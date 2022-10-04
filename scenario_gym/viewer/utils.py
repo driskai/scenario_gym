@@ -21,7 +21,9 @@ def vec2pix(
     X: np.ndarray, mag: int = 20, h: float = 100.0, w: float = 100.0
 ) -> np.ndarray:
     """Convert xy coordinates to pixel values."""
-    return (mag * (X + np.array([h / 2, w / 2]))).astype(np.int32)
+    idxs = X + np.array([w / 2, h / 2])
+    idxs[:, 0] = w - idxs[:, 0]
+    return (mag * idxs).astype(np.int32)
 
 
 def to_ego_frame(
