@@ -51,7 +51,7 @@ setup(
     name="scenario_gym",
     packages=find_packages(
         where=".",
-        include=["scenario_gym"],
+        include=["scenario_gym", "scenario_gym.*"],
     ),
     version="0.1.0",
 )
