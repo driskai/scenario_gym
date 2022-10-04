@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from odr_importer.road_objects.network import RoadNetwork as xodrRoadNetwork
+from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
 from scipy.interpolate import interp2d
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union

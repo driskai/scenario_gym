@@ -2,8 +2,8 @@ from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
 import numpy as np
-from odr_importer.road_objects.lane import Lane as xodrLane
-from odr_importer.road_objects.network import RoadNetwork as xodrRoadNetwork
+from pyxodr.road_objects.lane import Lane as xodrLane
+from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
 from shapely.geometry import LineString, Polygon
 
 from scenario_gym.road_network import Lane, LaneType, Road
@@ -98,7 +98,7 @@ def xodr_to_sg_roads(
     simplify_tolerance: float,
 ) -> List[Road]:
     """
-    Convert an odr_importer road network to a list of roads.
+    Convert an pyxodr road network to a list of roads.
 
     Parameters
     ----------
