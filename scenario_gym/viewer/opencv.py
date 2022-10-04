@@ -279,7 +279,7 @@ class OpenCVViewer(Viewer):
         v = np.linalg.norm(state.scenario.entities[0].velocity[:3])
         cv2.putText(
             self._frame,
-            "Ego speed: {:.4f}".format(v),
+            "Ego speed: {:.2f}".format(v),
             (10, int(0.9 * self.mag * self.h)),  # bottom left corner of text
             cv2.FONT_HERSHEY_SIMPLEX,  # font
             1,  # font scale
