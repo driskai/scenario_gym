@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from odr_importer.road_objects.network import RoadNetwork as xodrRoadNetwork
+from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
 from scipy.interpolate import interp2d
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
@@ -67,7 +67,6 @@ class RoadNetwork:
         filepath: str,
         resolution: float = 0.1,
         simplify_tolerance: float = 0.2,
-        right_hand_drive: bool = True,
     ):
         """
         Import a road network from an OpenDRIVE file.
@@ -89,9 +88,6 @@ class RoadNetwork:
         simplify_tolerance : float
             Points per m for simplifying center and boundary lines.
 
-        right_hand_drive : bool
-            Whether the roads are right hand drive.
-
         """
         path = Path(filepath).absolute()
         if not path.exists():
@@ -100,13 +96,11 @@ class RoadNetwork:
         # parse OpenDRIVE file
         xodr_network = xodrRoadNetwork(
             str(path),
-            fail_on_key_error=False,
             resolution=resolution,
         )
 
         roads = xodr_to_sg_roads(
             xodr_network,
-            right_hand_drive,
             simplify_tolerance,
         )
         return cls(roads=roads, path=str(path))
