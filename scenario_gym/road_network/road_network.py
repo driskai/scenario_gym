@@ -88,9 +88,6 @@ class RoadNetwork:
         simplify_tolerance : float
             Points per m for simplifying center and boundary lines.
 
-        right_hand_drive : bool
-            Whether the roads are right hand drive.
-
         """
         path = Path(filepath).absolute()
         if not path.exists():

@@ -108,9 +108,6 @@ def xodr_to_sg_roads(
     simplify_tolerance : float
         Points per m for simplifying center and boundary lines.
 
-    right_hand_drive : bool
-        Whether the roads are right hand drive.
-
     """
     xodr_id_to_sg_road_objects: Dict[int, List[Road]] = {}
     xodr_lane_to_sg_lane: Dict[xodrLane, Lane] = {}
