@@ -66,6 +66,42 @@ class State:
         self._scenario = s
         self._scenario.t = self.t
 
+    def reset(self, t_minus1: float, t_0: float):
+        """
+        Reset the state to the initial timestep.
+
+        Parameters
+        ----------
+        t_minus1 : float
+            Time before the initial timestep to use for initial velocities.
+
+        t_0 : float
+            Initial timestep.
+
+        """
+        self.is_done = False
+        self.t = t_minus1
+        self.t = t_0
+        if self.scenario is not None:
+            for agent in self.scenario.agents.values():
+                agent.reset()
+        self.scenario.non_agents.reset()
+
+        for cb in self.state_callbacks:
+            cb.reset(self)
+        self.update_callbacks()
+
+        for action in self.scenario.actions:
+            action.reset()
+        self.update_actions()
+
+    def step(self) -> None:
+        """Update by one timestep."""
+        self.t = self.next_t
+        self.update_callbacks()
+        self.update_actions()
+        self.is_done = self.check_terminal()
+
     @property
     def t(self):
         """Get the time in seconds (s)."""
@@ -96,6 +132,12 @@ class State:
         """Update all state callbacks."""
         for m in self.state_callbacks:
             m(self)
+
+    def update_actions(self) -> None:
+        """Update state actions."""
+        for act in self.scenario.actions:
+            if not act.applied and self.t >= act.t:
+                act.apply(self, self.scenario.entity_by_name[act.entity_ref])
 
     def check_terminal(self) -> bool:
         """Check if the state is terminal."""

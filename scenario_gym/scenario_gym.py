@@ -97,6 +97,7 @@ class ScenarioGym:
         scenario_path: str,
         create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
         relabel: bool = False,
+        **kwargs,
     ) -> None:
         """
         Load a scenario from a file.
@@ -117,6 +118,7 @@ class ScenarioGym:
         scenario = import_scenario(
             scenario_path,
             relabel=relabel,
+            **kwargs,
         )
         self._set_scenario(scenario, create_agent=create_agent)
 
@@ -175,17 +177,7 @@ class ScenarioGym:
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        self.state.is_done = False
-        self.state.t = Entity.INIT_PREV_T
-        self.state.t = 0.0
-        if self.state.scenario is not None:
-            for agent in self.state.scenario.agents.values():
-                agent.reset()
-        self.state.scenario.non_agents.reset()
-
-        for cb in self.state.state_callbacks:
-            cb.reset(self.state)
-        self.state.update_callbacks()
+        self.state.reset(Entity.INIT_PREV_T, 0.0)
         for m in self.metrics:
             m.reset(self.state)
 
@@ -202,9 +194,7 @@ class ScenarioGym:
         # update the poses and current time
         for e, p in new_poses.items():
             e.pose = p
-        self.state.t = self.state.next_t
-        self.state.update_callbacks()
-        self.state.is_done = self.state.check_terminal()
+        self.state.step()
 
         # metrics and rendering
         for m in self.metrics:
