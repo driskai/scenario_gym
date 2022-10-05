@@ -8,7 +8,6 @@ from scenario_gym.recorder import ScenarioRecorder
 from scenario_gym.scenario import Scenario
 from scenario_gym.state import State
 from scenario_gym.viewer import Viewer
-from scenario_gym.viewer.opencv import OpenCVViewer
 from scenario_gym.xosc_interface import import_scenario
 
 
@@ -18,7 +17,7 @@ class ScenarioGym:
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
-        viewer_class: Type[Viewer] = OpenCVViewer,
+        viewer_class: Optional[Type[Viewer]] = None,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
         ] = None,
@@ -54,7 +53,7 @@ class ScenarioGym:
 
         """
         self.timestep = timestep
-        if viewer_class is OpenCVViewer and "fps" not in viewer_parameters:
+        if viewer_class is None and "fps" not in viewer_parameters:
             viewer_parameters["fps"] = int(1.0 / self.timestep)
         self.viewer_parameters = viewer_parameters.copy()
 
@@ -66,13 +65,28 @@ class ScenarioGym:
             state_callbacks = []
         self.state_callbacks = state_callbacks
 
-        self.viewer_class: Type[Viewer] = viewer_class
+        if viewer_class is None:
+            self._get_viewer()
+        else:
+            self.viewer_class = viewer_class
+            self._render_enabled = True
         self.viewer: Optional[Viewer] = None
         self.recorder: Optional[ScenarioRecorder] = None
         self.reset_gym()
 
         if metrics is not None:
             self.add_metrics(metrics)
+
+    def _get_viewer(self) -> None:
+        """Get the viewer if it is not provided."""
+        try:
+            from scenario_gym.viewer.opencv import OpenCVViewer
+
+            self.viewer_class = OpenCVViewer
+            self._render_enabled = True
+        except ImportError:
+            self._render_enabled = False
+            self.viewer_class = None
 
     def reset_gym(self) -> None:
         """
@@ -222,6 +236,12 @@ class ScenarioGym:
     def reset_viewer(self, video_path: Optional[str] = None) -> None:
         """Reset the viewer at the start of a new rollout."""
         if self.viewer is None:
+            if not self._render_enabled:
+                raise ValueError(
+                    "Rendering is disabled since no `viewer_class` was provided "
+                    "and the default viewer could not be imported. Perhaps OpenCV "
+                    "is not installed?"
+                )
             self.viewer = self.viewer_class(**self.viewer_parameters)
         else:
             self.viewer.close()

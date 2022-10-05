@@ -137,7 +137,7 @@ class State:
         """Update state actions."""
         for act in self.scenario.actions:
             if not act.applied and self.t >= act.t:
-                act.apply(self, self.scenario.entity_by_name[act.entity_ref])
+                act.apply(self, self.scenario.entity_by_name(act.entity_ref))
 
     def check_terminal(self) -> bool:
         """Check if the state is terminal."""

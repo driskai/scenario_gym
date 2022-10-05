@@ -74,6 +74,11 @@ class Entity(ABC):
         self._prev_pose = None
         self._recorded_poses.clear()
         self._distance_travelled = 0.0
+        self._reset()
+
+    def _reset(self) -> None:
+        """Reset the entity (for subclasses)."""
+        pass
 
     @property
     def pose(self) -> np.ndarray:

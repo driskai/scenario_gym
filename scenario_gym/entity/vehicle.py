@@ -33,12 +33,12 @@ class Axle(CatalogObject):
 class VehicleCatalogEntry(CatalogEntry):
     """Catalog entry for a vehicle."""
 
-    mass: float
-    max_speed: float
-    max_deceleration: float
-    max_acceleration: float
-    front_axle: Axle
-    rear_axle: Axle
+    mass: Optional[float]
+    max_speed: Optional[float]
+    max_deceleration: Optional[float]
+    max_acceleration: Optional[float]
+    front_axle: Optional[Axle]
+    rear_axle: Optional[Axle]
 
     xosc_names = ["Vehicle"]
 
@@ -49,13 +49,30 @@ class VehicleCatalogEntry(CatalogEntry):
         performance = element.find("Performance")
         front_axle = element.find("Axles/FrontAxle")
         rear_axle = element.find("Axles/RearAxle")
+        mass = float(element.attrib["mass"]) if "mass" in element.attrib else None
+        if performance is not None:
+            max_speed = float(performance.attrib["maxSpeed"])
+            max_dec = float(performance.attrib["maxDeceleration"])
+            max_acc = float(performance.attrib["maxAcceleration"])
+        else:
+            max_speed = max_dec = max_acc = None
+        front_axle = (
+            Axle.from_xml(catalog_name, front_axle)
+            if front_axle is not None
+            else None
+        )
+        rear_axle = (
+            Axle.from_xml(catalog_name, rear_axle)
+            if rear_axle is not None
+            else None
+        )
         veh_args = (
-            float(element.attrib["mass"]),
-            float(performance.attrib["maxSpeed"]),
-            float(performance.attrib["maxDeceleration"]),
-            float(performance.attrib["maxAcceleration"]),
-            Axle.from_xml(catalog_name, front_axle),
-            Axle.from_xml(catalog_name, rear_axle),
+            mass,
+            max_dec,
+            max_acc,
+            max_speed,
+            front_axle,
+            rear_axle,
         )
         return base_args + veh_args, {}
 
