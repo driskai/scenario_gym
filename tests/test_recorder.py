@@ -22,6 +22,7 @@ def test_recorder(all_scenarios) -> None:
     gym.record()
     gym.load_scenario(scenario_path)
     gym.rollout()
+    old_scenario = gym.state.scenario
     traj1 = gym.state.scenario.entities[0].trajectory
 
     gym.recorder.write_xml(out_path=out_path)
@@ -33,10 +34,17 @@ def test_recorder(all_scenarios) -> None:
     )
     gym.load_scenario(out_path)
     traj2 = gym.state.scenario.entities[0].trajectory
-
     assert (
         len(gym.state.scenario.entities) == n_entities
     ), "New scenario has a different number of entities."
+    assert all(
+        (
+            isinstance(entity, type(old_entity))
+            for entity, old_entity in zip(
+                old_scenario.entities, gym.state.scenario.entities
+            )
+        )
+    ), "Entities are not the same type."
     assert n_stationary == sum(
         1 for t in gym.state.scenario.trajectories.values() if len(t) == 1
     ), "New scenario has a different number of stationary entities."
