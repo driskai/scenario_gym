@@ -6,8 +6,8 @@ import numpy as np
 
 from scenario_gym.entity import Entity
 from scenario_gym.observation import Observation, SingleEntityPoseObservation
+from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.state import State
-from scenario_gym.utils import detect_collisions
 
 from .base import Sensor
 

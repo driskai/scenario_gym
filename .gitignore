@@ -138,3 +138,6 @@ dmypy.json
 
 # scenario data
 data
+tests/input_files/Recordings/*.mp4
+tests/input_files/Recordings/*.xosc
+*.DS_Store

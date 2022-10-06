@@ -197,9 +197,7 @@ class ScenarioGym(ScenarioGym, Env):
         # update the poses and current time
         for e, p in new_poses.items():
             e.pose = p
-        self.state.t = self.state.next_t
-        self.state.is_done = self.state.check_terminal()
-        self.state.update_callbacks()
+        self.state.step()
 
         # get reward of next state
         reward = self.ego_agent.reward(self.state)

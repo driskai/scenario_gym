@@ -5,6 +5,7 @@ requires = [
     "matplotlib>=3.4.2",
     "numpy>=1.22",
     "opencv-python>=4.5.3.56",
+    "pyxodr @ git+https://github.com/driskai/pyxodr",
     "PyYAML>=6.0",
     "setuptools>=58.0.4",
     "scenariogeneration>=0.7.4",
@@ -51,7 +52,7 @@ setup(
     name="scenario_gym",
     packages=find_packages(
         where=".",
-        include=["scenario_gym"],
+        include=["scenario_gym", "scenario_gym.*"],
     ),
     version="0.1.0",
 )

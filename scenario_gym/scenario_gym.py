@@ -8,7 +8,6 @@ from scenario_gym.recorder import ScenarioRecorder
 from scenario_gym.scenario import Scenario
 from scenario_gym.state import State
 from scenario_gym.viewer import Viewer
-from scenario_gym.viewer.opencv import OpenCVViewer
 from scenario_gym.xosc_interface import import_scenario
 
 
@@ -18,7 +17,7 @@ class ScenarioGym:
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
-        viewer_class: Type[Viewer] = OpenCVViewer,
+        viewer_class: Optional[Type[Viewer]] = None,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
         ] = None,
@@ -54,7 +53,7 @@ class ScenarioGym:
 
         """
         self.timestep = timestep
-        if viewer_class is OpenCVViewer and "fps" not in viewer_parameters:
+        if viewer_class is None and "fps" not in viewer_parameters:
             viewer_parameters["fps"] = int(1.0 / self.timestep)
         self.viewer_parameters = viewer_parameters.copy()
 
@@ -66,7 +65,11 @@ class ScenarioGym:
             state_callbacks = []
         self.state_callbacks = state_callbacks
 
-        self.viewer_class: Type[Viewer] = viewer_class
+        if viewer_class is None:
+            self._get_viewer()
+        else:
+            self.viewer_class = viewer_class
+            self._render_enabled = True
         self.viewer: Optional[Viewer] = None
         self.recorder: Optional[ScenarioRecorder] = None
         self.reset_gym()
@@ -74,13 +77,24 @@ class ScenarioGym:
         if metrics is not None:
             self.add_metrics(metrics)
 
+    def _get_viewer(self) -> None:
+        """Get the viewer if it is not provided."""
+        try:
+            from scenario_gym.viewer.opencv import OpenCVViewer
+
+            self.viewer_class = OpenCVViewer
+            self._render_enabled = True
+        except ImportError:
+            self._render_enabled = False
+            self.viewer_class = None
+
     def reset_gym(self) -> None:
         """
         Reset the state of the gym.
 
         Closes the viewer, removes any metrics and unloads the scenario.
         """
-        self.close_viewer()
+        self.close()
         self.state = State(
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
@@ -97,6 +111,7 @@ class ScenarioGym:
         scenario_path: str,
         create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
         relabel: bool = False,
+        **kwargs,
     ) -> None:
         """
         Load a scenario from a file.
@@ -117,6 +132,7 @@ class ScenarioGym:
         scenario = import_scenario(
             scenario_path,
             relabel=relabel,
+            **kwargs,
         )
         self._set_scenario(scenario, create_agent=create_agent)
 
@@ -174,19 +190,8 @@ class ScenarioGym:
 
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
-        self.close_viewer()
-        self.state.is_done = False
-        self.state.t = Entity.INIT_PREV_T
-        self.state.t = 0.0
-        self.state.next_t = self.state.t + self.timestep
-        if self.state.scenario is not None:
-            for agent in self.state.scenario.agents.values():
-                agent.reset()
-        self.state.scenario.non_agents.reset()
-
-        for cb in self.state.state_callbacks:
-            cb.reset(self.state)
-        self.state.update_callbacks()
+        self.close()
+        self.state.reset(Entity.INIT_PREV_T, 0.0)
         for m in self.metrics:
             m.reset(self.state)
 
@@ -203,9 +208,7 @@ class ScenarioGym:
         # update the poses and current time
         for e, p in new_poses.items():
             e.pose = p
-        self.state.t = self.state.next_t
-        self.state.update_callbacks()
-        self.state.is_done = self.state.check_terminal()
+        self.state.step()
 
         # metrics and rendering
         for m in self.metrics:
@@ -224,14 +227,24 @@ class ScenarioGym:
             agent.finish(self.state)
         self.close()
 
-    def render(self, video_path: Optional[str] = None) -> Optional[int]:
+    def render(self, video_path: Optional[str] = None) -> None:
         """Render the state of the gym."""
         if self.viewer is None:
-            self.setup_viewer()
+            self.reset_viewer(video_path=video_path)
         return self.viewer.render(self.state)
 
-    def setup_viewer(self, video_path: Optional[str] = None) -> None:
-        """Create the viewer when rendering is started."""
+    def reset_viewer(self, video_path: Optional[str] = None) -> None:
+        """Reset the viewer at the start of a new rollout."""
+        if self.viewer is None:
+            if not self._render_enabled:
+                raise ValueError(
+                    "Rendering is disabled since no `viewer_class` was provided "
+                    "and the default viewer could not be imported. Perhaps OpenCV "
+                    "is not installed?"
+                )
+            self.viewer = self.viewer_class(**self.viewer_parameters)
+        else:
+            self.viewer.close()
         if video_path is None:
             path = self.state.scenario.scenario_path
             video_dir = os.path.join(os.path.dirname(path), "../Recordings")
@@ -247,17 +260,13 @@ class ScenarioGym:
                 video_path = (
                     os.path.splitext(self.state.scenario.scenario_path)[0] + ".mp4"
                 )
-        self.viewer = self.viewer_class(video_path, **self.viewer_parameters)
-
-    def close_viewer(self) -> None:
-        """Close the viewer if it exists."""
-        if self.viewer is not None:
-            self.viewer.close()
-            self.viewer = None
+        self.viewer.reset(video_path)
 
     def close(self) -> None:
         """Close the gym."""
-        self.close_viewer()
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
 
     def record(self, close: bool = False) -> None:
         """
