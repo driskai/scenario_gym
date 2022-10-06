@@ -9,7 +9,17 @@ from scenario_gym.road_network import RoadNetwork
 
 
 class Trajectory:
-    """A ScenarioGym representation of a trajectory."""
+    """
+    A Scenario Gym representation of a trajectory.
+
+    Note that trajectories consist of immutable arrays. To modify a trajectory
+    one must copy the data and init a new one:
+    ```
+    new_data = trajectory.data.copy()
+    # apply changes
+    new_t = Trajectory(new_data)
+    ```
+    """
 
     _fields = ["t", "x", "y", "z", "h", "p", "r"]
     t: Optional[NDArray] = None
@@ -64,7 +74,11 @@ class Trajectory:
                     )
             _data.append(d)
             setattr(self, f, d)
+
+        # we will make the data readonly
         self.data = np.unique(np.array(_data).T, axis=0)
+        self.data.flags.writeable = False
+
         self._interpolated: Optional[Callable[[ArrayLike], NDArray]] = None
         self._interpolated_s: Optional[Callable[[ArrayLike], NDArray]] = None
 
