@@ -69,7 +69,7 @@ def import_scenario(
     filepath = os.path.join(cwd, rn_path)
     extension = os.path.splitext(filepath)[1]
     if extension == "":
-        filepath = "{filepath}.json"
+        filepath = f"{filepath}.json"
 
     if not os.path.exists(filepath):
         warnings.warn(f"Could not find road network file: {filepath}.")
