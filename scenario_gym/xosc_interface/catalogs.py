@@ -7,7 +7,7 @@ from lxml.etree import Element
 from scenario_gym.catalog_entry import CatalogEntry
 from scenario_gym.entity import Entity, Pedestrian, Vehicle
 
-DEFAULT_ENTITY_TYPES = [Vehicle, Pedestrian]
+DEFAULT_ENTITY_TYPES = (Vehicle, Pedestrian)
 
 
 def load_object(
@@ -27,7 +27,7 @@ def load_object(
 @lru_cache(maxsize=None)
 def read_catalog(
     catalog_file: str,
-    entity_types: Optional[List[Type[Entity]]] = None,
+    entity_types: Optional[Tuple[Type[Entity]]] = None,
 ) -> Tuple[str, Dict[str, Entity]]:
     """
     Read a catalog and return it's name and a dictionary of entities.
@@ -37,15 +37,16 @@ def read_catalog(
     catalog_file : str
         Filepath of the catalog file.
 
-    entity_types : Optional[List[Type[CatalogObject]]]
-        List of extra subclasses of CatalogObject that will be used when reading
-        catalogs. Can be used for reading custom objects from catalog files.
+    entity_types : Optional[Tuple[Type[CatalogObject]]]
+        Tuple of extra subclasses of CatalogObject that will be used when reading
+        catalogs. Can be used for reading custom objects from catalog files. Must
+        be immutable or lru_cache
 
     """
     if entity_types is None:
         entity_types = DEFAULT_ENTITY_TYPES
     else:
-        entity_types.extend(DEFAULT_ENTITY_TYPES)
+        entity_types = entity_types + DEFAULT_ENTITY_TYPES
 
     catalog_objects = [Ent._catalog_entry_type() for Ent in entity_types]
 

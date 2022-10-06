@@ -16,9 +16,15 @@ def test_read_catalog(all_catalogs):
             raise TypeError(f"No catalog type for {e}.")
 
     for catalog in all_catalogs.values():
+        if "Scenario_Gym" not in catalog:
+            continue
         _, entries = read_catalog(catalog)
         for e in entries.values():
-            test_entry(e)
+            try:
+                test_entry(e)
+            except TypeError as err:
+                print(catalog)
+                raise err
 
 
 def test_import_scenario(all_scenarios):

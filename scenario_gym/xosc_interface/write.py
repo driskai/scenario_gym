@@ -13,7 +13,7 @@ from scenario_gym.xosc_interface.utils import is_stationary
 def write_scenario(
     scenario: Scenario,
     filepath: str,
-    base_catalog_path: str = "../Catalogs",
+    base_catalog_path: str = "../Catalogs/Scenario_Gym",
     base_road_network_path: str = "../Road_Networks",
     osc_minor_version: int = 0,
 ) -> None:

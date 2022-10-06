@@ -163,8 +163,10 @@ def relabel_scenario(scenario: Scenario) -> Scenario:
     """
     vehicles, pedestrians, others = 0, 0, 0
     scenario.entities[0].ref = "ego"
+    old_to_new = {}
     for e in scenario.entities[1:]:
-        scenario._ref_to_entity.pop(e.ref)
+        cur = e.ref
+        scenario._ref_to_entity.pop(cur)
         if e.catalog_entry.catalog_type == "Vehicle":
             e.ref = f"vehicle_{vehicles}"
             vehicles += 1
@@ -175,6 +177,9 @@ def relabel_scenario(scenario: Scenario) -> Scenario:
             e.ref = f"other_{others}"
             others += 1
         scenario._ref_to_entity[e.ref] = e
+        old_to_new[cur] = e.ref
+    for action in scenario.actions:
+        action.entity_ref = old_to_new[action.entity_ref]
     return scenario
 
 

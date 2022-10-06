@@ -1,3 +1,4 @@
+import warnings
 from typing import Callable, Dict, List, Optional, Union
 
 from shapely.geometry import Point
@@ -137,6 +138,12 @@ class State:
         """Update state actions."""
         for act in self.scenario.actions:
             if not act.applied and self.t >= act.t:
+                entity = act.entity_ref
+                if entity is None:
+                    warnings.warn(
+                        f"No entity with name {entity.ref} was found for action "
+                        f"{act.__class__.__name__}."
+                    )
                 act.apply(self, self.scenario.entity_by_name(act.entity_ref))
 
     def check_terminal(self) -> bool:

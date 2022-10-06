@@ -1,10 +1,10 @@
 from abc import ABC, abstractclassmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Union
 
 from lxml.etree import Element
 
-ArgsKwargs = Tuple[Tuple[Any], Dict[str, Any]]
+from scenario_gym.utils import ArgsKwargs
 
 
 class CatalogObject(ABC):
@@ -80,6 +80,9 @@ class CatalogEntry(CatalogObject):
     catalog_type : str
         The catalog type e.g Vehicle or Pedestrian.
 
+    properties : Dict[str, Union[float, str]]
+        Any properties associated with the element.
+
     """
 
     catalog_name: str
@@ -87,6 +90,7 @@ class CatalogEntry(CatalogObject):
     catalog_category: Optional[str]
     catalog_type: str
     bounding_box: BoundingBox
+    properties: Dict[str, Union[float, str]]
 
     @classmethod
     def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
@@ -102,4 +106,26 @@ class CatalogEntry(CatalogObject):
             category,
             element.tag,
             bb,
+            cls.load_properties_from_xml(element),
         ), {}
+
+    @staticmethod
+    def load_properties_from_xml(element: Element) -> Dict[str, Union[str, float]]:
+        """
+        Load properties from the xml element.
+
+        These are given as `Property` elements with `name` and `value` attributes
+        and are returned as a dict of values indexed by `name`. The value will be
+        converted to a float if it can otherwise the string will be returned.
+        """
+        properties = {}
+        prop = element.find("Properties")
+        if prop is not None:
+            for child in prop.findall("Property"):
+                v = child.attrib["value"]
+                try:
+                    v = float(v)
+                except ValueError:
+                    pass
+                properties[child.attrib["name"]] = v
+        return properties

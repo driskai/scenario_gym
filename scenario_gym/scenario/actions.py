@@ -1,7 +1,10 @@
+import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TypeVar
 
 from scenario_gym.entity import Entity
+
+State = TypeVar("State")
 
 
 class ScenarioAction(ABC):
@@ -35,7 +38,7 @@ class ScenarioAction(ABC):
         entity_ref : str
             Reference of the entity to which the action applies.
 
-        action_variables : str
+        action_variables :  Dict[str, Any]
             Dictionary of action variables.
 
         """
@@ -55,15 +58,13 @@ class ScenarioAction(ABC):
         """Reset the action."""
         self._applied = False
 
-    def apply(self, state: "State", entity: Optional[Entity]) -> None:  # noqa: F821
+    def apply(self, state: State, entity: Optional[Entity]) -> None:
         """Apply the action to the environment state."""
         self._apply(state, entity)
         self._applied = True
 
     @abstractmethod
-    def _apply(
-        self, state: "State", entity: Optional[Entity]  # noqa: F821
-    ) -> None:
+    def _apply(self, state: State, entity: Optional[Entity]) -> None:
         """Apply the action to the environment state."""
         raise NotImplementedError
 
@@ -71,9 +72,16 @@ class ScenarioAction(ABC):
 class UpdateStateVariableAction(ScenarioAction):
     """Action that sets state variables for the entity."""
 
-    def _apply(
-        self, state: "State", entity: Optional[Entity]  # noqa: F821
-    ) -> None:
+    def _apply(self, state: State, entity: Optional[Entity]) -> None:
         """Update the entity with action variables."""
-        for k, v in self.action_variables.items():
-            setattr(entity, k, v)
+        if self.entity is not None:
+            for k, v in self.action_variables.items():
+                try:
+                    entity.k
+                except AttributeError:
+                    warnings.warn(
+                        f"The entity {entity} has no attribute {k} but action "
+                        f"{self.__class__.__name__} is trying to set {k}."
+                    )
+                    continue
+                setattr(entity, k, v)

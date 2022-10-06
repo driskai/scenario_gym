@@ -12,8 +12,8 @@ from scenario_gym.entity.pedestrian import Pedestrian
 from scenario_gym.entity.vehicle import Vehicle
 from scenario_gym.road_network import RoadNetwork, RoadObject
 from scenario_gym.scenario.actions import ScenarioAction
+from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.trajectory import Trajectory
-from scenario_gym.utils import detect_collisions
 
 
 class Scenario:
