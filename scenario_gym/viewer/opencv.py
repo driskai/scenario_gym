@@ -2,9 +2,9 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LinearRing, LineString, Polygon
 
-from scenario_gym.entity import Entity
+from scenario_gym.entity import Entity, Pedestrian, Vehicle
 from scenario_gym.state import State
 
 from .base import Viewer
@@ -233,21 +233,27 @@ class OpenCVViewer(Viewer):
 
     def get_entity_color(self, entity_idx: int, entity: Entity) -> Color:
         """Get the color to draw the given entity."""
-        if self._entity_colour_dict is None:
-            self._entity_colour_dict = {}
-        if entity_idx not in self._entity_colour_dict:
-            if entity_idx == 0:
-                c = (0, 0, 0)
-            else:
-                c = tuple(map(int, np.random.randint(256, size=3)))
-            self._entity_colour_dict[entity_idx] = c
-        return self._entity_colour_dict[entity_idx]
+        if entity_idx == 0:
+            c = (0, 0, 128)
+        elif isinstance(entity, Vehicle):
+            c = (128, 0, 0)
+        elif isinstance(entity, Pedestrian):
+            c = (0, 128, 0)
+        else:
+            c = (221, 160, 221)
+        return c
 
     def draw_entity(
         self, entity_idx: int, entity: Entity, ego_pose: np.ndarray
     ) -> None:
         """Draw the given entity onto the frame."""
-        c = self.get_entity_color(entity_idx, entity)
+        if self._entity_colour_dict is None:
+            self._entity_colour_dict = {}
+        if entity_idx not in self._entity_colour_dict:
+            self._entity_colour_dict[entity_idx] = self.get_entity_color(
+                entity_idx, entity
+            )
+        c = self._entity_colour_dict[entity_idx]
 
         # get the bounding box in the global frame
         bbox_coords = entity.get_bounding_box_points()
@@ -290,20 +296,28 @@ class OpenCVViewer(Viewer):
 
     def draw_geom(
         self,
-        geom: Union[Polygon, LineString],
+        geom: Union[Polygon, LineString, LinearRing],
         ego_pose: np.ndarray,
         c: Color,
     ) -> None:
         """Render a polygon or linestring to the frame."""
+        if not isinstance(geom, (Polygon, LineString, LinearRing)):
+            raise TypeError(f"{type(geom)} not supported.")
+
         if id(geom) not in self._coords_cache:
-            self._coords_cache[id(geom)] = np.array(
-                geom.exterior.xy if isinstance(geom, Polygon) else geom.xy
-            ).T
+            if isinstance(geom, Polygon):
+                coords = np.array(geom.exterior.xy).T
+            else:
+                coords = np.array(geom.xy).T
+            self._coords_cache[id(geom)] = coords
+
         xy = to_ego_frame(self._coords_cache[id(geom)], ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-        cv2.fillPoly(self._frame, [xy], c)
 
-        if isinstance(geom, Polygon):
+        if isinstance(geom, (LineString, LinearRing)):
+            cv2.polylines(self._frame, [xy], False, c, self.line_thickness)
+        else:
+            cv2.fillPoly(self._frame, [xy], c)
             for interior in geom.interiors:
                 if id(interior) not in self._coords_cache:
                     self._coords_cache[id(interior)] = np.array(interior.xy).T
@@ -332,7 +346,6 @@ class OpenCVViewer(Viewer):
             self.draw_geom(
                 geom.exterior, ego_pose, self.driveable_surface_boundary_color
             )
-
             for interior in geom.interiors:
                 self.draw_geom(
                     interior, ego_pose, self.driveable_surface_boundary_color

@@ -8,9 +8,12 @@ from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.vectorized import contains
 
 from scenario_gym.entity import BatchReplayEntity, Entity
+from scenario_gym.entity.pedestrian import Pedestrian
+from scenario_gym.entity.vehicle import Vehicle
 from scenario_gym.road_network import RoadNetwork, RoadObject
+from scenario_gym.scenario.actions import ScenarioAction
+from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.trajectory import Trajectory
-from scenario_gym.utils import detect_collisions
 
 
 class Scenario:
@@ -19,11 +22,14 @@ class Scenario:
     def __init__(self, name: Optional[str] = None):
         """Init the scenario."""
         self.name = name
-        self._entities: List[Entity] = []
+
         self.scenario_path: Optional[str] = None
         self.road_network: Optional[RoadNetwork] = None
         self.agents: Dict[str, "Agent"] = {}  # noqa F821
         self.non_agents = BatchReplayEntity()
+
+        self._actions: List[ScenarioAction] = []
+        self._entities: List[Entity] = []
         self._vehicles: Optional[List[Entity]] = None
         self._pedestrians: Optional[List[Entity]] = None
         self._t: Optional[float] = None
@@ -80,11 +86,7 @@ class Scenario:
     def vehicles(self) -> List[Entity]:
         """Get the entities that have vehicle catalogs."""
         if self._vehicles is None:
-            self._vehicles = [
-                e
-                for e in self.entities
-                if e.catalog_entry.catalog_type == "Vehicle"
-            ]
+            self._vehicles = [e for e in self.entities if isinstance(e, Vehicle)]
         return self._vehicles
 
     @property
@@ -92,11 +94,18 @@ class Scenario:
         """Get the entities that have pedestrian catalogs."""
         if self._pedestrians is None:
             self._pedestrians = [
-                e
-                for e in self.entities
-                if e.catalog_entry.catalog_type == "Pedestrian"
+                e for e in self.entities if isinstance(e, Pedestrian)
             ]
         return self._pedestrians
+
+    @property
+    def actions(self) -> List[ScenarioAction]:
+        """Return the actions attached to the scenario."""
+        return self._actions
+
+    def add_action(self, action: ScenarioAction) -> None:
+        """Add an action to the scenario."""
+        self._actions.append(action)
 
     @property
     def t(self) -> float:
