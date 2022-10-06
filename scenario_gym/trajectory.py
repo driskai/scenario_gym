@@ -10,13 +10,15 @@ from scenario_gym.road_network import RoadNetwork
 
 class Trajectory:
     """
-    A ScenarioGym representation of a trajectory.
+    A Scenario Gym representation of a trajectory.
 
-    Note taht trajectories consist of immutable arrays. To modify a trajectory
+    Note that trajectories consist of immutable arrays. To modify a trajectory
     one must copy the data and init a new one:
-        new_data = trajectory.data.cop()
-        # apply changes
-        new_t = Trajectory(new_data)
+    ```
+    new_data = trajectory.data.copy()
+    # apply changes
+    new_t = Trajectory(new_data)
+    ```
     """
 
     _fields = ["t", "x", "y", "z", "h", "p", "r"]
