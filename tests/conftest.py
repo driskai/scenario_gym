@@ -71,3 +71,19 @@ def all_xodr_networks():
     )
     road_networks = []
     return {r: os.path.join(base, r + ".xodr") for r in road_networks}
+
+
+@pt.fixture(scope="module")
+def all_catalogs():
+    """Get all OpenDRIVE road networks as a dictionary."""
+    base = os.path.join(
+        os.path.dirname(__file__),
+        "input_files",
+        "Catalogs",
+    )
+    catalogs = [
+        "Scenario_Gym/PedestrianCatalogs/ScenarioGymPedestrianCatalog",
+        "Scenario_Gym/VehicleCatalogs/ScenarioGymVehicleCatalog",
+        "Custom_Catalog/MiscCatalogs/CustomCatalog",
+    ]
+    return {r: os.path.join(base, r + ".xosc") for r in catalogs}

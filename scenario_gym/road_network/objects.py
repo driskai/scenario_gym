@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 from shapely.geometry import LineString, Polygon
 
+from scenario_gym.utils import ArgsKwargs
+
 from .base import RoadGeometry, RoadLike
 
 
@@ -39,7 +41,7 @@ class Lane(RoadLike):
     walkable = False
 
     @classmethod
-    def load_data_from_dict(cls, l: Dict[str, Any]):
+    def load_data_from_dict(cls, l: Dict[str, Any]) -> ArgsKwargs:
         """Create from dictionary."""
         args, kwargs = super().load_data_from_dict(l)
         typ = l["type"] if "type" in l else "driving"
@@ -102,7 +104,7 @@ class Road(RoadLike):
     walkable = False
 
     @classmethod
-    def load_data_from_dict(cls, r: Dict[str, Any]):
+    def load_data_from_dict(cls, r: Dict[str, Any]) -> ArgsKwargs:
         """Create from dictionary."""
         args, kwargs = super().load_data_from_dict(r)
         lanes = [Lane.from_dict(l) for l in r["lanes" if "lanes" in r else "Lanes"]]
@@ -138,7 +140,7 @@ class Intersection(RoadGeometry):
     walkable = False
 
     @classmethod
-    def load_data_from_dict(cls, i: Dict[str, Any]):
+    def load_data_from_dict(cls, i: Dict[str, Any]) -> ArgsKwargs:
         """Create from dictionary."""
         args, kwargs = super().load_data_from_dict(i)
         lanes = [Lane.from_dict(l) for l in i["lanes" if "lanes" in i else "Lanes"]]
@@ -188,7 +190,7 @@ class Crossing(RoadLike):
     driveable = False
 
     @classmethod
-    def load_data_from_dict(cls, c: Dict[str, Any]):
+    def load_data_from_dict(cls, c: Dict[str, Any]) -> ArgsKwargs:
         """Create from dictionary."""
         args, kwargs = super().load_data_from_dict(c)
         return (

@@ -1,8 +1,10 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
 from shapely.geometry import LineString, Polygon
 from shapely.validation import make_valid
+
+from scenario_gym.utils import ArgsKwargs
 
 from .utils import load_road_geometry_from_json, polygon_to_data
 
@@ -22,9 +24,7 @@ class RoadObject:
         return cls(*args, **kwargs)
 
     @classmethod
-    def load_data_from_dict(
-        cls, data: Dict[str, Any]
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+    def load_data_from_dict(cls, data: Dict[str, Any]) -> ArgsKwargs:
         """Load raw data from dictionary."""
         return (data["Id" if "Id" in data else "id"],), {}
 
@@ -69,9 +69,7 @@ class RoadGeometry(RoadObject):
     impenetrable = False
 
     @classmethod
-    def load_data_from_dict(
-        cls, data: Dict[str, Any]
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+    def load_data_from_dict(cls, data: Dict[str, Any]) -> ArgsKwargs:
         """Load raw data from dictionary."""
         (obj_id,), _ = super().load_data_from_dict(data)
         boundary, _ = load_road_geometry_from_json(data)
@@ -114,9 +112,7 @@ class RoadLike(RoadGeometry):
     """
 
     @classmethod
-    def load_data_from_dict(
-        cls, data: Dict[str, Any]
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+    def load_data_from_dict(cls, data: Dict[str, Any]) -> ArgsKwargs:
         """Load raw data from dictionary."""
         boundary, center = load_road_geometry_from_json(data)
         if "Elevation" in data and data["Elevation"] is not None:

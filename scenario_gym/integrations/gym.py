@@ -195,9 +195,7 @@ class ScenarioGym(ScenarioGym, Env):
         # update the poses and current time
         for e, p in new_poses.items():
             e.pose = p
-        self.state.t = self.state.next_t
-        self.state.is_done = self.state.check_terminal()
-        self.state.update_callbacks()
+        self.state.step()
 
         # get reward of next state
         reward = self.ego_agent.reward(self.state)
@@ -230,7 +228,9 @@ class ScenarioGym(ScenarioGym, Env):
         """Render the environment."""
         return super().render(video_path=video_path)
 
-    def load_scenario(self, *args, create_agent: Optional = None, **kwargs):
+    def load_scenario(
+        self, *args, create_agent: Optional[Callable] = None, **kwargs
+    ):
         """
         Load a scenario from an OpenScenario file.
 
@@ -240,7 +240,9 @@ class ScenarioGym(ScenarioGym, Env):
             create_agent = self.create_agent
         super().load_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def _set_scenario(self, *args, create_agent: Optional = None, **kwargs):
+    def _set_scenario(
+        self, *args, create_agent: Optional[Callable] = None, **kwargs
+    ):
         """
         Set the scenario explicitly.
 

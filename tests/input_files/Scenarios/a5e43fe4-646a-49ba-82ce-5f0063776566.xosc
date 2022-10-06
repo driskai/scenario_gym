@@ -3,7 +3,7 @@
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>
-            <Directory path="../Catalogs/VehicleCatalogs"/>
+            <Directory path="../Catalogs/Scenario_Gym/VehicleCatalogs"/>
         </VehicleCatalog>
     </CatalogLocations>
     <RoadNetwork>

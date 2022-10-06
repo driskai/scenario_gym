@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from shapely.geometry import LinearRing, LineString, Polygon
 
-from scenario_gym.entity import Entity
+from scenario_gym.entity import Entity, Pedestrian, Vehicle
 from scenario_gym.state import State
 
 from .base import Viewer
@@ -235,10 +235,12 @@ class OpenCVViewer(Viewer):
         """Get the color to draw the given entity."""
         if entity_idx == 0:
             c = (0, 0, 128)
-        elif entity.catalog_entry.catalog_type == "Vehicle":
+        elif isinstance(entity, Vehicle):
             c = (128, 0, 0)
-        else:
+        elif isinstance(entity, Pedestrian):
             c = (0, 128, 0)
+        else:
+            c = (221, 160, 221)
         return c
 
     def draw_entity(
