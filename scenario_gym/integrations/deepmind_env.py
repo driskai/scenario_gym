@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Any, Optional, Tuple
 
 from scenario_gym.agent import Agent
 from scenario_gym.scenario_gym import ScenarioGym
@@ -32,7 +32,7 @@ class ScenarioGym(ScenarioGym, Environment):
         obs = self._reset()
         return restart(obs)
 
-    def _reset(self):
+    def _reset(self) -> Any:
         if self.state.scenario is None:
             raise ValueError("No scenario has been set.")
         self.reset_scenario()
@@ -61,7 +61,7 @@ class ScenarioGym(ScenarioGym, Environment):
 
         return transition(reward, obs)
 
-    def _step(self, action):
+    def _step(self, action) -> Tuple[Any, float]:
         """Process the given action."""
         new_poses = {}
         for ref, agent in self.state.scenario.agents.items():
@@ -75,18 +75,16 @@ class ScenarioGym(ScenarioGym, Environment):
         # update the poses and current time
         for e, p in new_poses.items():
             e.pose = p
-        self.state.t = self.state.next_t
-        self.state.is_done = self.state.check_terminal()
-        self.state.update_callbacks()
+        self.state.step()
 
         # get reward of next state
         reward = self.ego_agent.reward(self.state)
 
         # rendering and metrics
-        if self.viewer is not None:
-            self.state.last_keystroke = self.render()
         for m in self.metrics:
             m.step(self.state)
+        if self.viewer is not None:
+            self.state.last_keystroke = self.render()
 
         # process ego part of next state
         self.state.next_t = self.state.t + self.timestep
@@ -99,16 +97,16 @@ class ScenarioGym(ScenarioGym, Environment):
         return ego_obs, reward
 
     @abstractmethod
-    def observation_spec(self):
+    def observation_spec(self) -> Any:
         """Return the observation spec for the environment."""
         raise NotImplementedError()
 
     @abstractmethod
-    def action_spec(self):
+    def action_spec(self) -> Any:
         """Return the action spec for the environment."""
         raise NotImplementedError()
 
-    def rollout(self, *args, **kwargs):
+    def rollout(self, *args, **kwargs) -> None:
         """Raise an error if rollout is called with this env."""
         raise NotImplementedError("Rollout is not supported for this environment.")
 
