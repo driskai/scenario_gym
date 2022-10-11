@@ -63,7 +63,8 @@ def make_scenario():
             "..",
             "tests",
             "input_files",
-            "catalogs",
+            "Catalogs",
+            "Scenario_Gym",
             "VehicleCatalogs",
             "ScenarioGymVehicleCatalog.xosc",
         )
@@ -87,7 +88,8 @@ def make_scenario():
             "..",
             "tests",
             "input_files",
-            "catalogs",
+            "Catalogs",
+            "Scenario_Gym",
             "PedestrianCatalogs",
             "ScenarioGymPedestrianCatalog.xosc",
         )
