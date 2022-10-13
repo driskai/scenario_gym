@@ -1,6 +1,6 @@
 from abc import ABC, abstractclassmethod
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from lxml.etree import Element
 
@@ -83,6 +83,9 @@ class CatalogEntry(CatalogObject):
     properties : Dict[str, Union[float, str]]
         Any properties associated with the element.
 
+    files: List[str]
+        A list of filepaths for external files.
+
     """
 
     catalog_name: str
@@ -91,6 +94,7 @@ class CatalogEntry(CatalogObject):
     catalog_type: str
     bounding_box: BoundingBox
     properties: Dict[str, Union[float, str]]
+    files: List[str]
 
     @classmethod
     def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
@@ -100,32 +104,47 @@ class CatalogEntry(CatalogObject):
         category = element.attrib[cname] if cname in element.attrib else None
         bb = element.find("BoundingBox")
         bb = BoundingBox.from_xml(catalog_name, bb)
+        properties, files = cls.load_properties_from_xml(element)
         return (
             catalog_name,
             entry_name,
             category,
             element.tag,
             bb,
-            cls.load_properties_from_xml(element),
+            properties,
+            files,
         ), {}
 
     @staticmethod
-    def load_properties_from_xml(element: Element) -> Dict[str, Union[str, float]]:
+    def load_properties_from_xml(
+        element: Element,
+    ) -> Tuple[Dict[str, Union[str, float]], List[str]]:
         """
         Load properties from the xml element.
 
-        These are given as `Property` elements with `name` and `value` attributes
-        and are returned as a dict of values indexed by `name`. The value will be
-        converted to a float if it can otherwise the string will be returned.
+        These can be either `Property` or `File` elements. `Property` elements are
+        given with `name` and `value` attributes (`name` must be unique for the
+        entry) and are returned as a dict of values indexed by `name`. The value
+        will be converted to a float if it can otherwise the string will be
+        returned. `File` elements must have a `filepath` attribute which will
+        be parsed. Multiple files can be stored with one entity.
         """
+        files = []
         properties = {}
         prop = element.find("Properties")
         if prop is not None:
             for child in prop.findall("Property"):
-                v = child.attrib["value"]
                 try:
-                    v = float(v)
-                except ValueError:
-                    pass
-                properties[child.attrib["name"]] = v
-        return properties
+                    v = child.attrib["value"]
+                    try:
+                        v = float(v)
+                    except ValueError:
+                        pass
+                    properties[child.attrib["name"]] = v
+                except KeyError:
+                    raise RuntimeError(
+                        "Property could not be loaded without `value` key."
+                    )
+            for file in prop.findall("File"):
+                files.append(file.attrib["filepath"])
+        return properties, files
