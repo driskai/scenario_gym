@@ -121,3 +121,26 @@ def test_all_stationary(all_scenarios) -> None:
         e.trajectory = Trajectory(np.zeros((1, 7)))
     gym.reset_scenario()
     gym.recorder.get_state()
+
+
+def test_mixed_catalogs(all_scenarios) -> None:
+    """Record and output a scenario with mixed catalog sets."""
+    scenario_path = all_scenarios["mixed_catalogs"]
+    out_path = scenario_path.replace("Scenarios", "Recordings").replace(
+        ".xosc", "_test.xosc"
+    )
+
+    # rollout and record
+    gym = ScenarioGym()
+    gym.record()
+    gym.load_scenario(scenario_path)
+    gym.rollout()
+    gym.recorder.write_xml(out_path=out_path)
+
+    old_locations = gym.state.scenario.catalog_locations.copy()
+
+    gym.load_scenario(out_path)
+
+    new_locations = gym.state.scenario.catalog_locations.copy()
+
+    assert old_locations == new_locations
