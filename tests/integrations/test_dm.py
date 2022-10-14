@@ -1,4 +1,5 @@
 import os
+import random
 
 import numpy as np
 from absl.testing import absltest
@@ -61,3 +62,20 @@ class EnvTest(EnvironmentTestMixin, absltest.TestCase):
             create_agent=ExampleEnv._create_agent,
         )
         return env
+
+
+def test_dm_env(all_scenarios):
+    """Test implementing an env with random scenario sampling."""
+    scenarios = list(all_scenarios.values())
+
+    def update_scenario(self):
+        """Sample a scenario to use."""
+        scenario = random.choice(scenarios)
+        self.load_scenario(scenario, create_agent=ExampleEnv._create_agent)
+
+    gym = ExampleEnv(update_scenario=update_scenario)
+
+    for _ in range(10):
+        timestep = gym.reset()
+        while not timestep.last:
+            timestep = gym.step(np.zeros(2))

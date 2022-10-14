@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from typing import Any, Optional, Tuple
+from types import MethodType
+from typing import Any, Callable, Optional, Tuple
 
 from scenario_gym.agent import Agent
 from scenario_gym.scenario_gym import ScenarioGym
@@ -23,16 +24,30 @@ class ScenarioGym(ScenarioGym, Environment):
     required for the ego agent for the chosen experiment.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        update_scenario: Optional[Callable[[ScenarioGym], None]] = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.ego_agent: Optional[Agent] = None
 
+        if update_scenario is not None:
+            self.update_scenario = MethodType(update_scenario, self)
+
+    def update_scenario(self) -> None:
+        """Update the loaded scenario when reset is called."""
+        pass
+
     def reset(self) -> TimeStep:
-        """Restart the chosen scenario."""
+        """Reset the environment."""
+        self.update_scenario()
         obs = self._reset()
         return restart(obs)
 
     def _reset(self) -> Any:
+        """Reset the environment."""
         if self.state.scenario is None:
             raise ValueError("No scenario has been set.")
         self.reset_scenario()
