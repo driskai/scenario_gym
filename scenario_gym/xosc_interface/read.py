@@ -48,8 +48,8 @@ def import_scenario(
     # Read catalogs:
     catalogs: Dict[str, Dict[str, Entity]] = {}
     for catalog_location in osc_root.iterfind("CatalogLocations/"):
-        catalog_path = catalog_location.find("Directory").attrib["path"]
-        catalog_path = os.path.join(cwd, catalog_path)
+        rel_catalog_path = catalog_location.find("Directory").attrib["path"]
+        catalog_path = os.path.join(cwd, rel_catalog_path)
         for catalog_file in os.listdir(catalog_path):
             if catalog_file.endswith(".xosc"):
                 name, entries = read_catalog(
@@ -57,6 +57,7 @@ def import_scenario(
                     entity_types=entity_types,
                 )
                 catalogs[name] = entries
+                scenario.add_catalog_location(name, rel_catalog_path)
 
     # Import road network:
     scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
@@ -122,10 +123,19 @@ def import_scenario(
         ), "Could not find entity reference in maneuver group."
         entity_ref = entity_ref.attrib["entityRef"]
         trajectory_points = []
-        for vertex in maneuver_group.iterfind(
+
+        vertices = maneuver_group.findall(
             "Maneuver/Event/Action/PrivateAction/RoutingAction/"
-            + "FollowTrajectoryAction/Trajectory/Shape/Polyline/Vertex"
-        ):
+            + "FollowTrajectoryAction/TrajectoryRef/Trajectory/Shape/"
+            + "Polyline/Vertex"
+        )
+        vertices.extend(
+            maneuver_group.findall(
+                "Maneuver/Event/Action/PrivateAction/RoutingAction/"
+                + "FollowTrajectoryAction/Trajectory/Shape/Polyline/Vertex"
+            )
+        )
+        for vertex in vertices:
             t = float(vertex.attrib["time"])
             wp = vertex.find("Position/WorldPosition")
             trajectory_points.append(traj_point_from_time_and_position(t, wp))

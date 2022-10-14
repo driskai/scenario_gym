@@ -63,3 +63,29 @@ def test_add_metric(all_scenarios):
     gym = ScenarioGym()
     gym.load_scenario(files[0])
     gym.rollout()
+
+
+def test_viewer_params(all_scenarios):
+    """Test adding a metric to the scenario."""
+    s = all_scenarios["3fee6507-fd24-432f-b781-ca5676c834ef"]
+    manager = ScenarioManager(
+        viewer_params={
+            "render_layers": ["driveable_surface", "text"],
+            "codec": "mp4v",
+        }
+    )
+    gym = manager.make_gym()
+    gym.load_scenario(s)
+    gym.render()
+    assert gym.viewer.render_layers == [
+        "driveable_surface",
+        "text",
+    ], "Parameter not passed."
+    assert gym.viewer.codec == "mp4v", "Parameter not passed."
+
+    # repeat with incorrect argument
+    manager = ScenarioManager(magnification=2)
+    gym = manager.make_gym()
+    gym.load_scenario(s)
+    gym.render()
+    assert gym.viewer.mag != 2, "Parameter should not be passed."

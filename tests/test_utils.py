@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest as pt
 
@@ -13,7 +15,7 @@ from scenario_gym.trajectory import Trajectory
 def collision_scenario():
     """Create a scenario with two entities that collide."""
     box = BoundingBox(2.0, 5.0, 0.0, 0.0)
-    ce = CatalogEntry("car", "car", "car", "car", box, {})
+    ce = CatalogEntry("car", "car", "car", "car", box, {}, [])
     ego = Entity(ce, ref="ego")
     hazard = Entity(ce, ref="entity_1")
 
@@ -37,8 +39,10 @@ def collision_scenario():
     )
 
     scenario = Scenario()
-    scenario.add_entity(ego)
-    scenario.add_entity(hazard)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        scenario.add_entity(ego)
+        scenario.add_entity(hazard)
     return scenario, ego, hazard
 
 
