@@ -8,22 +8,37 @@ from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.vectorized import contains
 
 from scenario_gym.entity import BatchReplayEntity, Entity
+from scenario_gym.entity.pedestrian import Pedestrian
+from scenario_gym.entity.vehicle import Vehicle
 from scenario_gym.road_network import RoadNetwork, RoadObject
+from scenario_gym.scenario.actions import ScenarioAction
+from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.trajectory import Trajectory
-from scenario_gym.utils import detect_collisions
 
 
 class Scenario:
-    """The scenario_gym representation of a scenario."""
+    """
+    The scenario_gym representation of a scenario.
+
+    A scenario consists of a set of entities and a road network. The entities have
+    trajectories and catalog entries and may have additional entity specific
+    properties. The scenario also may have a list of actions which can specify
+    events that occur. E.g. a traffic light changing color.
+
+    """
 
     def __init__(self, name: Optional[str] = None):
         """Init the scenario."""
         self.name = name
-        self._entities: List[Entity] = []
+
         self.scenario_path: Optional[str] = None
         self.road_network: Optional[RoadNetwork] = None
         self.agents: Dict[str, "Agent"] = {}  # noqa F821
         self.non_agents = BatchReplayEntity()
+
+        self._actions: List[ScenarioAction] = []
+        self._catalog_locations: Dict[str, str] = {}
+        self._entities: List[Entity] = []
         self._vehicles: Optional[List[Entity]] = None
         self._pedestrians: Optional[List[Entity]] = None
         self._t: Optional[float] = None
@@ -36,8 +51,30 @@ class Scenario:
         """Get the entities in the scenario."""
         return self._entities
 
-    def add_entity(self, e: Entity) -> None:
+    def add_entity(self, e: Entity, catalog_location: Optional[str] = None) -> None:
         """Add a new entity to the scenario."""
+        if e.catalog_entry.catalog_name not in self.catalog_locations:
+            if catalog_location is None:
+                warnings.warn(
+                    f"Catalog file {e.catalog_entry.catalog_name} does not exist "
+                    "and has not been provided. This will mean the scenario cannot "
+                    "be written to OpenSCENARIO. Add the catalog location by "
+                    "providing `catalog_location=[filepath to xosc]` or via "
+                    "`scenario.add_catalog_location`."
+                )
+            else:
+                self.add_catalog_location(
+                    e.catalog_entry.catalog_name,
+                    catalog_location,
+                )
+        elif catalog_location is not None and (
+            self.catalog_locations[e.catalog_entry.catalog_name] == catalog_location
+        ):
+            raise ValueError(
+                "Different `catalog_location` already exists for "
+                f"{e.catalog_entry.catalog_name}."
+            )
+
         e.t = self.t
         if e.ref in self._ref_to_entity:
             i = 0
@@ -80,11 +117,7 @@ class Scenario:
     def vehicles(self) -> List[Entity]:
         """Get the entities that have vehicle catalogs."""
         if self._vehicles is None:
-            self._vehicles = [
-                e
-                for e in self.entities
-                if e.catalog_entry.catalog_type == "Vehicle"
-            ]
+            self._vehicles = [e for e in self.entities if isinstance(e, Vehicle)]
         return self._vehicles
 
     @property
@@ -92,11 +125,31 @@ class Scenario:
         """Get the entities that have pedestrian catalogs."""
         if self._pedestrians is None:
             self._pedestrians = [
-                e
-                for e in self.entities
-                if e.catalog_entry.catalog_type == "Pedestrian"
+                e for e in self.entities if isinstance(e, Pedestrian)
             ]
         return self._pedestrians
+
+    @property
+    def catalog_locations(self) -> Dict[str, str]:
+        """
+        Get the filepaths for each catalog.
+
+        These are indexed by the name.
+        """
+        return self._catalog_locations
+
+    def add_catalog_location(self, catalog_name: str, filepath: str) -> None:
+        """Add a catalog location to the scenario."""
+        self._catalog_locations[catalog_name] = filepath
+
+    @property
+    def actions(self) -> List[ScenarioAction]:
+        """Return the actions attached to the scenario."""
+        return self._actions
+
+    def add_action(self, action: ScenarioAction) -> None:
+        """Add an action to the scenario."""
+        self._actions.append(action)
 
     @property
     def t(self) -> float:

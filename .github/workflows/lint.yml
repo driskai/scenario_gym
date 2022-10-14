@@ -2,42 +2,32 @@ name: Lint
 
 on:
   # Trigger the workflow on push or pull request,
-  # but only for the main branch
+  # but only for the main and develop branches
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
+      - develop
 
 jobs:
   run-linters:
     name: Run linters
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v1
+    steps: 
+      - uses: actions/checkout@v2 
+ 
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
         with:
-          python-version: 3.8
-
-      - name: Install Python dependencies
-        run: pip install black==22.3.0 flake8==3.9.2
-
-      - name: Run linters
-        uses: wearerequired/lint-action@v2
-        with:
-          black: true
-          black_args: --line-length 84 --exclude examples
-          flake8: true
-          flake8_args: >-
-            --ignore C901,E203,E741,W503,BLK100
-            --max-line-length 84
-            --max-complexity 18
-            --select B,C,E,F,W,T4,B9
-            --per-file-ignores '__init__.py:F401'
-            --exclude examples
+          python-version: "3.10"
+          architecture: "x64"
+ 
+      - name: pre-commit-run 
+        run: | 
+          pip install pre-commit 
+          pre-commit run --all-files 
           

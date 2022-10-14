@@ -1,4 +1,5 @@
 import numpy as np
+import pytest as pt
 
 from scenario_gym.trajectory import Trajectory, _resolve_heading
 
@@ -46,3 +47,12 @@ def test_resolve_heading():
     assert (
         np.abs(np.diff(delta)).sum() <= np.abs(np.diff(data)).sum()
     ), "Stepwise distance should be reduced."
+
+
+def test_immutable_traj():
+    """Test that trajectories are copied correctly."""
+    data = np.repeat(np.arange(10, dtype=np.float32)[:, None], 4, axis=1)  # (10, 4)
+    traj = Trajectory(data, fields=["t", "x", "y", "h"])
+
+    with pt.raises(ValueError):
+        traj.data[-1][0] = 11

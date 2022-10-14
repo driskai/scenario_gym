@@ -36,6 +36,7 @@ def all_scenarios():
         "e1bdb607-206b-4f40-9bc4-59ded182ecc8",
         "e56ae853-4266-4c30-865f-96737d87b601",
         "fbb6b5ca-3fcb-4a7b-9757-b8554a753e69",
+        "mixed_catalogs",
     ]
     base = os.path.join(os.path.dirname(__file__), "input_files", "Scenarios")
     scenarios = {f: os.path.join(base, f + ".xosc") for f in scenarios}
@@ -59,3 +60,31 @@ def all_road_networks():
         "dRisk Unity 6-lane Intersection",
     ]
     return {r: os.path.join(base, r + ".json") for r in road_networks}
+
+
+@pt.fixture(scope="module")
+def all_xodr_networks():
+    """Get all OpenDRIVE road networks as a dictionary."""
+    base = os.path.join(
+        os.path.dirname(__file__),
+        "input_files",
+        "Road_Networks",
+    )
+    road_networks = []
+    return {r: os.path.join(base, r + ".xodr") for r in road_networks}
+
+
+@pt.fixture(scope="module")
+def all_catalogs():
+    """Get all OpenDRIVE road networks as a dictionary."""
+    base = os.path.join(
+        os.path.dirname(__file__),
+        "input_files",
+        "Catalogs",
+    )
+    catalogs = [
+        "Scenario_Gym/PedestrianCatalogs/ScenarioGymPedestrianCatalog",
+        "Scenario_Gym/VehicleCatalogs/ScenarioGymVehicleCatalog",
+        "Custom_Catalog/MiscCatalogs/CustomCatalog",
+    ]
+    return {r: os.path.join(base, r + ".xosc") for r in catalogs}

@@ -22,6 +22,7 @@ def test_recorder(all_scenarios) -> None:
     gym.record()
     gym.load_scenario(scenario_path)
     gym.rollout()
+    old_scenario = gym.state.scenario
     traj1 = gym.state.scenario.entities[0].trajectory
 
     gym.recorder.write_xml(out_path=out_path)
@@ -33,10 +34,17 @@ def test_recorder(all_scenarios) -> None:
     )
     gym.load_scenario(out_path)
     traj2 = gym.state.scenario.entities[0].trajectory
-
     assert (
         len(gym.state.scenario.entities) == n_entities
     ), "New scenario has a different number of entities."
+    assert all(
+        (
+            isinstance(entity, type(old_entity))
+            for entity, old_entity in zip(
+                old_scenario.entities, gym.state.scenario.entities
+            )
+        )
+    ), "Entities are not the same type."
     assert n_stationary == sum(
         1 for t in gym.state.scenario.trajectories.values() if len(t) == 1
     ), "New scenario has a different number of stationary entities."
@@ -113,3 +121,26 @@ def test_all_stationary(all_scenarios) -> None:
         e.trajectory = Trajectory(np.zeros((1, 7)))
     gym.reset_scenario()
     gym.recorder.get_state()
+
+
+def test_mixed_catalogs(all_scenarios) -> None:
+    """Record and output a scenario with mixed catalog sets."""
+    scenario_path = all_scenarios["mixed_catalogs"]
+    out_path = scenario_path.replace("Scenarios", "Recordings").replace(
+        ".xosc", "_test.xosc"
+    )
+
+    # rollout and record
+    gym = ScenarioGym()
+    gym.record()
+    gym.load_scenario(scenario_path)
+    gym.rollout()
+    gym.recorder.write_xml(out_path=out_path)
+
+    old_locations = gym.state.scenario.catalog_locations.copy()
+
+    gym.load_scenario(out_path)
+
+    new_locations = gym.state.scenario.catalog_locations.copy()
+
+    assert old_locations == new_locations
