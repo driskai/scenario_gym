@@ -13,7 +13,6 @@ from scenario_gym.metrics import Metric
 from scenario_gym.scenario import Scenario
 from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.sensor import EgoLocalizationSensor
-from scenario_gym.viewer import Viewer
 
 
 def load_keywords(obj: Type, exclude: List[str] = []) -> Dict[str, Any]:
@@ -30,7 +29,6 @@ class ScenarioManager:
     """Provides functionality to manage running large numbers of scenarios."""
 
     GYM_PARAMETERS = load_keywords(ScenarioGym, exclude=["metrics"])
-    VIEWER_PARAMETERS = load_keywords(Viewer, exclude=["output_path", "fps"])
     PARAMETERS = {}
 
     @classmethod
@@ -88,7 +86,8 @@ class ScenarioManager:
     def __init__(
         self,
         config_path: Optional[str] = None,
-        metrics: List[Metric] = [],
+        metrics: Optional[List[Metric]] = None,
+        viewer_params: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         """
@@ -99,8 +98,13 @@ class ScenarioManager:
         config_path : Optional[str]
             A path to a yaml file of the parameters to be used.
 
-        metrics : List[Metric]
+        metrics : Optional[List[Metric]]
             List of metrics to measure.
+
+        viewer_params : Optional[Dict[str, Any]]
+            Dictionary of parameters to use for the Viewer. Since the viewer can be
+            a custom class its parameters should be passed as a dictionary so the
+            manager will know which parameters should be passed for it.
 
         **kwargs:
             Parameters given as keywords. Will override any parameters
@@ -108,7 +112,8 @@ class ScenarioManager:
 
         """
         self.load_params(path=config_path, **kwargs)
-        self.metrics = metrics.copy()
+        self.metrics = metrics.copy() if metrics is not None else []
+        self.viewer_params = viewer_params.copy() if viewer_params else {}
 
     def load_params(self, config_path: Optional[str] = None, **kwargs) -> None:
         """Load all parameters required and set them as attributes."""
@@ -116,7 +121,6 @@ class ScenarioManager:
         self.PARAMETERS = self.PARAMETERS.copy()
         self.combined_config = {
             **self.GYM_PARAMETERS,
-            **self.VIEWER_PARAMETERS,
             **self.PARAMETERS,
             **params,
             **kwargs,
@@ -148,12 +152,21 @@ class ScenarioManager:
     @property
     def viewer_parameter_names(self) -> List[str]:
         """Return the names of all viewer parameters."""
-        return list(self.VIEWER_PARAMETERS)
+        return list(self.viewer_params)
 
     @property
     def viewer_parameters(self) -> Dict[str, Any]:
         """Return the parameters needed for the rendering module."""
-        return {k: getattr(self, k) for k in self.VIEWER_PARAMETERS}
+        return self.viewer_params
+
+    def make_gym(self, **kwargs) -> ScenarioGym:
+        """Create a gym instance with the given config."""
+        return ScenarioGym(
+            metrics=self.metrics,
+            **self.gym_parameters,
+            **self.viewer_parameters,
+            **kwargs,
+        )
 
     def create_agent(self, scenario: Scenario, entity: Entity) -> Agent:
         """
@@ -208,11 +221,7 @@ class ScenarioManager:
             Whether to record the scenario to OpenScenario.
 
         """
-        gym = ScenarioGym(
-            metrics=self.metrics,
-            **self.gym_parameters,
-            **self.viewer_parameters,
-        )
+        gym = self.make_gym()
         if record:
             gym.record()
         if isinstance(scenario, str):
@@ -257,11 +266,7 @@ class ScenarioManager:
 
         """
         results = []
-        gym = ScenarioGym(
-            metrics=self.metrics,
-            **self.gym_parameters,
-            **self.viewer_parameters,
-        )
+        gym = self.make_gym()
         if record:
             gym.record()
         for scenario in scenarios:

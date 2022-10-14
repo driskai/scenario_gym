@@ -49,3 +49,4 @@ def test_custom_catalog(all_catalogs):
     ent = out["misc_object"]
     assert ent.catalog_entry.catalog_entry == "misc_object"
     assert ent.catalog_entry.mystery_property == 100
+    assert set(ent.catalog_entry.files) == set(["test.txt", "test2.txt"])

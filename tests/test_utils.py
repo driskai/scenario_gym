@@ -15,7 +15,7 @@ from scenario_gym.trajectory import Trajectory
 def collision_scenario():
     """Create a scenario with two entities that collide."""
     box = BoundingBox(2.0, 5.0, 0.0, 0.0)
-    ce = CatalogEntry("car", "car", "car", "car", box, {})
+    ce = CatalogEntry("car", "car", "car", "car", box, {}, [])
     ego = Entity(ce, ref="ego")
     hazard = Entity(ce, ref="entity_1")
 
