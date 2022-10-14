@@ -42,6 +42,15 @@ def read_catalog(
         catalogs. Can be used for reading custom objects from catalog files. Must
         be immutable or lru_cache
 
+    Returns
+    -------
+    catalog_name : str
+        The name of the catalog from the Catalog element.
+
+    entries : Dict[str, Entity]
+        A dictionary mapping each entry name to an entity with that catalog entry.
+        These can then be cloned to create entities using the chosen catalog entry.
+
     """
     if entity_types is None:
         entity_types = DEFAULT_ENTITY_TYPES

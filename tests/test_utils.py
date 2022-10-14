@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest as pt
 
@@ -37,8 +39,10 @@ def collision_scenario():
     )
 
     scenario = Scenario()
-    scenario.add_entity(ego)
-    scenario.add_entity(hazard)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        scenario.add_entity(ego)
+        scenario.add_entity(hazard)
     return scenario, ego, hazard
 
 

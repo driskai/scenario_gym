@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 from shapely.geometry import Polygon
@@ -30,7 +31,9 @@ def detect_geom_collisions(
 
     """
     all_geoms = geoms if others is None else geoms + others
-    tree = STRtree(all_geoms)
+    with warnings.catch_warnings():  # STRTree not included in Shapely 2.0
+        warnings.simplefilter("ignore")
+        tree = STRtree(all_geoms)
     return {
         id(g): [
             g_prime

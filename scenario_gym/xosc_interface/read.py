@@ -48,8 +48,8 @@ def import_scenario(
     # Read catalogs:
     catalogs: Dict[str, Dict[str, Entity]] = {}
     for catalog_location in osc_root.iterfind("CatalogLocations/"):
-        catalog_path = catalog_location.find("Directory").attrib["path"]
-        catalog_path = os.path.join(cwd, catalog_path)
+        rel_catalog_path = catalog_location.find("Directory").attrib["path"]
+        catalog_path = os.path.join(cwd, rel_catalog_path)
         for catalog_file in os.listdir(catalog_path):
             if catalog_file.endswith(".xosc"):
                 name, entries = read_catalog(
@@ -57,6 +57,7 @@ def import_scenario(
                     entity_types=entity_types,
                 )
                 catalogs[name] = entries
+                scenario.add_catalog_location(name, rel_catalog_path)
 
     # Import road network:
     scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
