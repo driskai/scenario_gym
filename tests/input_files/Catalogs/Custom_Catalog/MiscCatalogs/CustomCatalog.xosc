@@ -5,6 +5,8 @@
     <CustomObject objectCategory="misc" name="misc_object">
       <Properties>
         <Property name="prop" value="64"/>
+        <File filepath="test.txt"/>
+        <File filepath="test2.txt"/>
       </Properties>
       <BoundingBox>
         <Center x="1.37" y="0" z="0.65" />
