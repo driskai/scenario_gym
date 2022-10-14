@@ -20,10 +20,10 @@
             <CatalogReference catalogName="ScenarioGymVehicleCatalog" entryName="car1"/>
         </ScenarioObject>
         <ScenarioObject name="entity_2">
-            <CatalogReference catalogName="CustomCatalog" entryName="misc_object"/>
+            <CatalogReference catalogName="CustomVehicleCatalog" entryName="misc_object"/>
         </ScenarioObject>
         <ScenarioObject name="entity_3">
-            <CatalogReference catalogName="CustomCatalog" entryName="misc_object"/>
+            <CatalogReference catalogName="CustomVehicleCatalog" entryName="misc_object"/>
         </ScenarioObject>
     </Entities>
     <Storyboard>

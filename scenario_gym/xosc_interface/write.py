@@ -13,7 +13,6 @@ from scenario_gym.xosc_interface.utils import is_stationary
 def write_scenario(
     scenario: Scenario,
     filepath: str,
-    base_catalog_path: str = "../Catalogs/",
     base_road_network_path: str = "../Road_Networks",
     osc_minor_version: int = 0,
 ) -> None:
@@ -47,10 +46,7 @@ def write_scenario(
     for e in scenario.entities:
         ce = e.catalog_entry
         if ce.catalog_type not in catalog.catalogs:
-            catalog_dir = os.path.join(
-                base_catalog_path,
-                scenario.catalog_locations[ce.catalog_name],
-            )
+            catalog_dir = scenario.catalog_locations[ce.catalog_name]
             catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
         catalog_ref = xosc.CatalogReference(ce.catalog_name, ce.catalog_entry)
         entities.add_scenario_object(e.ref, catalog_ref)

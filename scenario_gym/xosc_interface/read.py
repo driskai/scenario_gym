@@ -123,10 +123,19 @@ def import_scenario(
         ), "Could not find entity reference in maneuver group."
         entity_ref = entity_ref.attrib["entityRef"]
         trajectory_points = []
-        for vertex in maneuver_group.iterfind(
+
+        vertices = maneuver_group.findall(
             "Maneuver/Event/Action/PrivateAction/RoutingAction/"
-            + "FollowTrajectoryAction/Trajectory/Shape/Polyline/Vertex"
-        ):
+            + "FollowTrajectoryAction/TrajectoryRef/Trajectory/Shape/"
+            + "Polyline/Vertex"
+        )
+        vertices.extend(
+            maneuver_group.findall(
+                "Maneuver/Event/Action/PrivateAction/RoutingAction/"
+                + "FollowTrajectoryAction/Trajectory/Shape/Polyline/Vertex"
+            )
+        )
+        for vertex in vertices:
             t = float(vertex.attrib["time"])
             wp = vertex.find("Position/WorldPosition")
             trajectory_points.append(traj_point_from_time_and_position(t, wp))
