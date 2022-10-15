@@ -46,13 +46,13 @@ class Trajectory:
             must be a subset of _fields.
 
         """
-        assert all(f in fields for f in ["t", "x", "y"])
+        assert all(f in fields for f in ("t", "x", "y"))
         _data: List[NDArray] = []
         if "h" in fields:
             data[:, fields.index("h")] = _resolve_heading(
                 data[:, fields.index("h")]
             )
-        for i, f in enumerate(self._fields):
+        for f in self._fields:
             d = data[:, fields.index(f)] if f in fields else np.zeros(data.shape[0])
             if np.isnan(d).sum() != 0:
                 if f == "h" and data.shape[0] == 1:
@@ -66,7 +66,7 @@ class Trajectory:
                         fill_value="extrapolate",
                     )
                     d = np.arctan2(*np.flip(fn(t + 1e-2) - fn(t - 1e-2), axis=1).T)
-                elif f in ["z", "p", "r"]:
+                elif f in ("z", "p", "r"):
                     d = np.zeros(data.shape[0])
                 else:
                     raise ValueError(

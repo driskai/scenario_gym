@@ -109,19 +109,19 @@ class CollisionMetric(Metric):
             hazard_box, hazard_angle, hazard.pose[3]
         )
 
-        ego_front = ego_point in [
+        ego_front = ego_point in (
             CollisionPoints.front,
             CollisionPoints.front_corner,
-        ]
-        ego_back = ego_point in [CollisionPoints.back, CollisionPoints.back_corner]
-        hazard_front = hazard_point in [
+        )
+        ego_back = ego_point in (CollisionPoints.back, CollisionPoints.back_corner)
+        hazard_front = hazard_point in (
             CollisionPoints.front,
             CollisionPoints.front_corner,
-        ]
-        hazard_back = hazard_point in [
+        )
+        hazard_back = hazard_point in (
             CollisionPoints.back,
             CollisionPoints.back_corner,
-        ]
+        )
 
         if ego_front and hazard_front:
             if angle_between(
@@ -203,8 +203,7 @@ class CollisionMetric(Metric):
             return CollisionPoints.back
         elif angle_between(angle, corners[2] - c_tol, corners[1] + c_tol):
             return CollisionPoints.front
-        else:
-            return CollisionPoints.side
+        return CollisionPoints.side
 
 
 class CollisionPointMetric(Metric):

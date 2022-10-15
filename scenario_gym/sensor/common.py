@@ -80,7 +80,7 @@ class FutureCollisionDetector(Sensor):
 
         # check for collisions over the horizon
         for t in np.linspace(state.t, state.t + self.horizon, 10):
-            for e, (e_ref, a) in others.items():
+            for e_ref, a in others.values():
                 e_ref.pose = a.trajectory.position_at_t(t)
             other_ents, _ = map(list, zip(*others.values()))
             collisions = detect_collisions(other_ents)

@@ -259,7 +259,7 @@ class OpenCVViewer(Viewer):
         bbox_coords = entity.get_bounding_box_points()
 
         # convert to the egos frame (rotated 90)
-        bbox_in_ego = to_ego_frame(bbox_coords, ego_pose, vertical=True)
+        bbox_in_ego = to_ego_frame(bbox_coords, ego_pose)
 
         # render front of the entity
         l = np.linalg.norm(bbox_in_ego[0] - bbox_in_ego[1])

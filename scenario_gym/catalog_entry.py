@@ -1,4 +1,5 @@
 from abc import ABC, abstractclassmethod
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -136,10 +137,8 @@ class CatalogEntry(CatalogObject):
             for child in prop.findall("Property"):
                 try:
                     v = child.attrib["value"]
-                    try:
+                    with suppress(ValueError):
                         v = float(v)
-                    except ValueError:
-                        pass
                     properties[child.attrib["name"]] = v
                 except KeyError:
                     raise RuntimeError(

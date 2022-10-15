@@ -1,9 +1,7 @@
-from abc import ABC
-
 import numpy as np
 
 
-class Observation(ABC):
+class Observation:
     """The observation for a given entity at a given time."""
 
     pass

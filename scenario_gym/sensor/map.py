@@ -140,8 +140,7 @@ class RasterizedMapSensor(Sensor):
         """Return the output shape of the rasterized map."""
         if self.channels_first:
             return (len(self.layers), self.nw, self.nh)
-        else:
-            return (self.nw, self.nh, len(self.layers))
+        return (self.nw, self.nh, len(self.layers))
 
     def _get_coords(self, pose: ArrayLike) -> NDArray:
         """Get the coordinates at which the map should be constructed."""

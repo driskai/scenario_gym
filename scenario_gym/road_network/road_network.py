@@ -1,4 +1,5 @@
 import json
+from contextlib import suppress
 from functools import _lru_cache_wrapper, cached_property, lru_cache
 from pathlib import Path
 from types import MethodType
@@ -160,6 +161,7 @@ class RoadNetwork:
 
         """
         self._elevation_func: Optional[Callable[[float, float], float]] = None
+        self._lane_parents: Dict[Lane, Optional[Union[Road, Intersection]]] = {}
         self.path = path
 
         self.object_names = self._default_object_names.copy()
@@ -308,12 +310,15 @@ class RoadNetwork:
         """Get intersections that connect to the given road."""
         return [i for i in self.intersections if r in i.connecting_roads]
 
-    @lru_cache(maxsize=200)
-    def get_lane_parent(self, l: Lane) -> Union[Road, Intersection]:
+    def get_lane_parent(self, l: Lane) -> Optional[Union[Road, Intersection]]:
         """Get the object that the lane belongs to."""
-        for x in self.roads + self.intersections:
-            if l in x.lanes:
-                return x
+        if l not in self._lane_parents:
+            for x in self.roads + self.intersections:
+                if l in x.lanes:
+                    self._lane_parents[l] = x
+                    return x
+            self._lane_parents[l] = None
+        return self._lane_parents[l]
 
     def get_geometries_at_point(
         self,
@@ -368,14 +373,12 @@ class RoadNetwork:
                 # clear lru caches of self
                 getattr(self, method).__func__.cache_clear()
             else:
-                try:
-                    func = getattr(obj, "__func__")
+                with suppress(AttributeError):
+                    func = obj.__func__
                     if isinstance(func, _lru_cache_wrapper) and (
                         obj.__self__ is self
                     ):
                         func.cache_clear()
-                except AttributeError:
-                    continue
 
     def elevation_at_point(self, x: ArrayLike, y: ArrayLike) -> NDArray:
         """Estimate the elevation at (x, y) by interpolating."""
@@ -390,7 +393,7 @@ class RoadNetwork:
             for geom in self.road_network_geometries
             if geom.elevation is not None
         ]
-        if len(elevs) == 0:
+        if not elevs:
             self._elevation_func = lambda x, y: np.zeros_like(x)
         else:
             elevation_values = np.concatenate(elevs, axis=0)

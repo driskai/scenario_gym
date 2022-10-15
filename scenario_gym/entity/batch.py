@@ -27,7 +27,7 @@ class BatchReplayEntity:
     def reset(self) -> None:
         """Reset the entities at the start of the scenario."""
         if len(self.entities) > 0:
-            for e, t in zip(self.entities, self.trajectories):
+            for e in self.entities:
                 e.reset()
                 e.set_initial(
                     0.0,
@@ -72,7 +72,7 @@ class BatchReplayEntity:
         self.entities.clear()
         self.trajectories.clear()
         self.max_t = 0.0
-        if len(entities) > 0:
+        if entities:
             self.entities.extend(entities)
             self.trajectories.extend(trajs)
 

@@ -1,4 +1,3 @@
-from abc import ABC
 from inspect import getfullargspec
 from typing import List, Optional, Tuple, Type
 
@@ -10,7 +9,7 @@ from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
 from scenario_gym.trajectory import Trajectory
 
 
-class Entity(ABC):
+class Entity:
     """
     An entity in the gym.
 

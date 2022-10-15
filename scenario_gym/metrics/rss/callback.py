@@ -77,7 +77,7 @@ class RSSDistances(StateCallback):
         entities = self.entities
         try:
             ego_heading = direction(ego.pose[3])
-            ego_inverse_heading = inverse_direction(list(ego_heading))
+            ego_inverse_heading = inverse_direction(ego_heading)
             entity_params = []
             ego_position = ego.pose[0:2]
         except IndexError:
@@ -105,7 +105,7 @@ class RSSDistances(StateCallback):
                 continue
             else:
                 entity_params.append(entity_dictionary)
-        if len(entity_params) == 0:
+        if not entity_params:
             warnings.warn(
                 "Zero entity parameters generated at timestep: {0}".format(state.t)
             )

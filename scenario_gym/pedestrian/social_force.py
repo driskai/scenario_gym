@@ -61,8 +61,7 @@ class SocialForce(PedestrianBehaviour):
             if (e.type == "Pedestrian") and (e != agent.entity)
         ]
 
-        # Forces from other pedestrians
-        for i, pedestrian in enumerate(peds):
+        for pedestrian in peds:  # Forces from other pedestrians
             # Vector of agent's sight (velocity angle + head angle)
             view_dir_vector = rotate_coords(
                 agent.entity.velocity[[0, 1]], observation.head_rot_angle
@@ -221,5 +220,4 @@ class SocialForce(PedestrianBehaviour):
         )
         if dot_dir >= np.cos(self.params.sight_angle / 2 * np.pi / 180):
             return 1.0
-        else:
-            return self.params.sight_weight
+        return self.params.sight_weight

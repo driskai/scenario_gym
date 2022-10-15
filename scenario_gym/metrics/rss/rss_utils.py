@@ -1,10 +1,10 @@
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 from numpy.linalg import norm
 
 
-def inverse_direction(vector: Iterable, normalised: bool = True) -> Iterable:
+def inverse_direction(vector: Iterable, normalised: bool = True) -> List[float]:
     """
     Return the inverse of a 2D vector, Iterable -> Iterable.
 
@@ -16,13 +16,15 @@ def inverse_direction(vector: Iterable, normalised: bool = True) -> Iterable:
     """
     assert len(vector) == 2, "Invalid vector dimension: {0}".format(len(vector))
     if normalised:
-        return [vector[1], -vector[0]] / norm([vector[1], vector[0]])
-    else:
-        return [vector[1], -vector[0]]
+        n = norm([vector[1], vector[0]])
+        return [vector[1] / n, -vector[0] / n]
+    return [vector[1], -vector[0]]
 
 
 def coord_change(
-    vector: List[float], direction: List[float], centre=[0, 0]
+    vector: List[float],
+    direction: List[float],
+    centre: Tuple[float, float] = (0, 0),
 ) -> List[float]:
     """
     Change vector coordinates to new frame of reference.

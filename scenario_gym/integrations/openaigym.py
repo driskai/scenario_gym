@@ -264,7 +264,7 @@ class ScenarioGym(ScenarioGym, Env):
         if entity.ref == "ego":
             return RLAgent(
                 entity,
-                VehicleController(entity, max_steer=0.9, max_accel=5.0),
+                VehicleController(entity, max_steer=0.9),
                 RasterizedMapSensor(
                     entity, channels_first=True, height=30, width=30, n=128
                 ),
