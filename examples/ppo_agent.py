@@ -1,11 +1,11 @@
 import argparse
+import os
 import random
 from typing import Optional, Tuple
 
 import numpy as np
 
 try:
-    import asdf
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
@@ -24,7 +24,7 @@ Or, you can install additional requirements for examples with:
 import scenario_gym
 from scenario_gym.action import VehicleAction
 from scenario_gym.agent import Agent
-from scenario_gym.controller import BasicVehicleController, Controller
+from scenario_gym.controller import Controller, VehicleController
 from scenario_gym.entity import Entity
 from scenario_gym.manager import ScenarioManager
 from scenario_gym.metrics import Metric
@@ -363,7 +363,7 @@ class PPOConfig(ScenarioManager):
 
     def create_agent(self, scenario: Scenario, entity: Entity) -> Agent:
         if entity.ref == "ego":
-            controller = BasicVehicleController(entity, max_steer=self.max_steer)
+            controller = VehicleController(entity, max_steer=self.max_steer)
             sensor = RasterizedMapSensor(entity)
             return PPOAgent(
                 entity,
@@ -488,7 +488,7 @@ def parse_args():
     )
     parser.add_argument(
         "--scenario_path",
-        default="../tests/input_files/Scenarios/d9726503-e04a-4e8b-b487-8805ef790c93.xosc",
+        default=None,
         type=str,
         help="Path to the scenario file.",
     )
@@ -558,4 +558,14 @@ def run(FLAGS):
 
 if __name__ == "__main__":
     flags = parse_args()
+
+    if flags.scenario_path is None:
+        flags.scenario_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "tests",
+            "input_files",
+            "Scenarios",
+            "d9726503-e04a-4e8b-b487-8805ef790c93.xosc",
+        )
     run(flags)
