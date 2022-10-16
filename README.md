@@ -2,7 +2,7 @@
 
 ![Tests](https://github.com/driskai/scenario_gym/actions/workflows/test.yml/badge.svg)
 
-Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios which containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
+Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
 
 <p align="center">
 <img src="docs/source/_static/ex1.gif" width="20%" />
