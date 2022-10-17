@@ -43,7 +43,9 @@ def all_scenarios():
 
     # Collect all OpenSCENARIO examples
     for subdir, _, files in os.walk(
-        os.path.join(os.path.dirname(__file__), "input_files", "OpenSCENARIO_examples")
+        os.path.join(
+            os.path.dirname(__file__), "input_files", "OpenSCENARIO_examples"
+        )
     ):
         for file in files:
             filename, file_extension = os.path.splitext(file)
