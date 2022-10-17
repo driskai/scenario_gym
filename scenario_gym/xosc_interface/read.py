@@ -61,12 +61,12 @@ def import_scenario(
                 scenario.add_catalog_location(name, rel_catalog_path)
 
     # Import road network:
-    scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
-    if scene_graph_file is not None:
-        rn_path = scene_graph_file.attrib["filepath"]
-    else:
-        logic_file = osc_root.find("RoadNetwork/LogicFile")
+    logic_file = osc_root.find("RoadNetwork/LogicFile")
+    if logic_file is not None:
         rn_path = logic_file.attrib["filepath"]
+    else:
+        scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
+        rn_path = scene_graph_file.attrib["filepath"]
 
     filepath = os.path.join(cwd, rn_path)
     extension = os.path.splitext(filepath)[1]
