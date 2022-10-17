@@ -41,6 +41,7 @@ def import_scenario(
     cwd = os.path.dirname(osc_file)
     et = etree.parse(osc_file)
     osc_root = et.getroot()
+    osc_root = resolve_parameters(osc_root)
     scenario = Scenario(name=os.path.basename(osc_file))
     scenario.scenario_path = osc_file
     entities = {}
@@ -161,6 +162,59 @@ def import_scenario(
         scenario = relabel_scenario(scenario)
 
     return scenario
+
+
+def resolve_parameters(xosc_root: etree._Element) -> etree._Element:
+    """
+    Resolve all parameter instances in an xosc file to their values.
+
+    Parameters
+    ----------
+    xosc_root : etree._Element
+        etree root Element of the xosc file.
+
+    Returns
+    -------
+    etree._Element
+        Modified etree Element with all parameter instances replaced with their
+        values.
+
+    """
+    resolved_xosc_root = deepcopy(xosc_root)
+
+    def _recursive_modify_keys(
+        original_element: etree._Element,
+        resolved_element: etree._Element,
+        parameter_to_values: Dict[str, str],
+    ):
+        parameter_to_values = deepcopy(parameter_to_values)
+        for parameter_declarations in original_element.findall(
+            "ParameterDeclarations"
+        ):
+            for parameter_declaration in parameter_declarations.findall(
+                "ParameterDeclaration"
+            ):
+                value = parameter_declaration.attrib["value"]
+                parameter_to_values[parameter_declaration.attrib["name"]] = value
+
+        for key, value in original_element.attrib.items():
+            if (
+                str(value)[0] == "$"
+                and original_element.tag != "ParameterDeclaration"
+            ):
+                resolved_value = parameter_to_values[str(value)[1:]]
+                resolved_element.attrib[key] = resolved_value
+
+        for child_element, child_resolved_element in zip(
+            original_element.getchildren(), resolved_element.getchildren()
+        ):
+            _recursive_modify_keys(
+                child_element, child_resolved_element, parameter_to_values
+            )
+
+    _recursive_modify_keys(xosc_root, resolved_xosc_root, {})
+
+    return resolved_xosc_root
 
 
 def relabel_scenario(scenario: Scenario) -> Scenario:
