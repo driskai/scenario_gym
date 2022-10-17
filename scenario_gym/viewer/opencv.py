@@ -102,7 +102,7 @@ class OpenCVViewer(Viewer):
         self.entity_ref = render_entity
         self.window_name = window_name
         self.line_thickness = line_thickness
-        self.centring_position = np.array([self.w / 2, self.w / 2])
+        self.centring_position = np.array([self.w / 2, self.h / 2])
         self.origin = np.array([0.0, 0.0])
         self._coords_cache = {}
 
@@ -169,11 +169,10 @@ class OpenCVViewer(Viewer):
         key = None
         self.draw_frame(state, e_ref=self.entity_ref)
 
-        frame = self._frame
         if self.headless_rendering:
-            self.video_writer.write(frame)
+            self.video_writer.write(self._frame)
         else:
-            cv2.imshow(self.window_name, frame)
+            cv2.imshow(self.window_name, self._frame)
             wait_time = 0 if self.fps == 0 else 1000 // self.fps
             key = cv2.waitKey(wait_time)
 
@@ -299,31 +298,38 @@ class OpenCVViewer(Viewer):
         geom: Union[Polygon, LineString, LinearRing],
         ego_pose: np.ndarray,
         c: Color,
+        use_cache: bool = False,
     ) -> None:
         """Render a polygon or linestring to the frame."""
         if not isinstance(geom, (Polygon, LineString, LinearRing)):
             raise TypeError(f"{type(geom)} not supported.")
 
-        if id(geom) not in self._coords_cache:
-            if isinstance(geom, Polygon):
-                coords = np.array(geom.exterior.xy).T
-            else:
-                coords = np.array(geom.xy).T
-            self._coords_cache[id(geom)] = coords
-
-        xy = to_ego_frame(self._coords_cache[id(geom)], ego_pose)
+        xy = to_ego_frame(self.get_coords(geom, use_cache=use_cache), ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-
-        if isinstance(geom, (LineString, LinearRing)):
+        if isinstance(geom, LineString):
             cv2.polylines(self._frame, [xy], False, c, self.line_thickness)
         else:
             cv2.fillPoly(self._frame, [xy], c)
             for interior in geom.interiors:
-                if id(interior) not in self._coords_cache:
-                    self._coords_cache[id(interior)] = np.array(interior.xy).T
-                xy = to_ego_frame(self._coords_cache[id(interior)], ego_pose)
+                # cannot cache as the id is different each time
+                xy = to_ego_frame(np.array(interior.xy).T)
                 xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
                 cv2.fillPoly(self._frame, [xy], self.background_color)
+
+    def get_coords(
+        self,
+        geom: Union[Polygon, LineString, LinearRing],
+        use_cache: bool = True,
+    ) -> np.ndarray:
+        """Get the coordinates for the given geometry."""
+        if id(geom) in self._coords_cache:
+            return self._coords_cache[id(geom)]
+        coords = np.array(
+            geom.exterior.xy if isinstance(geom, Polygon) else geom.xy
+        ).T
+        if use_cache:
+            self._coords_cache[id(geom)] = coords
+        return coords
 
     def render_driveable_surface(
         self,
@@ -333,7 +339,9 @@ class OpenCVViewer(Viewer):
         """Render the driveable surface."""
         road_network = state.scenario.road_network
         for geom in road_network.driveable_surface.geoms:
-            self.draw_geom(geom, ego_pose, self.driveable_surface_color)
+            self.draw_geom(
+                geom, ego_pose, self.driveable_surface_color, use_cache=False
+            )
 
     def render_driveable_surface_boundary(
         self,
@@ -344,11 +352,17 @@ class OpenCVViewer(Viewer):
         road_network = state.scenario.road_network
         for geom in road_network.driveable_surface.geoms:
             self.draw_geom(
-                geom.exterior, ego_pose, self.driveable_surface_boundary_color
+                geom.exterior,
+                ego_pose,
+                self.driveable_surface_boundary_color,
+                use_cache=False,
             )
             for interior in geom.interiors:
                 self.draw_geom(
-                    interior, ego_pose, self.driveable_surface_boundary_color
+                    interior,
+                    ego_pose,
+                    self.driveable_surface_boundary_color,
+                    use_cache=False,
                 )
 
     def render_walkable_surface(

@@ -19,7 +19,7 @@ def test_viewer(all_scenarios):
         background=(0, 100, 0),
     )
     gym.load_scenario(scenario_path)
-    for _ in range(10):
+    for _ in range(1):
         gym.rollout(render=True)
 
 
