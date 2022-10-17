@@ -13,10 +13,16 @@ DEFAULT_ENTITY_TYPES = (Vehicle, Pedestrian)
 def load_object(
     catalog_name: str,
     entry: Element,
-    entity_types: List[Type[Entity]],
-    catalog_objects: List[Type[CatalogEntry]],
+    entity_types: Optional[List[Type[Entity]]] = None,
 ) -> Optional[Entity]:
     """Try to load a catalog entry with given catalog objects."""
+    if entity_types is None:
+        entity_types = DEFAULT_ENTITY_TYPES
+    else:
+        entity_types = entity_types + DEFAULT_ENTITY_TYPES
+
+    catalog_objects = [Ent._catalog_entry_type() for Ent in entity_types]
+
     for Ent, Obj in zip(entity_types, catalog_objects):
         types = Obj.xosc_names if Obj.xosc_names is not None else [Obj.__name__]
         if entry.tag in types:
@@ -52,20 +58,13 @@ def read_catalog(
         These can then be cloned to create entities using the chosen catalog entry.
 
     """
-    if entity_types is None:
-        entity_types = DEFAULT_ENTITY_TYPES
-    else:
-        entity_types = entity_types + DEFAULT_ENTITY_TYPES
-
-    catalog_objects = [Ent._catalog_entry_type() for Ent in entity_types]
-
     et = etree.parse(catalog_file)
     osc_root = et.getroot()
     catalog = osc_root.find("Catalog")
     catalog_name = catalog.attrib["name"]
     entries = {}
     for element in catalog.getchildren():
-        entry = load_object(catalog_name, element, entity_types, catalog_objects)
+        entry = load_object(catalog_name, element, entity_types=entity_types)
         if entry is None:
             entry = Entity(CatalogEntry.from_xml(catalog_name, element))
         entries[entry.catalog_entry.catalog_entry] = entry
