@@ -12,22 +12,34 @@ from .base import RoadGeometry, RoadLike
 class LaneType(Enum):
     """Enumerates OpenDrive standard lane types."""
 
-    none = 0
-    driving = 1
-    biking = 3
-    border = 4
+    HOV = 0
+    bidirectional = 1
+    biking = 2
+    border = 3
+    bus = 4
     connectingRamp = 5
     curb = 6
-    entry = 7
-    exit = 8
-    median = 9
-    offRamp = 10
-    onRamp = 11
-    parking = 12
-    restricted = 13
-    sidewalk = 14
-    shoulder = 15
-    stop = 16
+    driving = 7
+    entry = 8
+    exit = 9
+    median = 10
+    mwyEntry = 11
+    mwyExit = 12
+    none = 13
+    offRamp = 14
+    onRamp = 15
+    parking = 16
+    rail = 17
+    restricted = 18
+    roadWorks = 19
+    shoulder = 20
+    sidewalk = 21
+    special1 = 22
+    special2 = 23
+    special3 = 24
+    stop = 25
+    taxi = 26
+    tram = 27
 
 
 class Lane(RoadLike):
