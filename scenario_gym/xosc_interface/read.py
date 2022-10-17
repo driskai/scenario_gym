@@ -219,7 +219,8 @@ def resolve_parameters(xosc_root: etree._Element) -> etree._Element:
 
         for key, value in original_element.attrib.items():
             if (
-                str(value)[0] == "$"
+                value != ""
+                and str(value)[0] == "$"
                 and original_element.tag != "ParameterDeclaration"
             ):
                 resolved_value = parameter_to_values[str(value)[1:]]
