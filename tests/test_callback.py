@@ -57,14 +57,11 @@ def test_metric_requires(scenario_path):
     try:
         gym.load_scenario(scenario_path)
     except ValueError as e:
-        print("Should not raise any value error:")
-        raise e
+        raise "Should not raise any value error:" from e
 
     gym = ScenarioGym(state_callbacks=[], metrics=[TestMetric()])
-    try:
+    with pt.raises(ValueError):
         gym.load_scenario(scenario_path)
-    except ValueError:
-        pass
 
 
 def test_callback_requires(scenario_path):
@@ -73,17 +70,12 @@ def test_callback_requires(scenario_path):
     try:
         gym.load_scenario(scenario_path)
     except ValueError as e:
-        print("Should not raise any value error:")
-        raise e
+        raise "Should not raise any value error:" from e
 
     gym = ScenarioGym(state_callbacks=[TestDependentCallback()])
-    try:
+    with pt.raises(ValueError):
         gym.load_scenario(scenario_path)
-    except ValueError:
-        pass
 
     gym = ScenarioGym(state_callbacks=[TestDependentCallback(), TestCallback()])
-    try:
+    with pt.raises(ValueError):
         gym.load_scenario(scenario_path)
-    except ValueError:
-        pass
