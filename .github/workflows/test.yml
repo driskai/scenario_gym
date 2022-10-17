@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - OpenSCENARIO-tests
 
 jobs:
   test:
@@ -28,6 +29,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install ffmpeg libsm6 libxext6  -y
+
+      - name: Decrypt example xosc files
+        run: ./tests/input_files/decrypt_xoscs.sh
+        env:
+          EXAMPLE_XODR_PASSKEY: ${{ secrets.EXAMPLE_XOSC_PASSKEY }}
           
       - name: Lint with flake8
         run: >-

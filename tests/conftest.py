@@ -40,6 +40,15 @@ def all_scenarios():
     ]
     base = os.path.join(os.path.dirname(__file__), "input_files", "Scenarios")
     scenarios = {f: os.path.join(base, f + ".xosc") for f in scenarios}
+
+    # Collect all OpenSCENARIO examples
+    for subdir, _, files in os.walk(
+        os.path.join(os.path.dirname(__file__), "input_files", "OpenSCENARIO_examples")
+    ):
+        for file in files:
+            filename, file_extension = os.path.splitext(file)
+            if file_extension == ".xosc":
+                scenarios[filename] = os.path.abspath(os.path.join(subdir, file))
     return scenarios
 
 
