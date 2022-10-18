@@ -77,7 +77,7 @@ class UpdateStateVariableAction(ScenarioAction):
         if entity is not None:
             for k, v in self.action_variables.items():
                 try:
-                    entity.k
+                    getattr(entity, k)
                 except AttributeError:
                     warnings.warn(
                         f"The entity {entity} has no attribute {k} but action "
