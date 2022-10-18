@@ -74,7 +74,7 @@ class UpdateStateVariableAction(ScenarioAction):
 
     def _apply(self, state: State, entity: Optional[Entity]) -> None:
         """Update the entity with action variables."""
-        if self.entity is not None:
+        if entity is not None:
             for k, v in self.action_variables.items():
                 try:
                     entity.k
