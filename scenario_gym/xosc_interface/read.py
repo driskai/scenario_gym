@@ -41,7 +41,7 @@ def import_scenario(
     cwd = os.path.dirname(osc_file)
     et = etree.parse(osc_file)
     osc_root = et.getroot()
-    scenario = Scenario(name=os.path.basename(osc_file))
+    scenario = Scenario(name=os.path.splitext(os.path.basename(osc_file))[0])
     scenario.scenario_path = osc_file
     entities = {}
 
