@@ -141,13 +141,13 @@ def import_scenario(
             trajectory_points.append(traj_point_from_time_and_position(t, wp))
         if entity_ref in entities:
             traj_data = np.stack(trajectory_points, axis=0)
-            entities[entity_ref].trajectory = Trajectory(traj_data)
             if (np.isnan(traj_data[:, 3]).sum() > 0) and (
                 scenario.road_network is not None
             ):
-                entities[entity_ref].trajectory.update_z_from_road_network(
-                    scenario.road_network
+                traj_data[:, 3] = scenario.road_network.elevation_at_point(
+                    traj_data[:, 1], traj_data[:, 2]
                 )
+            entities[entity_ref].trajectory = Trajectory(traj_data)
 
     for e in entities.values():
         if e.trajectory is not None:

@@ -14,6 +14,19 @@ from scenario_gym.xosc_interface import import_scenario
 class ScenarioGym:
     """The main class that loads and runs scenarios."""
 
+    @classmethod
+    def run_scenarios(
+        cls,
+        paths: List[str],
+        render: bool = False,
+        **kwargs,
+    ) -> None:
+        """Rollout the scenarios in paths."""
+        gym = cls(**kwargs)
+        for path in paths:
+            gym.load_scenario(path)
+            gym.rollout(render=render)
+
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
