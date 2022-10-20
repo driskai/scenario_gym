@@ -173,9 +173,9 @@ class Trajectory:
                 data[-1, 0] += 1e-3
             self._interpolated_s = interp1d(
                 self.s,
-                data[:, 1:],
+                data[:, :],
                 bounds_error=False,
-                fill_value=(data[0, 1:], data[-1, 1:]),
+                fill_value=(data[0, :], data[-1, :]),
                 axis=0,
             )
         return self._interpolated_s(s)
