@@ -64,3 +64,12 @@ def test_manual_rollout(all_scenarios):
         gym.step()
         gym.render()
     gym.close()
+
+
+def test_run_scenarios(all_scenarios):
+    """Test using the run scenarios class method."""
+    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
+    ScenarioGym.run_scenarios(
+        [scenario_path, scenario_path],
+        timestep=0.075,
+    )

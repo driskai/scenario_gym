@@ -49,11 +49,11 @@ def test_add_metric(all_scenarios):
     """Test adding a metric to the scenario."""
     files = [
         all_scenarios[s]
-        for s in [
+        for s in (
             "3fee6507-fd24-432f-b781-ca5676c834ef",
             "41dac6fa-6f83-461e-a145-08692da5f3c7",
             "9c324146-be03-4d4e-8112-eaf36af15c17",
-        ]
+        )
     ]
     manager = ScenarioManager()
     manager.add_metric(EgoMaxSpeedMetric())
