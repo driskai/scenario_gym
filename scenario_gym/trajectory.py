@@ -73,6 +73,7 @@ class Trajectory:
                         fill_value="extrapolate",
                     )
                     d = np.arctan2(*np.flip(fn(t + 1e-2) - fn(t - 1e-2), axis=1).T)
+                    d = _resolve_heading(d)
                 elif f in ["z", "p", "r"]:
                     d = np.zeros(data.shape[0])
                 else:
