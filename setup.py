@@ -10,10 +10,11 @@ requires = [
     "setuptools>=58.0.4",
     "scenariogeneration>=0.7.4",
     "scipy>=1.6.3",
-    "Shapely>=1.8.0",
+    "Shapely==2.0b1",
 ]
 extras = {
     "gym": ["gym>=0.21.0"],
+    "dm": ["dm-env>=1.5"],
     "hooks": [
         "black~=22.3.0",
         "flake8~=3.9.2",
@@ -29,6 +30,7 @@ extras = {
 extras["dev"] = list(
     set().union(
         extras["gym"],
+        extras["dm"],
         extras["hooks"],
         extras["docs"],
         extras["testing"],

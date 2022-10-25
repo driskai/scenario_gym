@@ -364,6 +364,8 @@ class RoadNetwork:
 
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""
+        self._lane_parents.clear()
+        self._elevation_func = None
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
             if isinstance(obj, cached_property) and (method in self.__dict__):

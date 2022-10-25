@@ -29,7 +29,7 @@ def detect_collisions(
     geom_to_ent = {}
     for e in entities + others if others is not None else entities:
         g = e.get_bounding_box_geom()
-        geom_to_ent[id(g)] = e
+        geom_to_ent[g] = e
         geom_to_ent[e] = g
 
     geoms = [geom_to_ent[e] for e in entities]
@@ -37,6 +37,6 @@ def detect_collisions(
 
     collisions = detect_geom_collisions(geoms, others=other_geoms)
     return {
-        e: [geom_to_ent[id(g_prime)] for g_prime in collisions[id(g)]]
+        e: [geom_to_ent[g_prime] for g_prime in collisions[g]]
         for e, g in zip(entities, geoms)
     }
