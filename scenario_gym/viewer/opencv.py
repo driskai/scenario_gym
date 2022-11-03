@@ -166,6 +166,7 @@ class OpenCVViewer(Viewer):
         This will visualise a top-down view of the gym centrered around the
         ego agent.
         """
+        self._state = state
         key = None
         self.draw_frame(state, e_ref=self.entity_ref)
 
@@ -230,6 +231,21 @@ class OpenCVViewer(Viewer):
             ego_pose = np.zeros(6)
         return ego_pose
 
+    @property
+    def entity_colors(self) -> Dict[int, Color]:
+        """Store the entity color dict."""
+        if self._entity_colour_dict is None:
+            if self._state is None:
+                raise ValueError(
+                    "Cannot query the entity colors if state is not set."
+                )
+            self._entity_colour_dict = {
+                i: self.get_entity_color(i, e)
+                for i, e in enumerate(self._state.scenario.entities)
+            }
+
+        return self._entity_colour_dict
+
     def get_entity_color(self, entity_idx: int, entity: Entity) -> Color:
         """Get the color to draw the given entity."""
         if entity_idx == 0:
@@ -246,14 +262,6 @@ class OpenCVViewer(Viewer):
         self, entity_idx: int, entity: Entity, ego_pose: np.ndarray
     ) -> None:
         """Draw the given entity onto the frame."""
-        if self._entity_colour_dict is None:
-            self._entity_colour_dict = {}
-        if entity_idx not in self._entity_colour_dict:
-            self._entity_colour_dict[entity_idx] = self.get_entity_color(
-                entity_idx, entity
-            )
-        c = self._entity_colour_dict[entity_idx]
-
         # get the bounding box in the global frame
         bbox_coords = entity.get_bounding_box_points()
 
@@ -274,6 +282,7 @@ class OpenCVViewer(Viewer):
         )
 
         # add to frame
+        c = self.entity_colors[entity_idx]
         xy = vec2pix(bbox_in_ego, mag=self.mag, h=self.h, w=self.w)
         xy_front = vec2pix(front_bbox, mag=self.mag, h=self.h, w=self.w)
         cv2.fillPoly(self._frame, [xy], c)
