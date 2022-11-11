@@ -1,12 +1,13 @@
 import os
 import warnings
+from contextlib import suppress
 from copy import deepcopy
 from typing import Dict, List, Optional, Type
 
 import numpy as np
 from lxml import etree
 
-from scenario_gym.entity import Entity
+from scenario_gym.entity import Entity, Pedestrian, Vehicle
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario import Scenario
 from scenario_gym.trajectory import Trajectory
@@ -41,8 +42,6 @@ def import_scenario(
     cwd = os.path.dirname(osc_file)
     et = etree.parse(osc_file)
     osc_root = et.getroot()
-    scenario = Scenario(name=os.path.splitext(os.path.basename(osc_file))[0])
-    scenario.scenario_path = osc_file
     entities = {}
 
     # Read catalogs:
@@ -52,12 +51,12 @@ def import_scenario(
         catalog_path = os.path.join(cwd, rel_catalog_path)
         for catalog_file in os.listdir(catalog_path):
             if catalog_file.endswith(".xosc"):
-                name, entries = read_catalog(
+                catalog, entries = read_catalog(
                     os.path.join(catalog_path, catalog_file),
+                    relative_catalog_path=rel_catalog_path,
                     entity_types=entity_types,
                 )
-                catalogs[name] = entries
-                scenario.add_catalog_location(name, rel_catalog_path)
+                catalogs[catalog.catalog_name] = entries
 
     # Import road network:
     scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
@@ -76,9 +75,11 @@ def import_scenario(
         warnings.warn(f"Could not find road network file: {filepath}.")
 
     if extension == ".json" or extension == "":
-        scenario.road_network = RoadNetwork.create_from_json(filepath)
+        road_network = RoadNetwork.create_from_json(filepath)
     elif extension == ".xodr":
-        scenario.road_network = RoadNetwork.create_from_xodr(filepath)
+        road_network = RoadNetwork.create_from_xodr(filepath)
+    else:
+        road_network = None
 
     # add the entities to the scenario
     for scenario_object in osc_root.iterfind("Entities/ScenarioObject"):
@@ -141,21 +142,18 @@ def import_scenario(
             trajectory_points.append(traj_point_from_time_and_position(t, wp))
         if entity_ref in entities:
             traj_data = np.stack(trajectory_points, axis=0)
-            if (np.isnan(traj_data[:, 3]).sum() > 0) and (
-                scenario.road_network is not None
-            ):
-                traj_data[:, 3] = scenario.road_network.elevation_at_point(
+            if (np.isnan(traj_data[:, 3]).sum() > 0) and (road_network is not None):
+                traj_data[:, 3] = road_network.elevation_at_point(
                     traj_data[:, 1], traj_data[:, 2]
                 )
             entities[entity_ref].trajectory = Trajectory(traj_data)
 
-    for e in entities.values():
-        if e.trajectory is not None:
-            scenario.add_entity(e)
-        elif e.ref == "ego":
-            raise ValueError("Ego does not have a trajectory.")
-        else:
-            warnings.warn(f"Entity {e.ref} does not have a trajectory.")
+    scenario = Scenario(
+        list(entities.values()),
+        name=os.path.splitext(os.path.basename(osc_file))[0],
+        path=osc_file,
+        road_network=road_network,
+    )
 
     if relabel:
         scenario = relabel_scenario(scenario)
@@ -176,11 +174,12 @@ def relabel_scenario(scenario: Scenario) -> Scenario:
     old_to_new = {}
     for e in scenario.entities[1:]:
         cur = e.ref
-        scenario._ref_to_entity.pop(cur)
-        if e.catalog_entry.catalog_type == "Vehicle":
+        with suppress(KeyError):
+            scenario._ref_to_entity.pop(cur)
+        if isinstance(e, Vehicle):
             e.ref = f"vehicle_{vehicles}"
             vehicles += 1
-        elif e.catalog_entry.catalog_type == "Pedestrian":
+        elif isinstance(e, Pedestrian):
             e.ref = f"pedestrian_{pedestrians}"
             pedestrians += 1
         else:

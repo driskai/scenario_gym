@@ -23,16 +23,16 @@ class Controller(ABC):
         """Construct the controller from the entity."""
         self.entity = entity
 
-    def reset(self) -> None:
+    def reset(self, state: State) -> None:
         """Reset the controller parameters."""
-        self._reset()
+        self._reset(state)
 
     def step(self, state: State, action: Action) -> ArrayLike:
         """Return the agent's next pose from the action."""
         return self._step(state, action)
 
     @abstractmethod
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> None:
         """Reset the controller parameters."""
         pass
 
@@ -45,7 +45,7 @@ class Controller(ABC):
 class ReplayTrajectoryController(Controller):
     """A controller to replay preset trajectories."""
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> None:
         """Reset the controller parameters."""
         pass
 
@@ -97,9 +97,9 @@ class VehicleController(Controller):
         self.allow_reverse = allow_reverse
         self.max_speed = max_speed
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> None:
         """Reset the controller parameters."""
-        self.speed = np.linalg.norm(self.entity.velocity[:2])
+        self.speed = np.linalg.norm(state.velocities[self.entity][:2])
         self.l = self.entity.catalog_entry.bounding_box.length
 
     def _step(
@@ -119,7 +119,7 @@ class VehicleController(Controller):
         accel = np.clip(accel, -self.max_accel, self.max_accel)
         steer = np.clip(steer, -self.max_steer, self.max_steer)
 
-        pose = self.entity.pose.copy()
+        pose = state.poses[self.entity].copy()
         dt = state.next_t - state.t
         h = pose[3]
 
@@ -138,12 +138,6 @@ class VehicleController(Controller):
         self.speed = speed
 
         return pose
-
-    @property
-    def v(self):
-        """Get the xy velocity vector for the vehicle."""
-        h = self.entity.pose[3]
-        return self.speed * np.array([np.cos(h), np.sin(h)])
 
 
 class PIDController(VehicleController):
@@ -201,12 +195,12 @@ class PIDController(VehicleController):
         self.accel_Ki = accel_Ki
         self.accel_Kd = accel_Kd
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> None:
         """Reset the controller parameters."""
         self.e_lon_prev = 0.0
         self.e_lon_int = 0.0
         self.e_lat_prev = 0.0
-        super(self.__class__, self)._reset()
+        super(self.__class__, self)._reset(state)
 
     def _step(self, state: State, action: TeleportAction) -> ArrayLike:
         """
@@ -219,7 +213,7 @@ class PIDController(VehicleController):
         """
         # current and target positions
         target = action.pose[:2]
-        pose = self.entity.pose.copy()
+        pose = state.poses[self.entity].copy()
         cur, h = pose[:2], pose[3]
         speed = self.speed
 
@@ -241,14 +235,14 @@ class PIDController(VehicleController):
         else:
             gain_adj = 1.0
 
-        e_lat_D = (e_lat - self.e_lat_prev) / self.entity.dt
+        e_lat_D = (e_lat - self.e_lat_prev) / state.dt
         steer_Kp = self.steer_Kp * gain_adj
         steer_Kd = self.steer_Kd * gain_adj
         steer = steer_Kp * e_lat + steer_Kd * e_lat_D
 
         # acceleration
-        e_lon_D = (e_lon - self.e_lon_prev) / self.entity.dt
-        e_lon_I = self.e_lon_int + e_lon * self.entity.dt
+        e_lon_D = (e_lon - self.e_lon_prev) / state.dt
+        e_lon_I = self.e_lon_int + e_lon * state.dt
         if abs(e_lon) > 0.1:
             accel = (
                 self.accel_Kp * e_lon

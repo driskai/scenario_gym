@@ -72,10 +72,10 @@ class CollisionMetric(Metric):
 
     def _step(self, state: State) -> None:
         """Update recorded collisions."""
-        for e_other in state.collisions[self.ego]:
+        for e_other in state.collisions()[self.ego]:
             if e_other not in self.last_timestep:
                 self.collisions.append(self.record_collision(state, e_other))
-        self.last_timestep = state.collisions[self.ego].copy()
+        self.last_timestep = state.collisions()[self.ego].copy()
 
     def get_state(self) -> List[Tuple[float, str, str]]:
         """Return the recorded collisions."""
@@ -88,8 +88,8 @@ class CollisionMetric(Metric):
         if hazard.catalog_entry.catalog_type != "Vehicle":
             return (state.t, hazard.ref, CollisionTypes.non_vehicle)
 
-        ego_box = self.ego.get_bounding_box_geom()
-        hazard_box = hazard.get_bounding_box_geom()
+        ego_box = self.ego.get_bounding_box_geom(state.poses[self.ego])
+        hazard_box = hazard.get_bounding_box_geom(state.poses[hazard])
 
         collision_point = np.array(
             ego_box.intersection(hazard_box).centroid.xy
@@ -235,12 +235,12 @@ class CollisionPointMetric(Metric):
 
     def _step(self, state: State) -> None:
         """Update recorded collision angle and position."""
-        for e_other in state.collisions[self.ego]:
+        for e_other in state.collisions()[self.ego]:
             if e_other not in self.last_timestep:
                 self.collisions.append(
                     self.record_collision_position(state, e_other)
                 )
-        self.last_timestep = state.collisions[self.ego].copy()
+        self.last_timestep = state.collisions()[self.ego].copy()
 
     def get_state(self) -> List[Tuple[str, np.ndarray, float]]:
         """Return the entity reference, coordinates and angle of collisions."""
@@ -250,8 +250,8 @@ class CollisionPointMetric(Metric):
         self, state: State, hazard: Entity
     ) -> Tuple[str, np.ndarray, float]:
         """Calculate the coordinate and relative angle of entities at collision."""
-        ego_box = self.ego.get_bounding_box_geom()
-        hazard_box = hazard.get_bounding_box_geom()
+        ego_box = self.ego.get_bounding_box_geom(state.poses[self.ego])
+        hazard_box = hazard.get_bounding_box_geom(state.poses[hazard])
 
         collision_point = np.array(
             ego_box.intersection(hazard_box).centroid.xy

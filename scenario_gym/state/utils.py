@@ -1,12 +1,15 @@
+from itertools import chain
 from typing import Dict, List, Optional
+
+import numpy as np
 
 from scenario_gym.entity import Entity
 from scenario_gym.utils import detect_geom_collisions
 
 
 def detect_collisions(
-    entities: List[Entity],
-    others: Optional[List[Entity]] = None,
+    entities: Dict[Entity, np.ndarray],
+    others: Optional[Dict[Entity, np.ndarray]] = None,
 ) -> Dict[Entity, List[Entity]]:
     """
     Return collisions between entities.
@@ -27,8 +30,12 @@ def detect_collisions(
 
     """
     geom_to_ent = {}
-    for e in entities + others if others is not None else entities:
-        g = e.get_bounding_box_geom()
+    for e, pose in (
+        entities.items()
+        if others is None
+        else chain(entities.items(), others.items())
+    ):
+        g = e.get_bounding_box_geom(pose)
         geom_to_ent[id(g)] = e
         geom_to_ent[e] = g
 

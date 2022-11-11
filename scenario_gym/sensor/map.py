@@ -16,6 +16,12 @@ from scenario_gym.state import State
 from .base import Sensor
 
 
+class MapObservation(Observation):
+    """An observation with a rasterized map around the entity."""
+
+    map: np.ndarray
+
+
 class RasterizedMapSensor(Sensor):
     """
     Returns a rasterized semantic map as a 2d grid of vectors.
@@ -124,24 +130,24 @@ class RasterizedMapSensor(Sensor):
         """Reset the sensor at the start of the scenario."""
         self._road_network: Optional[RoadNetwork] = None
 
-    def _step(self, state: State) -> Observation:
+    def _step(self, state: State, obs: MapObservation) -> MapObservation:
         """Return the rasterized map around the entity."""
         if self._road_network is None:
             self._prepare_layers(state)
 
-        coords = self._get_coords(self.entity.pose).reshape(-1, 2)
+        coords = self._get_coords(obs.pose).reshape(-1, 2)
 
         layers = [getattr(self, f"_{l}_layer")(state, coords) for l in self.layers]
-        obs = np.array(layers).reshape(len(layers), self.nw, self.nw)
-        return obs if self.channels_first else obs.transpose(1, 2, 0)
+        obs_map = np.array(layers).reshape(len(layers), self.nw, self.nw)
+        obs.map = obs_map if self.channels_first else obs_map.transpose(1, 2, 0)
+        return obs
 
     @property
     def output_shape(self) -> Tuple[int, int, int]:
         """Return the output shape of the rasterized map."""
         if self.channels_first:
             return (len(self.layers), self.nw, self.nh)
-        else:
-            return (self.nw, self.nh, len(self.layers))
+        return (self.nw, self.nh, len(self.layers))
 
     def _get_coords(self, pose: ArrayLike) -> NDArray:
         """Get the coordinates at which the map should be constructed."""
@@ -174,7 +180,10 @@ class RasterizedMapSensor(Sensor):
         """
         entities = prep(
             MultiPolygon(
-                [e.get_bounding_box_geom() for e in state.scenario.entities]
+                [
+                    e.get_bounding_box_geom(state.poses[e])
+                    for e in state.scenario.entities
+                ]
             )
         )
         return contains(entities, coords[:, 0], coords[:, 1])

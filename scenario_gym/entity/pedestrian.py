@@ -5,6 +5,7 @@ from lxml.etree import Element
 
 from scenario_gym.catalog_entry import ArgsKwargs, CatalogEntry
 from scenario_gym.entity.base import Entity
+from scenario_gym.trajectory import Trajectory
 
 
 @dataclass
@@ -26,11 +27,12 @@ class PedestrianCatalogEntry(CatalogEntry):
 
 
 class Pedestrian(Entity):
-    """Class for vehicles."""
+    """Entity class for pedestrians."""
 
     def __init__(
         self,
         catalog_entry: PedestrianCatalogEntry,
+        trajectory: Optional[Trajectory] = None,
         ref: Optional[str] = None,
     ):
-        super().__init__(catalog_entry, ref=ref)
+        super().__init__(catalog_entry, trajectory=trajectory, ref=ref)

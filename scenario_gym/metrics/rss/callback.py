@@ -6,6 +6,7 @@ from numpy.linalg import norm
 from shapely.geometry import LineString, Polygon
 
 from scenario_gym.callback import StateCallback
+from scenario_gym.entity import Entity
 from scenario_gym.metrics.rss.rss_utils import (
     acceleration,
     ahead,
@@ -13,7 +14,7 @@ from scenario_gym.metrics.rss.rss_utils import (
     direction,
     inverse_direction,
 )
-from scenario_gym.state import Entity, State
+from scenario_gym.state import State
 
 
 class RSSParameters:
@@ -39,21 +40,20 @@ class RSSDistances(StateCallback):
     state, which the metric uses to return a boolean value per rule.
     """
 
-    def reset(self, state: State):
+    def _reset(self, state: State) -> None:
         """Reset callback and declares variables."""
-        super().reset(state)
-        assert len(state.scenario.entities) > 0, "Scenario contains zero entities."
         self.ego = state.scenario.entities[0]
         self.entities = state.scenario.entities
         # Initialise default callback parameters
-        state.ego_params = {}
-        state.entity_params = [{} for entity in self.entities[1:]]
-        state.safe_distances = [[0.0, 0.0] for entity in self.entities[1:]]
-        state.intersect = [["safe"] for entity in self.entities[1:]]
-        for entity in self.entities:
-            entity.safe_ratios = [float("inf"), float("inf")]
+        self.ego_params = {}
+        self.entity_params = [{} for _ in self.entities[1:]]
+        self.safe_distances = [[0.0, 0.0] for _ in self.entities[1:]]
+        self.intersect = [["safe"] for _ in self.entities[1:]]
+        self.entity_safe_ratios = {
+            entity: [float("inf"), float("inf")] for entity in self.entities
+        }
 
-    def __call__(self, state: State):
+    def __call__(self, state: State) -> None:
         """
         Label each entity to specify if its distances to the ego are unsafe.
 
@@ -68,39 +68,35 @@ class RSSDistances(StateCallback):
             corresponding ego safe buffer, and if so, which direction should be
             flagged as unsafe
         """
-        if state._t == 0.0:
+        if state.t == 0.0:
             # Require at least two poses to calculate velocity
             return
 
         # Establish Ego parameters
         ego = self.ego
         entities = self.entities
-        try:
-            ego_heading = direction(ego.pose[3])
-            ego_inverse_heading = inverse_direction(list(ego_heading))
-            entity_params = []
-            ego_position = ego.pose[0:2]
-        except IndexError:
-            # Ego has invalid pose
-            warnings.warn(
-                "RSSDistances _step: Error in handling of ego at time {0}. "
-                "Invalid pose: {1}. RSSDistances callback skips this "
-                "timestep.".format(state._t, ego.pose)
-            )
-            return
+        ego_heading = direction(state.poses[ego][3])
+        ego_inverse_heading = inverse_direction(list(ego_heading))
+        entity_params = []
+        ego_position = state.poses[ego][0:2]
         # Create a dictionary for each entity of form:
         # {position, heading, velocity, acceleration, box_points, length, width}
         # With directional and positional parameters defined with respect to ego
         # frame.
         for entity in entities:
             entity_dictionary = self.get_entity_parameters(
-                entity, ego_heading, ego_inverse_heading, ego_position, state.dt
+                state,
+                entity,
+                ego_heading,
+                ego_inverse_heading,
+                ego_position,
+                state.dt,
             )
             if entity_dictionary is None:
                 warnings.warn(
                     "RSSDistances _step: Error in handling of entity {0} at time "
                     "{1}. Invalid pose: {2}. RSS metric skips entity at this "
-                    "timestep.".format(entity, state._t, entity.pose)
+                    "timestep.".format(entity, state.t, state.poses[entity])
                 )
                 continue
             else:
@@ -121,36 +117,38 @@ class RSSDistances(StateCallback):
 
         # Assign evaluated parameters to the state
         assert len(entity_params) == len(safe_distances)
-        state.ego_params = ego_params
-        state.entity_params = entity_params
-        state.safe_distances = safe_distances
+        self.ego_params = ego_params
+        self.entity_params = entity_params
+        self.safe_distances = safe_distances
 
         # Check for each entity if there is an intersection of safe distance buffer
         # and assign safe distance ratios to entity as an attribute
         for i in range(len(entity_params)):
-            self.safe_ratios(
-                entities[i + 1], ego_params, entity_params[i], safe_distances[i]
+            self.entity_safe_ratios[entities[i + 1]] = self.safe_ratios(
+                ego_params, entity_params[i], safe_distances[i]
             )
-            state.intersect[i].append(
+            self.intersect[i].append(
                 self.unsafe_distance(
                     ego_params,
                     entity_params[i],
-                    state.intersect[i],
+                    self.intersect[i],
                     safe_distances[i],
                 )
             )
-            if state.intersect[i] is None:
+            if self.intersect[i] is None:
                 # Entity trimmed poses results in IndexError, go to next entity
                 warnings.warn(
                     "safe_longitudinal: IndexError in handling of entity number: "
                     "{0} at timestep: {1} seconds. Continue to next "
-                    "entity.".format(i, state._t)
+                    "entity.".format(i, state.t)
                 )
 
     @staticmethod
     def safe_ratios(
-        entity: Entity, ego: Dict, haz: Dict, safe_distances: List[float]
-    ) -> None:
+        ego: Dict,
+        haz: Dict,
+        safe_distances: List[float],
+    ) -> List[float]:
         """
         Attach safe_distance ratios to entity.
 
@@ -191,8 +189,7 @@ class RSSDistances(StateCallback):
             - 0.5 * ego["length"]
             - 0.5 * abs(np.dot([haz["width"], haz["length"]], haz["heading"])),
         )
-        safe_ratios = [abs(actual_lat / safe_lat), abs(actual_long / safe_long)]
-        entity.safe_ratios = safe_ratios
+        return [abs(actual_lat / safe_lat), abs(actual_long / safe_long)]
 
     @staticmethod
     def unsafe_distance(
@@ -368,6 +365,7 @@ class RSSDistances(StateCallback):
 
     @staticmethod
     def get_entity_parameters(
+        state: State,
         entity: Entity,
         ego_heading: List[float],
         ego_inverse_heading: List[float],
@@ -375,7 +373,8 @@ class RSSDistances(StateCallback):
         dt: float,
     ) -> Dict:
         """Calculate entity parameters and returns these as a dictionary."""
-        entity_pose = entity.pose
+        entity_pose = state.poses[entity]
+        entity_velocity = state.velocities[entity]
         if len(entity_pose) != 6:
             warnings.warn(
                 "Entity pose should have six elements, [x, y, z, h, r, p]. "
@@ -384,7 +383,7 @@ class RSSDistances(StateCallback):
             return
         ego_position = np.array(ego_position)
         entity_heading = direction(entity_pose[3])
-        entity_acceleration = acceleration(entity.recorded_poses, dt)
+        entity_acceleration = acceleration(state.recorded_poses(entity), dt)
         # All vectors take form [lateral, longitudinal] / [x, y]
         entity_dictionary = {
             "position": coord_change(entity_pose[0:2], ego_heading, ego_position),
@@ -393,8 +392,8 @@ class RSSDistances(StateCallback):
                 np.dot(entity_heading, ego_heading),
             ],
             "velocity": [
-                np.dot(entity.velocity[:2], ego_inverse_heading),
-                np.dot(entity.velocity[:2], ego_heading),
+                np.dot(entity_velocity[:2], ego_inverse_heading),
+                np.dot(entity_velocity[:2], ego_heading),
             ],
             "accel": [
                 np.dot(
@@ -405,7 +404,7 @@ class RSSDistances(StateCallback):
             ],
             "box_points": [
                 coord_change(point, ego_heading, ego_position)
-                for point in entity.get_bounding_box_points()
+                for point in entity.get_bounding_box_points(entity_pose)
             ],
             "length": entity.catalog_entry.bounding_box.length,
             "width": entity.catalog_entry.bounding_box.width,

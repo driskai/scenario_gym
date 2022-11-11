@@ -3,7 +3,7 @@ import numpy as np
 from scenario_gym.scenario_gym import ScenarioGym
 
 
-def test_scenario_gym(all_scenarios):
+def test_gym(all_scenarios):
     """Rollout a single scenario."""
     scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
 
@@ -13,14 +13,14 @@ def test_scenario_gym(all_scenarios):
 
     gym.reset_scenario()
     gym.step()
-    assert all([np.allclose(e.dt, 0.5) for e in gym.state.scenario.entities])
+    assert np.allclose(gym.state.dt, 0.5)
 
     gym.timestep = 0.2
     gym.step()
-    assert all([np.allclose(e.dt, 0.2) for e in gym.state.scenario.entities])
+    assert np.allclose(gym.state.t, 0.7)
 
     gym.rollout()
-    v = gym.state.scenario.entities[0].velocity
+    v = gym.state.velocities[gym.state.scenario.entities[0]]
     assert (v[:2] == np.zeros(2)).all()
 
 
@@ -30,7 +30,7 @@ def test_reset_scenario(all_scenarios):
 
     gym = ScenarioGym()
     gym.load_scenario(scenario_path)
-    assert [e.pose is not None for e in gym.state.scenario.entities]
+    assert [gym.state.poses[e] is not None for e in gym.state.scenario.entities]
 
     gym.load_scenario(scenario_path, relabel=True)
     assert (gym.state.scenario.entities[0].ref == "ego") and (

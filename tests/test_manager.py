@@ -8,18 +8,17 @@ from scenario_gym.scenario_gym import ScenarioGym
 class EgoMaxSpeedMetric(Metric):
     """Measures the max speed achieved by the ego in the scenario."""
 
-    def __init__(self):
-        self.max_speed = 0.0
+    max_speed: float
 
     def _reset(self, state):
         """Reset the metric."""
-        self.ego = state.scenario.agents["ego"]
+        self.ego = state.scenario.entities[0]
         self.max_speed = 0.0
 
     def _step(self, state):
         """Update the max speed."""
         self.max_speed = np.maximum(
-            np.linalg.norm(self.ego.entity.velocity[:2]),
+            np.linalg.norm(state.velocities[self.ego][:3]),
             self.max_speed,
         )
 

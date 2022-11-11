@@ -136,6 +136,7 @@ class RoadNetwork:
 
     def __init__(
         self,
+        name: Optional[str] = None,
         path: Optional[str] = None,
         **road_objects: Dict[str, List[RoadObject]],
     ):
@@ -151,7 +152,10 @@ class RoadNetwork:
 
         Parameters
         ----------
-        path: Optional[str]
+        name : Optional[str]
+            Name for the road network.
+
+        path : Optional[str]
             The filepath of the road network data.
 
         road_objects : Dict[str, List[RoadObject]]
@@ -159,8 +163,10 @@ class RoadNetwork:
             passed.
 
         """
-        self._elevation_func: Optional[Callable[[float, float], float]] = None
+        self.name = name
         self.path = path
+
+        self._elevation_func: Optional[Callable[[float, float], float]] = None
 
         self.object_names = self._default_object_names.copy()
         self.object_classes = {v: k for k, v in self.object_names.items()}

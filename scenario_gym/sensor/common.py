@@ -1,13 +1,12 @@
 """Provides a selection of commonly used sensors."""
 from copy import deepcopy
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation, SingleEntityPoseObservation
-from scenario_gym.scenario.utils import detect_collisions
-from scenario_gym.state import State
+from scenario_gym.observation import Observation
+from scenario_gym.state import State, detect_collisions
 
 from .base import Sensor
 
@@ -31,15 +30,21 @@ class CombinedSensor(Sensor):
 
 
 class EgoLocalizationSensor(Sensor):
-    """Returns position and orientation of the entity."""
+    """Observation containing just the base entity information."""
 
     def _reset(self) -> None:
         """Reset the sensor at the start of the scenario."""
         pass
 
-    def _step(self, state: State) -> SingleEntityPoseObservation:
-        """Produce an observation from the global state."""
-        return SingleEntityPoseObservation(self.entity.pose)
+    def _step(self, state: State, obs: Observation) -> Observation:
+        """Return the entity observation."""
+        return obs
+
+
+class FutureCollisionObservation(Observation):
+    """Contains a bool variable indicating if a future collision is predicted."""
+
+    future_collision: bool
 
 
 class FutureCollisionDetector(Sensor):
@@ -47,8 +52,10 @@ class FutureCollisionDetector(Sensor):
     Detects any future collisions in the scenario.
 
     Entity trajectories are used to obtain their future position
-    and compare it to the sensor's entity.
+    and compare t to the sensor's entity.
     """
+
+    observation_type = FutureCollisionObservation
 
     def __init__(self, entity: Entity, horizon: float = 5.0):
         """
@@ -70,7 +77,7 @@ class FutureCollisionDetector(Sensor):
         """Reset the sensor at the start of the scenario."""
         pass
 
-    def _step(self, state: State) -> bool:
+    def _step(self, state: State, obs: FutureCollisionObservation) -> bool:
         """Produce an observation from the global state."""
         # make copeies of each entity to avoid modifying
         others = {
@@ -79,31 +86,52 @@ class FutureCollisionDetector(Sensor):
         }
 
         # check for collisions over the horizon
+        obs.future_collision = False
         for t in np.linspace(state.t, state.t + self.horizon, 10):
             for e, (e_ref, a) in others.items():
                 e_ref.pose = a.trajectory.position_at_t(t)
             other_ents, _ = map(list, zip(*others.values()))
             collisions = detect_collisions(other_ents)
             if len(collisions[others[self.entity][0]]) > 0:
-                return True
-        return False
+                obs.future_collision = True
+        return obs
+
+
+class CollisionObservation(Observation):
+    """Observation with currently occuring collisions."""
+
+    collisions: Dict[Entity, List[Entity]]
 
 
 class GlobalCollisionDetector(Sensor):
     """Returns collisions observed in the scene."""
 
-    def _step(self, state: State):
+    observation_type = CollisionObservation
+
+    def _step(
+        self, state: State, obs: CollisionObservation
+    ) -> CollisionObservation:
         """Produce an observation from the global state."""
-        return state.scenario.detect_collisions()
+        obs.collisions = state.collisions()
+        return obs
+
+
+class KeyboardObservation(Observation):
+    """Observation with current key pressed by user."""
+
+    last_keystroke: int
 
 
 class KeyboardInputDetector(Sensor):
     """Detects keyboard input."""
 
+    observation_type = KeyboardObservation
+
     def _reset(self) -> None:
         """Reset the sensor at the start of the scenario."""
         pass
 
-    def _step(self, state: State) -> int:
+    def _step(self, state: State, obs: KeyboardObservation) -> int:
         """Produce an observation from the global state."""
-        return state.last_keystroke
+        obs.last_keystroke = state.last_keystroke
+        return obs

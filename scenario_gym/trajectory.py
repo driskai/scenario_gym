@@ -53,6 +53,7 @@ class Trajectory:
                 f" for all of {self._fields} are provided."
             )
 
+        data = np.unique(data, axis=0)
         _data: List[NDArray] = []
         if "h" in fields:
             data[:, fields.index("h")] = _resolve_heading(
@@ -86,7 +87,7 @@ class Trajectory:
             setattr(self, f, d)
 
         # we will make the data readonly
-        self.data = np.unique(np.array(_data).T, axis=0)
+        self.data = np.array(_data).T.copy()
         self.data.flags.writeable = False
 
         self._interpolated: Optional[Callable[[ArrayLike], NDArray]] = None
@@ -229,9 +230,34 @@ class Trajectory:
         new_data[:, 4] = (new_data[:, 4] + h) % (2.0 * np.pi)
         return self.__class__(new_data)
 
+    def is_stationary(self) -> bool:
+        """Return True if the trajectory is stationary."""
+        return is_stationary(self.data)
+
 
 def _resolve_heading(h: NDArray) -> NDArray:
     """Update heading so that there are no large jumps."""
     deltas = np.diff(h) % (2 * np.pi)
     deltas = np.where(deltas > np.pi, deltas - 2 * np.pi, deltas)
     return np.hstack([h[0], deltas]).cumsum()
+
+
+def is_stationary(data: np.ndarray) -> bool:
+    """
+    Check if an entity is stationary for the entire scenario.
+
+    Any nan values are replaced with 0s.
+    """
+    return (
+        len(
+            np.unique(
+                np.where(
+                    np.isnan(data[:, 1:]),
+                    0.0,
+                    data[:, 1:],
+                ),
+                axis=0,
+            )
+        )
+        <= 1
+    )

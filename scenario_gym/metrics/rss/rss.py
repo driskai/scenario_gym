@@ -10,7 +10,6 @@
 #       road users
 
 import string
-import warnings
 from enum import Enum
 from typing import Dict, List
 
@@ -127,24 +126,22 @@ class RSS(Metric):
 
     def _reset(self, state: State) -> None:
         """Reset behaviour."""
+        self.rss_callback = self.callbacks[0]
         self.behaviour = None
         self.ego = state.scenario.entities[0]
-        for entity in state.scenario.entities:
-            if not entity.record_trajectory:
-                entity.recorded_trajectory = True
         self.metrics_ = {rule.name: True for rule in Rules}
 
     def _step(self, state: State) -> None:
         """Update the metric to find behaviour at the point of interest."""
-        if state._t == 0.0:
+        if state.t == 0.0:
             # Require at least two poses to calculate velocity
             return
 
         ego, entities, safe_distances, intersect = (
-            state.ego_params,
-            state.entity_params,
-            state.safe_distances,
-            state.intersect,
+            self.rss_callback.ego_params,
+            self.rss_callback.entity_params,
+            self.rss_callback.safe_distances,
+            self.rss_callback.intersect,
         )
         rules = RSSBehaviourDetection(
             metrics=self.metrics_,
@@ -153,19 +150,15 @@ class RSS(Metric):
             safe_distances=safe_distances,
             road_network=state.scenario.road_network,
             dt=state.dt,
-            intersect=state.intersect,
-            collisions=state.collisions,
+            intersect=self.rss_callback.intersect,
+            collisions=state.collisions(),
         )
-        try:
-            outcomes, intersect = rules()
-            self.intersect = intersect
-            for rule, outcome in outcomes.items():
-                if outcome is False:
-                    self.metrics_[rule] = outcome
-        except IndexError:
-            warnings.warn(
-                "RSSBehaviourDetection: IndexError caught at time " + str(state._t)
-            )
+
+        outcomes, intersect = rules()
+        self.intersect = intersect
+        for rule, outcome in outcomes.items():
+            if outcome is False:
+                self.metrics_[rule] = outcome
 
     def get_state(self) -> Dict[str, bool]:
         """Return state."""
