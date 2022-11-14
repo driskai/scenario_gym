@@ -10,10 +10,11 @@ requires = [
     "setuptools>=58.0.4",
     "scenariogeneration>=0.7.4",
     "scipy>=1.6.3",
-    "Shapely>=1.8.0",
+    "Shapely==2.0b2",
 ]
 extras = {
     "gym": ["gym>=0.21.0"],
+    "dm": ["dm-env>=1.5"],
     "hooks": [
         "black~=22.3.0",
         "flake8~=3.9.2",
@@ -29,6 +30,7 @@ extras = {
 extras["dev"] = list(
     set().union(
         extras["gym"],
+        extras["dm"],
         extras["hooks"],
         extras["docs"],
         extras["testing"],
@@ -46,7 +48,7 @@ setup(
     description="scenario_gym - intelligent agents in traffic scenarios.",
     extras_require=extras,
     install_requires=requires,
-    # license=...,
+    license="MIT",
     long_description=long_description,
     long_description_content_type="text/markdown",
     name="scenario_gym",
@@ -54,5 +56,5 @@ setup(
         where=".",
         include=["scenario_gym", "scenario_gym.*"],
     ),
-    version="0.2.0",
+    version="0.3.0",
 )

@@ -62,7 +62,7 @@ class BatchReplayEntity:
         self.entities.clear()
         self.trajectories.clear()
         self.max_t = 0.0
-        if len(entities) > 0:
+        if entities:
             self.entities.extend(entities)
             self.trajectories.extend(trajs)
 

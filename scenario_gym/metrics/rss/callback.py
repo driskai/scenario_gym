@@ -101,7 +101,7 @@ class RSSDistances(StateCallback):
                 continue
             else:
                 entity_params.append(entity_dictionary)
-        if len(entity_params) == 0:
+        if not entity_params:
             warnings.warn(
                 "Zero entity parameters generated at timestep: {0}".format(state.t)
             )

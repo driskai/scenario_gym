@@ -15,13 +15,13 @@ from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.sensor import EgoLocalizationSensor
 
 
-def load_keywords(obj: Type, exclude: List[str] = []) -> Dict[str, Any]:
+def load_keywords(obj: Type, exclude: Optional[List[str]] = None) -> Dict[str, Any]:
     """Find keyword arguments of the object."""
     sig = inspect.signature(obj.__init__)
     return {
         k: v.default
         for k, v in sig.parameters.items()
-        if v.default != inspect._empty and k not in exclude
+        if v.default != inspect._empty and (exclude is None or k not in exclude)
     }
 
 

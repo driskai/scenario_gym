@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Optional
 
 from numpy.typing import ArrayLike
@@ -17,7 +16,7 @@ from scenario_gym.state import State
 from scenario_gym.trajectory import Trajectory
 
 
-class Agent(ABC):
+class Agent:
     """Base agent class. Processes observations to select an action."""
 
     def __init__(self, entity: Entity, controller: Controller, sensor: Sensor):

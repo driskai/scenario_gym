@@ -55,11 +55,10 @@ class Trajectory:
 
         data = np.unique(data, axis=0)
         _data: List[NDArray] = []
-        if "h" in fields:
-            data[:, fields.index("h")] = _resolve_heading(
-                data[:, fields.index("h")]
-            )
         for f in self._fields:
+            d = data[:, fields.index(f)] if f in fields else np.zeros(data.shape[0])
+            if f == "h":
+                d = _resolve_heading(d)
             if f not in fields or (
                 f in fields and np.isnan(data[:, fields.index(f)]).sum() != 0
             ):
@@ -75,7 +74,7 @@ class Trajectory:
                     )
                     d = np.arctan2(*np.flip(fn(t + 1e-2) - fn(t - 1e-2), axis=1).T)
                     d = _resolve_heading(d)
-                elif f in ["z", "p", "r"]:
+                elif f in ("z", "p", "r"):
                     d = np.zeros(data.shape[0])
                 else:
                     raise ValueError(

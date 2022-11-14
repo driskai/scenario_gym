@@ -74,7 +74,7 @@ def import_scenario(
     if not os.path.exists(filepath):
         warnings.warn(f"Could not find road network file: {filepath}.")
 
-    if extension == ".json" or extension == "":
+    if extension in (".json", ""):
         road_network = RoadNetwork.create_from_json(filepath)
     elif extension == ".xodr":
         road_network = RoadNetwork.create_from_xodr(filepath)

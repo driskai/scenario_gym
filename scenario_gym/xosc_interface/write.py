@@ -100,12 +100,16 @@ def write_scenario(
         osc_minor_version=osc_minor_version,
     )
     element = ET.Element("OpenSCENARIO")
-    element.append(s.header.get_element())
-    element.append(s.parameters.get_element())
-    element.append(s.catalog.get_element())
-    element.append(s.roadnetwork.get_element())
-    element.append(s.entities.get_element())
-    element.append(s.storyboard.get_element())
+    element.extend(
+        (
+            s.header.get_element(),
+            s.parameters.get_element(),
+            s.catalog.get_element(),
+            s.roadnetwork.get_element(),
+            s.entities.get_element(),
+            s.storyboard.get_element(),
+        )
+    )
     s.write_xml(filepath)
 
 
@@ -185,8 +189,6 @@ def get_maneuver(
         for event in events:
             maneuver.add_event(event)
         return maneuver
-    else:
-        return None
 
 
 def get_maneuver_group(
@@ -201,5 +203,3 @@ def get_maneuver_group(
         mangrp.add_actor(e.ref)
         mangrp.add_maneuver(maneuver)
         return mangrp
-    else:
-        return None

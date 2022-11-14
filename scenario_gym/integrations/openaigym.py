@@ -144,11 +144,13 @@ class ScenarioGym(ScenarioGym, Env):
             s = self.select_scenario()
         if s is not None:
             if isinstance(s, Scenario):
-                self._set_scenario(s)
+                self.set_scenario(s)
             else:
                 self.load_scenario(s)
         elif self.state.scenario is None:
             raise ValueError("No scenario has been set.")
+        else:
+            self.reset_scenario()
 
         self.state.next_t = self.state.t + self.timestep
         ego_obs = self.ego_agent.sensor.step(self.state)
@@ -235,7 +237,7 @@ class ScenarioGym(ScenarioGym, Env):
             create_agent = self.create_agent
         super().load_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def _set_scenario(
+    def set_scenario(
         self, *args, create_agent: Optional[Callable] = None, **kwargs
     ):
         """
@@ -245,7 +247,7 @@ class ScenarioGym(ScenarioGym, Env):
         """
         if create_agent is None:
             create_agent = self.create_agent
-        super()._set_scenario(*args, create_agent=create_agent, **kwargs)
+        super().set_scenario(*args, create_agent=create_agent, **kwargs)
 
     def select_scenario(self) -> Union[str, Scenario]:
         """Update the scenario when reset is called."""
