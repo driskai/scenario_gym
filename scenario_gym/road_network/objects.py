@@ -88,9 +88,10 @@ class Lane(RoadLike):
             {
                 "successors": self.successors,
                 "predecessors": self.predecessors,
-                "type": self.type.name,
             }
         )
+        if self.type is not None:
+            data["type"] = self.type.name
         return data
 
 
