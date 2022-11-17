@@ -59,7 +59,7 @@ class RoadNetwork:
         """
         with open(filepath) as f:
             data = json.load(f)
-        return cls.create_from_dict(data, path=filepath)
+        return cls.create_from_dict(data, name=Path(filepath).stem, path=filepath)
 
     @classmethod
     @lru_cache(maxsize=15)
@@ -104,7 +104,8 @@ class RoadNetwork:
             xodr_network,
             simplify_tolerance,
         )
-        return cls(roads=roads, path=str(path))
+
+        return cls(roads=roads, name=path.stem, path=str(path))
 
     @classmethod
     def create_from_dict(cls, data: Dict, **kwargs):
@@ -153,10 +154,10 @@ class RoadNetwork:
 
         Parameters
         ----------
-        name : Optional[str]
-            Name for the road network.
+        name: Optional[str]
+            Optional name for the road network.
 
-        path : Optional[str]
+        path: Optional[str]
             The filepath of the road network data.
 
         road_objects : Dict[str, List[RoadObject]]
