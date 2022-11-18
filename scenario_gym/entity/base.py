@@ -1,3 +1,4 @@
+from copy import deepcopy
 from inspect import getfullargspec
 from typing import Optional, Type
 
@@ -79,6 +80,14 @@ class Entity:
     def type(self) -> Optional[str]:
         """Get the catalog type of the entity. E.g. Vehicle, Pedestrian."""
         return self.catalog_entry.catalog_type.replace("Catalogs", "")
+
+    def __deepcopy__(self, memo):
+        """Deepcopy an entity without copying catalog_entry."""
+        return self.__class__(
+            self.catalog_entry,
+            trajectory=deepcopy(self.trajectory),
+            ref=self.ref,
+        )
 
     def get_bounding_box_points(self, pose: ArrayLike) -> np.ndarray:
         """

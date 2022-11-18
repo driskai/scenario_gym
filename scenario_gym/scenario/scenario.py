@@ -94,7 +94,7 @@ class Scenario:
             return self._ref_to_entity[e_ref]
 
     def __deepcopy__(self, memo) -> Scenario:
-        """"""
+        """Deepcopy a scenario."""
         return self.__class__(
             name=f"Copy of {self.name}" if self.name is not None else None,
             road_network=self.road_network,
