@@ -97,3 +97,14 @@ def test_immutable_traj():
 
     with pt.raises(ValueError):
         traj.data[-1][0] = 11
+
+
+def test_copy_traj():
+    """Test copying a trajectory."""
+    data = np.repeat(np.arange(10, dtype=np.float32)[:, None], 4, axis=1)  # (10, 4)
+    traj = Trajectory(data, fields=["t", "x", "y", "h"])
+
+    traj_new = traj.copy()
+    assert id(traj) != id(traj_new), "Should have different memory."
+    assert id(traj.data) != id(traj_new.data), "Should have different memory."
+    assert np.allclose(traj.data, traj_new.data), "Should have equal data."

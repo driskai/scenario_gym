@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy
 
 import numpy as np
 import pytest as pt
@@ -17,7 +17,7 @@ def example_catalog_entry(all_scenarios):
     return scenario.entities[0].catalog_entry
 
 
-def test_deepcopy_entity(example_catalog_entry):
+def test_copy_entity(example_catalog_entry):
     """Test deepcopying an entity."""
     e = Entity(
         example_catalog_entry,
@@ -27,7 +27,7 @@ def test_deepcopy_entity(example_catalog_entry):
         ),
         ref="example",
     )
-    e_new = deepcopy(e)
+    e_new = copy(e)
     assert id(e_new.catalog_entry) == id(
         e.catalog_entry
     ), "Catalog entry should be the same."

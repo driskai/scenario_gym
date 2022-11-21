@@ -21,6 +21,6 @@ def test_deepcopy_scenario(example_scenario):
     """Test deepcopying a scenario."""
     s_new = deepcopy(example_scenario)
     assert len(s_new.entities) == len(example_scenario.entities)
-    assert id(s_new.road_network) == id(
+    assert id(s_new.road_network) != id(
         example_scenario.road_network
-    ), "Road networks should be the same."
+    ), "Road networks should be different."

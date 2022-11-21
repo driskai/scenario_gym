@@ -1,9 +1,11 @@
-from copy import deepcopy
+from __future__ import annotations
+
+from copy import copy
 from inspect import getfullargspec
 from typing import Optional, Type
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from shapely.geometry import Polygon
 
 from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
@@ -81,15 +83,19 @@ class Entity:
         """Get the catalog type of the entity. E.g. Vehicle, Pedestrian."""
         return self.catalog_entry.catalog_type.replace("Catalogs", "")
 
-    def __deepcopy__(self, memo):
-        """Deepcopy an entity without copying catalog_entry."""
+    def __copy__(self) -> Entity:
+        """Create a copy of an entity without copying the catalog_entry."""
         return self.__class__(
             self.catalog_entry,
-            trajectory=deepcopy(self.trajectory),
+            trajectory=self.trajectory.copy(),
             ref=self.ref,
         )
 
-    def get_bounding_box_points(self, pose: ArrayLike) -> np.ndarray:
+    def copy(self) -> Entity:
+        """Create a copy of an entity without copying the catalog_entry."""
+        return copy(self)
+
+    def get_bounding_box_points(self, pose: ArrayLike) -> NDArray:
         """
         Compute the bounding box coordinates in the global frame for the given pose.
 

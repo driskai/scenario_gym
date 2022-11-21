@@ -1,4 +1,3 @@
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar
 
@@ -65,12 +64,4 @@ class UpdateStateVariableAction(ScenarioAction):
         """Update the entity with action variables."""
         if entity is not None:
             for k, v in self.action_variables.items():
-                try:
-                    getattr(entity, k)
-                except AttributeError:
-                    warnings.warn(
-                        f"The entity {entity} has no attribute {k} but action "
-                        f"{self.__class__.__name__} is trying to set {k}."
-                    )
-                    continue
-                setattr(entity, k, v)
+                state.entity_state[entity] = k

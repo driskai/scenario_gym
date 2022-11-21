@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 from shapely.geometry import MultiPolygon, Point, Polygon
@@ -10,7 +12,7 @@ from shapely.vectorized import contains
 from scenario_gym.callback import StateCallback
 from scenario_gym.entity import BatchReplayEntity, Entity
 from scenario_gym.road_network import RoadObject
-from scenario_gym.scenario import Scenario
+from scenario_gym.scenario import Scenario, ScenarioAction
 from scenario_gym.state.utils import detect_collisions
 from scenario_gym.trajectory import Trajectory, is_stationary
 
@@ -33,7 +35,7 @@ class State:
     def __init__(
         self,
         scenario: Scenario,
-        conditions: Optional[List[Union[str, Callable[["State"], bool]]]] = None,
+        conditions: Optional[List[Union[str, Callable[[State], bool]]]] = None,
         state_callbacks: Optional[Dict[str, StateCallback]] = None,
     ):
         """
@@ -44,7 +46,7 @@ class State:
         scenario : Scenario
             The scenario to be simulated.
 
-        conditions : Optional[List[Union[str, Callable[["State"], bool]]]]
+        conditions : Optional[List[Union[str, Callable[[State], bool]]]]
             Terminal conditions that will end the scenario if any is met. May be a
             string referencing an entry of the TERMINAL_CONDITIONS dictionary.
 
@@ -72,10 +74,12 @@ class State:
         self._collisions: Optional[Dict[Entity, List[Entity]]] = None
         self._callbacks: Dict[Type[StateCallback], StateCallback] = {}
 
+        self.unapplied_actions: List[ScenarioAction]
         self.poses: Dict[Entity, np.ndarray]
         self.prev_poses: Dict[Entity, np.ndarray]
         self.velocities: Dict[Entity, np.ndarray]
         self.distances: Dict[Entity, float]
+        self.entity_state: Dict[Entity, Any]
         self._recorded_poses: Dict[Entity, List[Tuple[float, np.ndarray]]]
 
         self.agents: Dict[Entity, Agent] = {}
@@ -127,6 +131,7 @@ class State:
         self.next_t: Optional[float] = None
         self._t: Optional[float] = None
         self._prev_t: Optional[float] = None
+        self.unapplied_actions = self.scenario.actions.copy()
 
         entities = self.scenario.entities
         self.poses: Dict[Entity, np.ndarray] = OrderedDict.fromkeys(entities)
@@ -136,6 +141,7 @@ class State:
             entities,
             value=0.0,
         )
+        self.entity_state: Dict[Entity, Any] = OrderedDict.fromkeys(entities, None)
         self._recorded_poses: Dict[
             Entity, List[Tuple[float, np.ndarray]]
         ] = OrderedDict()
@@ -202,15 +208,24 @@ class State:
 
     def update_actions(self) -> None:
         """Update state actions."""
-        for act in self.scenario.actions:
-            if not act.applied and self.t >= act.t:
-                entity = act.entity_ref
-                if entity is None:
-                    warnings.warn(
-                        f"No entity with name {entity.ref} was found for action "
-                        f"{act.__class__.__name__}."
-                    )
-                act.apply(self, self.scenario.entity_by_name(act.entity_ref))
+        unapplied: List[ScenarioAction] = []
+        for act in self.unapplied_actions:
+            if self.t >= act.t:
+                self.apply_action(act)
+            else:
+                unapplied.append(act)
+        self.unapplied_actions = unapplied
+
+    def apply_action(self, action: ScenarioAction) -> None:
+        """Apply an action to the state."""
+        entity = self.scenario.entity_by_name(action.entity_ref)
+        if entity is None:
+            warnings.warn(
+                f"No entity with name {entity.ref} was found for action "
+                f"{action.__class__.__name__}."
+            )
+        else:
+            action.apply(self, entity)
 
     def update_callbacks(self) -> None:
         """Update all state callbacks."""
@@ -227,7 +242,7 @@ class State:
     ) -> Dict[Entity, np.ndarray]:
         """Get recorded poses for each or a given entity."""
         if entity is not None:
-            poses = self._recorded_poses[entity]
+            poses = self._recorded_poses.get(entity, None)
             if not poses:
                 return np.empty((0, 7))
             ts, poses = map(np.array, zip(*poses))
@@ -240,6 +255,17 @@ class State:
                 ts, poses = map(np.array, zip(*poses))
                 data[ent] = np.concatenate([ts[:, None], poses], axis=1)
         return data
+
+    def get_entity_data(self, entity: Entity) -> Dict[str, Any]:
+        """Get state data for a specific entity."""
+        return {
+            "pose": self.poses.get(entity, None),
+            "prev_pose": self.prev_poses.get(entity, None),
+            "velocity": self.velocities.get(entity, None),
+            "distance": self.distances.get(entity, None),
+            "state": self.entity_state.get(entity, None),
+            "recorded_poses": self.recorded_poses(entity=entity),
+        }
 
     def collisions(self) -> Dict[Entity, List[Entity]]:
         """Return collisions between entities at the current time."""

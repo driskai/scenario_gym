@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import suppress
-from copy import deepcopy
+from copy import copy, deepcopy
 from functools import cached_property
 from typing import Dict, List, Optional, Tuple
 
@@ -93,14 +93,18 @@ class Scenario:
         with suppress(KeyError):
             return self._ref_to_entity[e_ref]
 
-    def __deepcopy__(self, memo) -> Scenario:
-        """Deepcopy a scenario."""
+    def __copy__(self) -> Scenario:
+        """Create a copy of a scenario without copying the road network."""
         return self.__class__(
             name=f"Copy of {self.name}" if self.name is not None else None,
             road_network=self.road_network,
             actions=deepcopy(self.actions),
-            entities=deepcopy(self.entities),
+            entities=[e.copy() for e in self.entities],
         )
+
+    def copy(self) -> Scenario:
+        """Create a copy of the scenario."""
+        return copy(self)
 
     def add_entity(self, e: Entity, inplace: bool = False) -> Scenario:
         """Create a new scenario with the entity added."""
@@ -116,11 +120,20 @@ class Scenario:
             warnings.warn(
                 f"An entity with ref {old_ref} exists. Adding with ref {new_ref}."
             )
-        scenario = deepcopy(self) if not inplace else self
+        scenario = self.copy() if not inplace else self
         scenario._entities.append(e)
         scenario._ref_to_entity[e.ref] = e
-        scenario.vehicles = None
-        scenario.pedestrians = None
+        scenario._vehicles = None
+        scenario._pedestrians = None
+        return scenario
+
+    def remove_entity(self, e: Entity, inplace: bool = False) -> Scenario:
+        """Create a new scenario with the entity added."""
+        scenario = self.copy() if not inplace else self
+        scenario._entities.remove(e)
+        scenario._ref_to_entity.pop(e.ref)
+        scenario._vehicles = None
+        scenario._pedestrians = None
         return scenario
 
     def make_ego(self, e: Entity, inplace: bool = False) -> Scenario:
@@ -129,7 +142,7 @@ class Scenario:
             idx = self._entities.index(e)
         except ValueError:
             idx = None
-        scenario = self if inplace else deepcopy(self)
+        scenario = self.copy() if not inplace else self
 
         if idx is not None:
             e = scenario._entities.pop(idx)
@@ -142,13 +155,13 @@ class Scenario:
 
     def add_action(self, action: ScenarioAction, inplace: bool = False) -> Scenario:
         """Add an action to the scenario."""
-        scenario = self if inplace else deepcopy(self)
+        scenario = self.copy() if not inplace else self
         scenario.actions.append(action)
         return scenario
 
     def translate(self, x: np.ndarray, inplace: bool = False) -> Scenario:
         """Return a new scenario with all entities translated."""
-        scenario = self if inplace else deepcopy(self)
+        scenario = self.copy() if not inplace else self
         for e in scenario.entities:
             e.trajectory = e.trajectory.translate(x)
         return scenario

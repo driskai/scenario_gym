@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from copy import copy
 from functools import cached_property
 from typing import Callable, List, Optional, Tuple
 
@@ -103,12 +106,12 @@ class Trajectory:
     @cached_property
     def min_t(self) -> float:
         """Return the first timestamp of the trajectory."""
-        return self.data[:, 0].min()
+        return self.t.min()
 
     @cached_property
     def max_t(self) -> float:
         """Return the final timestamp of the trajectory."""
-        return self.data[:, 0].max()
+        return self.t.max()
 
     @cached_property
     def s(self) -> NDArray:
@@ -174,14 +177,26 @@ class Trajectory:
                 data[-1, 0] += 1e-3
             self._interpolated_s = interp1d(
                 self.s,
-                data[:, :],
+                data,
                 bounds_error=False,
                 fill_value=(data[0, :], data[-1, :]),
                 axis=0,
             )
         return self._interpolated_s(s)
 
-    def translate(self, x: np.ndarray) -> "Trajectory":
+    def is_stationary(self) -> bool:
+        """Return True if the trajectory is stationary."""
+        return is_stationary(self.data)
+
+    def __copy__(self) -> Trajectory:
+        """Create a copy of the trajectory."""
+        return self.__class__(self.data.copy())
+
+    def copy(self) -> Trajectory:
+        """Create a copy of the trajectory."""
+        return copy(self)
+
+    def translate(self, x: np.ndarray) -> Trajectory:
         """
         Create a new trajectory by translating the current by x.
 
@@ -201,7 +216,7 @@ class Trajectory:
             x = x[None, :]
         return self.__class__(self.data + x)
 
-    def rotate(self, h: float) -> "Trajectory":
+    def rotate(self, h: float) -> Trajectory:
         """
         Create a new trajectory by rotating the current by h around O.
 
@@ -229,9 +244,41 @@ class Trajectory:
         new_data[:, 4] = (new_data[:, 4] + h) % (2.0 * np.pi)
         return self.__class__(new_data)
 
-    def is_stationary(self) -> bool:
-        """Return True if the trajectory is stationary."""
-        return is_stationary(self.data)
+    def subsample(
+        self,
+        points_per_s: Optional[float] = None,
+        points_per_t: Optional[float] = None,
+    ) -> Trajectory:
+        """
+        Create a new trajectory with a given frequency of control points.
+
+        The control points can either be equally spaced across time or across arc by
+        passing the keyword arguments `points_per_t` or `points_per_s` respectively.
+        Exactly one of these keywords must be passed.
+
+        Parameters
+        ----------
+        points_per_s : Optional[float]
+            Number of control points per unit of arc.
+
+        points_per_t : Optional[float]
+            Number of control points per unit of time.
+
+        """
+        if (points_per_s is None) == (points_per_t is None):
+            raise ValueError(
+                "Exactly one of `points_per_s` or `points_per_t` must be supplied."
+            )
+        if points_per_t:
+            n = np.ceil((self.max_t - self.min_t) * points_per_t)
+            ts = np.linspace(self.min_t, self.max_t, n)
+            data = self.position_at_t(ts)
+            return self.__class__(np.concatenate([ts[:, None], data], axis=1))
+
+        n = np.ceil(self.arclength * points_per_s)
+        ss = np.linspace(0, self.arclength, n)
+        data = self.position_at_s(ss)
+        return self.__class__(data)
 
 
 def _resolve_heading(h: NDArray) -> NDArray:

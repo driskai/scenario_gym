@@ -212,7 +212,7 @@ class OpenCVViewer(Viewer):
                 getattr(self, f"render_{layer}")(state, ego_pose)
 
         for entity_idx, (entity, pose) in enumerate(state.poses.items()):
-            self.draw_entity(entity_idx, entity, pose, ego_pose)
+            self.draw_entity(state, entity_idx, entity, pose, ego_pose)
 
         if "text" in self.render_layers:
             self.render_text(state)
@@ -256,6 +256,7 @@ class OpenCVViewer(Viewer):
 
     def draw_entity(
         self,
+        state: State,
         entity_idx: int,
         entity: Entity,
         pose: np.ndarray,
