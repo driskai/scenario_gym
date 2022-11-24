@@ -15,6 +15,47 @@ def test_trajectory():
     ), f"Incorrect arclength: {traj.arclength}."
 
 
+def test_invalid_create():
+    """Test that we cannot create without txy or with an invalid shape."""
+    with pt.raises(ValueError):
+        Trajectory(np.empty((3, 2)), fields=["x", "y"])
+        Trajectory(np.empty((3, 2)), fields=["t", "y"])
+        Trajectory(np.empty((3, 2)), fields=["t", "x"])
+        Trajectory(np.empty((2)))
+        Trajectory(np.empty((2, 2, 2)))
+        Trajectory(np.empty((2, 4)), fields=["t", "x", "y"])
+        Trajectory(np.empty((2, 2)))
+
+
+def test_filled_headings():
+    """Test that headings are estimated when not provided."""
+    data = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [2, 2, 2],
+        ]
+    )
+    traj = Trajectory(data, fields=["t", "x", "y"])
+    true_h = np.ones(3) * np.pi / 4
+    assert np.allclose(traj.h, true_h), "Headings should be estimated from xy."
+
+
+def test_filled_zrp():
+    """Test that headings are estimated when not provided."""
+    data = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 1],
+            [2, 2, 2],
+        ]
+    )
+    traj = Trajectory(data, fields=["t", "x", "y"])
+    assert np.allclose(traj.z, np.zeros(3)), "z not filled correctly."
+    assert np.allclose(traj.z, np.zeros(3)), "r not filled correctly."
+    assert np.allclose(traj.z, np.zeros(3)), "p not filled correctly."
+
+
 def test_single_cp():
     """Test loading a trajectory with 1 control point."""
     data = np.array(

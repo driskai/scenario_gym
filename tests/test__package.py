@@ -1,4 +1,6 @@
+"""Test package and module versions (file named so as to always run first)."""
 import os
+from pathlib import Path
 
 from packaging import version
 
@@ -18,7 +20,6 @@ def test_version():
         os.path.dirname(__file__),  # scenario_gym/tests
         "../setup.py",
     )
-    with open(setup_pth, "r") as f:
-        setup = f.read()
+    setup = Path(setup_pth).read_text()
     v_setup = version.parse(setup.split("version=")[-1].split(",")[0].strip("'\""))
     assert v_module == v_setup, "Setup version does not equal module version."

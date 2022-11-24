@@ -1,11 +1,9 @@
 from functools import cached_property
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.interpolate import interp1d
-
-from scenario_gym.road_network import RoadNetwork
 
 
 class Trajectory:
@@ -21,7 +19,7 @@ class Trajectory:
     ```
     """
 
-    _fields = ["t", "x", "y", "z", "h", "p", "r"]
+    _fields = ("t", "x", "y", "z", "h", "p", "r")
     t: Optional[NDArray] = None
     x: Optional[NDArray] = None
     y: Optional[NDArray] = None
@@ -30,7 +28,7 @@ class Trajectory:
     p: Optional[NDArray] = None
     r: Optional[NDArray] = None
 
-    def __init__(self, data: NDArray, fields: List[str] = _fields):
+    def __init__(self, data: NDArray, fields: Tuple[str] = _fields):
         """
         Trajectory constructor.
 
@@ -46,15 +44,24 @@ class Trajectory:
             must be a subset of _fields.
 
         """
-        assert all(f in fields for f in ["t", "x", "y"])
+        if not all(f in fields for f in ("t", "x", "y")):
+            raise ValueError("Trajectory cannot be created with t, x and y values.")
+        if data.ndim != 2 or data.shape[1] != len(fields):
+            raise ValueError(
+                f"Invalid shape: {data.shape}. Expected: (N, {len(fields)}). Either"
+                " pass `fields` to specify the columns given or ensure that columns"
+                f" for all of {self._fields} are provided."
+            )
+
         _data: List[NDArray] = []
         if "h" in fields:
             data[:, fields.index("h")] = _resolve_heading(
                 data[:, fields.index("h")]
             )
-        for i, f in enumerate(self._fields):
-            d = data[:, fields.index(f)] if f in fields else np.zeros(data.shape[0])
-            if np.isnan(d).sum() != 0:
+        for f in self._fields:
+            if f not in fields or (
+                f in fields and np.isnan(data[:, fields.index(f)]).sum() != 0
+            ):
                 if f == "h" and data.shape[0] == 1:
                     d = np.zeros(1)
                 elif f == "h" and data.shape[0] > 1:
@@ -66,12 +73,15 @@ class Trajectory:
                         fill_value="extrapolate",
                     )
                     d = np.arctan2(*np.flip(fn(t + 1e-2) - fn(t - 1e-2), axis=1).T)
+                    d = _resolve_heading(d)
                 elif f in ["z", "p", "r"]:
                     d = np.zeros(data.shape[0])
                 else:
                     raise ValueError(
                         f"Invalid values found for {f}. Values required for xyt."
                     )
+            else:
+                d = data[:, fields.index(f)]
             _data.append(d)
             setattr(self, f, d)
 
@@ -164,9 +174,9 @@ class Trajectory:
                 data[-1, 0] += 1e-3
             self._interpolated_s = interp1d(
                 self.s,
-                data[:, 1:],
+                data[:, :],
                 bounds_error=False,
-                fill_value=(data[0, 1:], data[-1, 1:]),
+                fill_value=(data[0, :], data[-1, :]),
                 axis=0,
             )
         return self._interpolated_s(s)
@@ -218,10 +228,6 @@ class Trajectory:
         ) + xy
         new_data[:, 4] = (new_data[:, 4] + h) % (2.0 * np.pi)
         return self.__class__(new_data)
-
-    def update_z_from_road_network(self, road_network: RoadNetwork) -> None:
-        """Replace the z-values with those estimated from the road network."""
-        self.z = road_network.elevation_at_point(self.x, self.y)
 
 
 def _resolve_heading(h: NDArray) -> NDArray:
