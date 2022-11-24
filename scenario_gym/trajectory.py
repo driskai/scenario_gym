@@ -94,6 +94,7 @@ class Trajectory:
 
         self._interpolated: Optional[Callable[[ArrayLike], NDArray]] = None
         self._interpolated_s: Optional[Callable[[ArrayLike], NDArray]] = None
+        self._grad_fn = None
 
     def __len__(self) -> int:
         """Return the number of points in the trajectory."""
@@ -248,6 +249,8 @@ class Trajectory:
         self,
         points_per_s: Optional[float] = None,
         points_per_t: Optional[float] = None,
+        curvature: bool = False,
+        **kwargs,
     ) -> Trajectory:
         """
         Create a new trajectory with a given frequency of control points.
@@ -264,21 +267,83 @@ class Trajectory:
         points_per_t : Optional[float]
             Number of control points per unit of time.
 
+        curvature: bool
+            If given will given curvature sampling to subsample the trajectory.
+
         """
         if (points_per_s is None) == (points_per_t is None):
             raise ValueError(
                 "Exactly one of `points_per_s` or `points_per_t` must be supplied."
             )
+        if curvature:
+            return self.curvature_subsample(
+                points_per_s=points_per_s,
+                points_per_t=points_per_t,
+                **kwargs,
+            )
         if points_per_t:
-            n = np.ceil((self.max_t - self.min_t) * points_per_t)
+            n = int(np.ceil((self.max_t - self.min_t) * points_per_t))
             ts = np.linspace(self.min_t, self.max_t, n)
             data = self.position_at_t(ts)
             return self.__class__(np.concatenate([ts[:, None], data], axis=1))
 
-        n = np.ceil(self.arclength * points_per_s)
+        n = int(np.ceil(self.arclength * points_per_s))
         ss = np.linspace(0, self.arclength, n)
         data = self.position_at_s(ss)
         return self.__class__(data)
+
+    def curvature_subsample(
+        self,
+        points_per_s: Optional[float] = None,
+        points_per_t: Optional[float] = None,
+        eps: float = 1e-3,
+        weight: float = 5.0,
+    ) -> np.ndarray:
+        """
+        Subsample by sampling points arround high curvature areas.
+
+        Parameters
+        ----------
+        points_per_s : Optional[float]
+            Number of control points per unit of arc.
+
+        points_per_t : Optional[float]
+            Number of control points per unit of time.
+
+        eps : float
+            Epsilon parameter for computing gradients of the trajectory.
+
+        weight : float
+            Temperature for sampling distribution. Higher values give points more
+            densley sampled around high curvature areas.
+
+        """
+        if points_per_s is not None:
+            n = int(np.maximum(1, points_per_s * self.arclength))
+        elif points_per_t is not None:
+            n = int(np.maximum(1, points_per_t * self.max_t))
+        else:
+            raise ValueError(
+                "Exactly one of `points_per_s` or `points_per_t` must be supplied."
+            )
+        s = self.s
+        if self._grad_fn is None:
+            fn = self.position_at_s
+            grads = (fn(s + eps)[:, [1, 2]] - fn(s - eps)[:, [1, 2]]) / (2 * eps)
+            self._grad_fn = interp1d(s, grads, axis=0, fill_value="extrapolate")
+        grad_fn = self._grad_fn
+        second_grad = (grad_fn(s[1:-1] + eps) - grad_fn(s[1:-1] - eps)) / (2 * eps)
+        curv = np.linalg.norm(second_grad, axis=1)
+        dist = np.exp(weight * curv) / np.exp(weight * curv).sum()
+        num_points = int(np.clip(n - 2, 1, dist.shape[0]))
+        idxs = np.random.choice(
+            dist.shape[0],
+            size=(num_points,),
+            replace=False,
+            p=dist,
+        )
+        s_vals = s[np.hstack([[0], 1 + np.sort(idxs), [s.shape[0] - 1]])]
+        return self.__class__(fn(s_vals))
 
 
 def _resolve_heading(h: NDArray) -> NDArray:
