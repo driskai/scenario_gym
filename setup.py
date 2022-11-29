@@ -13,7 +13,7 @@ requires = [
     "Shapely>=1.8.0",
 ]
 extras = {
-    "gym": ["gym>=0.21.0"],
+    "gym": ["gym>=0.20.0"],
     "hooks": [
         "black~=22.3.0",
         "flake8~=5.0.4",
