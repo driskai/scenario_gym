@@ -227,7 +227,7 @@ class ScenarioManager:
         if isinstance(scenario, str):
             gym.load_scenario(scenario, create_agent=self.create_agent)
         elif isinstance(scenario, Scenario):
-            gym._set_scenario(scenario, create_agent=self.create_agent)
+            gym.set_scenario(scenario, create_agent=self.create_agent)
         else:
             raise ValueError(f"{scenario}: should be a scenario or a file.")
         self.on_rollout_start(gym)
