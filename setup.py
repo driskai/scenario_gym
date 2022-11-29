@@ -16,7 +16,7 @@ extras = {
     "gym": ["gym>=0.21.0"],
     "hooks": [
         "black~=22.3.0",
-        "flake8~=3.9.2",
+        "flake8~=5.0.4",
         "isort~=5.10.1",
         "pre-commit~=2.16.0",
         "pydocstyle~=6.1.1",
