@@ -3,9 +3,9 @@ from setuptools import find_packages, setup
 requires = [
     "lxml>=4.7.1",
     "matplotlib>=3.4.2",
-    "numpy>=1.22",
+    "numpy>=1.21.0",
     "opencv-python>=4.5.3.56",
-    "pyxodr @ git+https://github.com/driskai/pyxodr",
+    "pyxodr @ git+https://github.com/driskai/pyxodr@develop",
     "PyYAML>=6.0",
     "setuptools>=58.0.4",
     "scenariogeneration>=0.7.4",
@@ -22,7 +22,7 @@ extras = {
         "pydocstyle~=6.1.1",
     ],
     "docs": ["Sphinx~=4.4.0"],
-    "integrations": ["pandas~=1.3.4"],
+    "integrations": ["pandas~=1.1.5"],
     "examples": ["torch~=1.11.0"],
     "testing": ["pytest~=6.2.4"],
 }
@@ -43,7 +43,9 @@ with open("README.md", "r") as f:
 setup(
     author="dRISK AI",
     author_email="hamish@drisk.ai",
-    description="scenario_gym - intelligent agents in traffic scenarios.",
+    description=(
+        "scenario_gym - a lightweight framework for learning from scenario data."
+    ),
     extras_require=extras,
     install_requires=requires,
     # license=...,

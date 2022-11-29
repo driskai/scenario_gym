@@ -1,5 +1,4 @@
 import warnings
-from functools import cached_property
 from typing import Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
@@ -14,6 +13,7 @@ from scenario_gym.road_network import RoadNetwork, RoadObject
 from scenario_gym.scenario.actions import ScenarioAction
 from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import cached_property
 
 
 class Scenario:
