@@ -371,12 +371,10 @@ class RoadNetwork:
             obj = getattr(self.__class__, method)
             if isinstance(obj, _lru_cache_wrapper):
                 getattr(self, method).__func__.cache_clear()
-            elif all(
-                (
-                    isinstance(cached_property, type),
-                    isinstance(obj, cached_property),
-                    method in self.__dict__,
-                )
+            elif (
+                isinstance(cached_property, type)
+                and isinstance(obj, cached_property)
+                and (method in self.__dict__)
             ):
                 del self.__dict__[method]
             else:
