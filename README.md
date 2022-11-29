@@ -6,9 +6,11 @@
 Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
 
 <p align="center">
-<img src="docs/source/_static/ex1.gif" width="20%" />
-&nbsp; &nbsp; &nbsp; &nbsp;
-<img src="docs/source/_static/ex2.gif" width="20%" />
+<img src="docs/source/_static/gym-ex1.gif" width="20%" />
+&nbsp; &nbsp;
+<img src="docs/source/_static/gym-ex2.gif" width="20%" />
+&nbsp; &nbsp;
+<img src="docs/source/_static/gym-ex3.gif" width="20%" />
 </p>
 
 ## Overview
@@ -20,18 +22,18 @@ Intelligent agents interact with the environment through a simple sensor-agent-c
 Custom metrics can be implemented to allow quick and specific yet comprehensive insights. Through the scenario representation these can be constructed to efficiently track statistics such as speeds and distances, to record events such as collisions and near misses or to capture more compound measures such as safe distances and risk measures.
 
 <p align="center">
-<img src="docs/source/_static/system_overview.svg" width="80%">
+<img src="https://raw.githubusercontent.com/driskai/pyxodr/main/docs/source/_static/system_overview.svg" width="80%">
 </p>
 
 ## Installation
 Install with `pip`:
 ```
-pip install git+https://github.com/driskai/scenario_gym
+pip install scenario_gym
 ```
 
 To install extras for specific integrations or development requirements:
 ```
-pip install "scenario_gym[extra] @ git+https://github.com/driskai/scenario_gym"
+pip install "scenario_gym[extra]"
 ```
 
 ## Getting started
