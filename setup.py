@@ -13,13 +13,14 @@ requires = [
     "Shapely>=1.8.0",
 ]
 extras = {
-    "gym": ["gym>=0.20.0"],
+    "gym": ["gym>=0.21.0"],
     "hooks": [
         "black~=22.3.0",
-        "flake8~=5.0.4",
+        "flake8~=3.9.2",
         "isort~=5.10.1",
         "pre-commit~=2.16.0",
         "pydocstyle~=6.1.1",
+        "importlib-metadata<5.0",
     ],
     "docs": ["Sphinx~=4.4.0"],
     "integrations": ["pandas~=1.1.5"],
