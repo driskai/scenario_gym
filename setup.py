@@ -23,7 +23,7 @@ extras = {
         "importlib-metadata<5.0",
     ],
     "docs": ["Sphinx~=4.4.0"],
-    "integrations": ["pandas~=1.1.5"],
+    "integrations": ["pandas>=1.1.5"],
     "examples": ["torch~=1.11.0"],
     "testing": ["pytest~=6.2.4"],
 }
