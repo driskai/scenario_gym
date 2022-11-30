@@ -6,23 +6,23 @@
 Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
 
 <p align="center">
-<img src="docs/source/_static/gym-ex1.gif" width="20%" />
+<img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/gym-ex1.gif" width="20%" />
 &nbsp; &nbsp;
-<img src="docs/source/_static/gym-ex2.gif" width="20%" />
+<img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/gym-ex2.gif" width="20%" />
 &nbsp; &nbsp;
-<img src="docs/source/_static/gym-ex3.gif" width="20%" />
+<img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/gym-ex3.gif" width="20%" />
 </p>
 
 ## Overview
 
 Scenario Gym defines a flexible scenario representation that is compatible with the OpenSCENARIO description language and OpenDRIVE road network representation. Entities can adopt predefined trajectories, or control themselves intelligently with a high-level goal (e.g. reach a target position) or via a complex trained policy. Scenarios are simulated synchronously in discrete time steps within which each agent selects an action and the pose of each entity is updated before moving to the next step.
 
-Intelligent agents interact with the environment through a simple sensor-agent-controller architecture. This streamlines the agent design by splitting it into three components that emulate the design of autonomous agent systems. The sensor component produces a local observation for the agent from the current global state of the environment. The agent then selects an action and passes it to the controller. The controller manages the physical model of the agent e.g. converting steering and acceleration commands into a new pose. This modular architecture provides reusability and quick iteration of agent designs, not only for vehicular agents but also pedestrians, bicycles and other entity types.
+Intelligent agents interact with the environment through a simple sensor-agent-controller architecture. This streamlines the agent design by splitting it into three components that emulate the design of autonomous agent systems. The sensor component produces a logical observation for the agent from the current global state of the environment. The agent then selects an action and passes it to the controller. The controller manages the physical model of the agent e.g. converting steering and acceleration commands into a new pose. This modular architecture provides reusability and quick iteration of agent designs, not only for vehicular agents but also pedestrians, bicycles and other entity types.
 
 Custom metrics can be implemented to allow quick and specific yet comprehensive insights. Through the scenario representation these can be constructed to efficiently track statistics such as speeds and distances, to record events such as collisions and near misses or to capture more compound measures such as safe distances and risk measures.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/driskai/pyxodr/main/docs/source/_static/system_overview.svg" width="80%">
+<img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/system_overview.svg" width="80%">
 </p>
 
 ## Installation
@@ -33,7 +33,7 @@ pip install scenario_gym
 
 To install extras for specific integrations or development requirements:
 ```
-pip install "scenario_gym[extra]"
+pip install scenario_gym[extra]
 ```
 
 ## Getting started
