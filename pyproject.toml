@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+gym = ["gym>=0.21.0"]
+hooks = [
+    "black~=22.3.0",
+    "flake8~=3.9.2",
+    "isort~=5.10.1",
+    "pre-commit~=2.16.0",
+    "pydocstyle~=6.1.1",
+    "importlib-metadata<5.0.0",
+]
+docs = ["Sphinx~=4.4.0"]
+integrations = ["pandas>=1.1.5"]
+testing = ["pytest~=6.2.4"]
+dev = [
+    "gym>=0.21.0",
+    "black~=22.3.0",
+    "flake8~=3.9.2",
+    "isort~=5.10.1",
+    "pre-commit~=2.16.0",
+    "pydocstyle~=6.1.1",
+    "importlib-metadata<5.0.0",
+    "Sphinx~=4.4.0",
+    "pandas>=1.1.5",
+    "pytest~=6.2.4",
+]
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[project]
+name = "scenario_gym"
+authors = [
+    { name="Hamish Scott", email="hamish@drisk.ai" },
+]
+description="scenario_gym - a lightweight framework for learning from scenario data."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+dependencies = [
+    "lxml>=4.9.1",
+    "matplotlib>=3.5.0",
+    "numpy>=1.21.0",
+    "opencv-python>=4.5.3.56",
+    "pyxodr==0.1.1",
+    "PyYAML>=6.0",
+    "setuptools>=61.0.0",
+    "scenariogeneration>=0.7.4",
+    "scipy>=1.7.0",
+    "Shapely>=1.8.4",
+]
+
+[tool.setuptools.packages.find]
+include = ["scenario_gym", "scenario_gym.*"]
+
+[project.urls]
+"Homepage" = "https://github.com/driskai/scenario_gym"

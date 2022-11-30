@@ -1,16 +1,17 @@
 import json
 from contextlib import suppress
-from functools import _lru_cache_wrapper, cached_property, lru_cache
+from functools import _lru_cache_wrapper, lru_cache
 from pathlib import Path
 from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
 from scipy.interpolate import interp2d
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
+
+from scenario_gym.utils import ArrayLike, NDArray, cached_property
 
 from .base import RoadGeometry, RoadObject
 from .objects import (
@@ -375,12 +376,14 @@ class RoadNetwork:
         self._elevation_func = None
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
-            if isinstance(obj, cached_property) and (method in self.__dict__):
-                # clear cached properties
-                del self.__dict__[method]
-            elif isinstance(obj, _lru_cache_wrapper):
-                # clear lru caches of self
+            if isinstance(obj, _lru_cache_wrapper):
                 getattr(self, method).__func__.cache_clear()
+            elif (
+                isinstance(cached_property, type)
+                and isinstance(obj, cached_property)
+                and (method in self.__dict__)
+            ):
+                del self.__dict__[method]
             else:
                 with suppress(AttributeError):
                     func = obj.__func__

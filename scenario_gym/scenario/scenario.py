@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from contextlib import suppress
 from copy import copy, deepcopy
-from functools import cached_property
 from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
@@ -15,6 +14,7 @@ from scenario_gym.entity.vehicle import Vehicle
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario.actions import ScenarioAction
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import cached_property
 
 
 class Scenario:

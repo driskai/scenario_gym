@@ -5,11 +5,11 @@ from inspect import getfullargspec
 from typing import Optional, Type
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from shapely.geometry import Polygon
 
 from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import ArrayLike, NDArray
 
 
 class Entity:

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from copy import copy
-from functools import cached_property
 from typing import Callable, List, Optional, Tuple
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from scipy.interpolate import interp1d
+
+from scenario_gym.utils import ArrayLike, NDArray, cached_property
 
 
 class Trajectory:

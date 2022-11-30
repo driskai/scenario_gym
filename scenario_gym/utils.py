@@ -1,7 +1,24 @@
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 from shapely.geometry import Polygon
 from shapely.strtree import STRtree
+
+try:
+    from functools import cached_property
+except ImportError:
+
+    def cached_property(fn):
+        """Replace cached_property with a size 1 lru cache."""
+        return property(lru_cache(maxsize=1)(fn))
+
+
+try:
+    from numpy.typing import ArrayLike, NDArray
+except ImportError:
+    ArrayLike = NDArray = np.ndarray
+
 
 ArgsKwargs = Tuple[Tuple[Any, ...], Dict[str, Any]]
 
