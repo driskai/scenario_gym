@@ -128,10 +128,10 @@ class RasterizedMapSensor(Sensor):
                     f"Layer {layer} does not have a get and/or a prepare method."
                 )
 
-    def _reset(self, state: State) -> SingleEntityObservation:
+    def _reset(self, state: State) -> MapObservation:
         """Reset the sensor at the start of the scenario."""
         self._road_network: Optional[RoadNetwork] = None
-        return super()._reset(state)
+        return self._step(state)
 
     def _step(self, state: State) -> MapObservation:
         """Return the rasterized map around the entity."""

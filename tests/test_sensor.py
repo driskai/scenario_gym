@@ -24,14 +24,16 @@ def test_combined_sensor(all_scenarios):
         GlobalCollisionDetector(ego),
         KeyboardInputDetector(ego),
     )
-    initial_obs = sensor.step(state)
+    assert sensor.obs_class is None
+    sensor.reset(state)
+    assert sensor.obs_class is not None
     obs = sensor.step(state)
-    assert len(initial_obs) == 4 == len(obs), "Should have two observations."
 
     # check attributes exist
-    obs[1].future_collision
-    obs[2].collisions
-    obs[3].last_keystroke
+    obs.pose
+    obs.future_collision
+    obs.collisions
+    obs.last_keystroke
 
 
 def test_map_sensor(all_scenarios):

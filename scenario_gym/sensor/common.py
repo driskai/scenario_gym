@@ -5,7 +5,11 @@ from typing import Dict, List
 import numpy as np
 
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation, SingleEntityObservation
+from scenario_gym.observation import (
+    Observation,
+    SingleEntityObservation,
+    combine_observations,
+)
 from scenario_gym.state import State, detect_collisions
 
 from .base import Sensor
@@ -18,18 +22,25 @@ class CombinedSensor(Sensor):
         """Init the sensor."""
         assert [s.entity == entity for s in sensors]
         self.sensors = sensors
+        self.obs_class = None
 
-    def _reset(self, state: State) -> List[Observation]:
+    def _reset(self, state: State) -> Observation:
         """Reset all sensors."""
-        return [s.reset(state) for s in self.sensors]
+        init_obs = [s.reset(state) for s in self.sensors]
+        self.obs_class = combine_observations(*(obs.__class__ for obs in init_obs))
+        return self.obs_class.from_obs(*init_obs)
 
-    def _step(self, state: State) -> List[Observation]:
+    def _step(self, state: State) -> Observation:
         """Get observations from all sensors."""
-        return [s.step(state) for s in self.sensors]
+        return self.obs_class.from_obs(*(s.step(state) for s in self.sensors))
 
 
 class EgoLocalizationSensor(Sensor):
     """Observation containing just the base entity information."""
+
+    def _reset(self, state: State) -> SingleEntityObservation:
+        """Return the entity observation."""
+        return self._step(state)
 
     def _step(self, state: State) -> SingleEntityObservation:
         """Return the entity observation."""
@@ -69,8 +80,12 @@ class FutureCollisionDetector(Sensor):
         super().__init__(entity)
         self.horizon = horizon
 
+    def _reset(self, state: State) -> FutureCollisionObservation:
+        """Return future collisions."""
+        return self._step(state)
+
     def _step(self, state: State) -> FutureCollisionObservation:
-        """Produce an observation from the global state."""
+        """Return future collisions."""
         ents = {e: None for e in state.scenario.entities if e != self.entity}
 
         # check for collisions over the horizon
@@ -99,8 +114,12 @@ class CollisionObservation(SingleEntityObservation):
 class GlobalCollisionDetector(Sensor):
     """Returns collisions observed in the scene."""
 
+    def _reset(self, state: State) -> CollisionObservation:
+        """Return the collision observation."""
+        return self._step(state)
+
     def _step(self, state: State) -> CollisionObservation:
-        """Produce an observation from the global state."""
+        """Return the collision observation."""
         return CollisionObservation(
             self.entity,
             *state.get_entity_data(self.entity),
@@ -118,8 +137,12 @@ class KeyboardObservation(SingleEntityObservation):
 class KeyboardInputDetector(Sensor):
     """Detects keyboard input."""
 
-    def _step(self, state: State) -> int:
-        """Produce an observation from the global state."""
+    def _reset(self, state: State) -> KeyboardObservation:
+        """Return the collision observation."""
+        return self._step(state)
+
+    def _step(self, state: State) -> KeyboardObservation:
+        """Return the keyboard observation."""
         return KeyboardObservation(
             self.entity,
             *state.get_entity_data(self.entity),

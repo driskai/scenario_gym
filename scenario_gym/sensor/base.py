@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation, SingleEntityObservation
+from scenario_gym.observation import Observation
 from scenario_gym.state import State
 
 
@@ -20,7 +20,7 @@ class Sensor(ABC):
     def __init__(self, entity: Entity):
         """Init the sensor."""
         self.entity = entity
-        self.initial_observation: Optional[SingleEntityObservation] = None
+        self.initial_observation: Optional[Observation] = None
         self._last_observation: Optional[Observation] = None
 
     def reset(self, state: State) -> Observation:
@@ -34,11 +34,10 @@ class Sensor(ABC):
         self.last_observation = self._step(state)
         return self.last_observation
 
-    def _reset(self, state: State) -> SingleEntityObservation:
-        """Reset the sensor at the start of the scenario."""
-        return SingleEntityObservation(
-            self.entity, *state.get_entity_data(self.entity)
-        )
+    @abstractmethod
+    def _reset(self, state: State) -> Observation:
+        """Reset the sensor and return an initial observation."""
+        raise NotImplementedError
 
     @abstractmethod
     def _step(self, state: State) -> Observation:
