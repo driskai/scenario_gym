@@ -1,5 +1,4 @@
 """Provides a selection of commonly used sensors."""
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -20,12 +19,11 @@ class CombinedSensor(Sensor):
         assert [s.entity == entity for s in sensors]
         self.sensors = sensors
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> List[Observation]:
         """Reset all sensors."""
-        for s in self.sensors:
-            s.reset()
+        return [s.reset(state) for s in self.sensors]
 
-    def _step(self, state) -> List[Observation]:
+    def _step(self, state: State) -> List[Observation]:
         """Get observations from all sensors."""
         return [s.step(state) for s in self.sensors]
 
@@ -49,7 +47,7 @@ class FutureCollisionObservation(SingleEntityObservation):
 
 class FutureCollisionDetector(Sensor):
     """
-    Detects any future collisions in the scenario.
+    Detects any future collisions with the ego in the scenario.
 
     Entity trajectories are used to obtain their future position
     and compare t to the sensor's entity.
@@ -73,20 +71,16 @@ class FutureCollisionDetector(Sensor):
 
     def _step(self, state: State) -> FutureCollisionObservation:
         """Produce an observation from the global state."""
-        # make copeies of each entity to avoid modifying
-        others = {
-            a.entity: (deepcopy(a.entity), a)
-            for a in state.scenario.agents.values()
-        }
+        ents = {e: None for e in state.scenario.entities if e != self.entity}
 
         # check for collisions over the horizon
         future_collision = False
         for t in np.linspace(state.t, state.t + self.horizon, 10):
-            for e_ref, a in others.values():
-                e_ref.pose = a.trajectory.position_at_t(t)
-            other_ents, _ = map(list, zip(*others.values()))
-            collisions = detect_collisions(other_ents)
-            if len(collisions[others[self.entity][0]]) > 0:
+            ego_pose = self.entity.trajectory.position_at_t(t)
+            for e in ents:
+                ents[e] = e.trajectory.position_at_t(t)
+            collisions = detect_collisions({self.entity: ego_pose}, ents)
+            if len(collisions[self.entity]) > 0:
                 future_collision = True
         return FutureCollisionObservation(
             self.entity,
@@ -128,6 +122,6 @@ class KeyboardInputDetector(Sensor):
         """Produce an observation from the global state."""
         return KeyboardObservation(
             self.entity,
-            state.get_entity_data(self.entity),
+            *state.get_entity_data(self.entity),
             state.last_keystroke,
         )
