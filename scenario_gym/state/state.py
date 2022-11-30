@@ -70,6 +70,7 @@ class State:
         self._t: Optional[float] = None
         self._prev_t: Optional[float] = None
         self.is_done = False
+        self.last_keystroke: Optional[int] = None
 
         self._collisions: Optional[Dict[Entity, List[Entity]]] = None
         self._callbacks: Dict[Type[StateCallback], StateCallback] = {}
@@ -256,16 +257,19 @@ class State:
                 data[ent] = np.concatenate([ts[:, None], poses], axis=1)
         return data
 
-    def get_entity_data(self, entity: Entity) -> Dict[str, Any]:
+    def get_entity_data(
+        self, entity: Entity
+    ) -> Tuple[float, float, np.ndarray, np.ndarray, float, np.ndarray, Any]:
         """Get state data for a specific entity."""
-        return {
-            "pose": self.poses.get(entity, None),
-            "prev_pose": self.prev_poses.get(entity, None),
-            "velocity": self.velocities.get(entity, None),
-            "distance": self.distances.get(entity, None),
-            "state": self.entity_state.get(entity, None),
-            "recorded_poses": self.recorded_poses(entity=entity),
-        }
+        return (
+            self.t,
+            self.next_t,
+            self.poses.get(entity, None),
+            self.velocities.get(entity, None),
+            self.distances.get(entity, None),
+            self.recorded_poses(entity=entity),
+            self.entity_state.get(entity, None),
+        )
 
     def collisions(self) -> Dict[Entity, List[Entity]]:
         """Return collisions between entities at the current time."""

@@ -9,17 +9,15 @@ from dm_env.test_utils import EnvironmentTestMixin
 from scenario_gym import Agent, State
 from scenario_gym.controller import VehicleController
 from scenario_gym.integrations.deepmind_env import ScenarioGym
-from scenario_gym.sensor.map import MapObservation, RasterizedMapSensor
+from scenario_gym.sensor.map import RasterizedMapSensor
 
 
 class MapOnlySensor(RasterizedMapSensor):
     """Sensor returning only the rasterized map."""
 
-    observation_type = np.ndarray
-
-    def _step(self, state: State, obs: MapObservation) -> np.ndarray:
+    def _step(self, state: State) -> np.ndarray:
         """Get the map from the base sensor's observation."""
-        return super()._step(state, obs).map
+        return super()._step(state).map
 
 
 class ExampleAgent(Agent):

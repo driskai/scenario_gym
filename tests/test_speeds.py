@@ -61,7 +61,7 @@ def test_collision_speed(paths):
 
     class CollisionCallback(StateCallback):
         def __call__(self, state):
-            state.scenario.collisions()
+            state.collisions()
 
     n = 10
     gym = ScenarioGym(timestep=1.0 / 30.0, state_callbacks=[CollisionCallback()])

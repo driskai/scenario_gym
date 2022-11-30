@@ -14,7 +14,7 @@ from scenario_gym.entity import Entity
 from scenario_gym.observation import Observation
 from scenario_gym.scenario import Scenario
 from scenario_gym.scenario_gym import ScenarioGym, _create_agent
-from scenario_gym.sensor.map import MapObservation, RasterizedMapSensor
+from scenario_gym.sensor.map import RasterizedMapSensor
 from scenario_gym.state import TERMINAL_CONDITIONS, State
 
 try:
@@ -280,11 +280,9 @@ class ScenarioGym(ScenarioGym, Env):
 class MapOnlySensor(RasterizedMapSensor):
     """Sensor returning only the rasterized map."""
 
-    observation_type = np.ndarray
-
-    def _step(self, state: State, obs: MapObservation) -> np.ndarray:
+    def _step(self, state: State) -> np.ndarray:
         """Get the map from the base sensor's observation."""
-        return super()._step(state, obs).map
+        return super()._step(state).map
 
 
 class RLAgent(Agent):

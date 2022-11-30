@@ -1,5 +1,5 @@
 from scenario_gym.scenario_gym import ScenarioGym
-from scenario_gym.sensor.map import MapObservation, RasterizedMapSensor
+from scenario_gym.sensor.map import RasterizedMapSensor
 
 
 def test_sensor(all_scenarios):
@@ -12,9 +12,8 @@ def test_sensor(all_scenarios):
 
     # test with default layers
     sensor = RasterizedMapSensor(e, height=30, width=30, n=61)
-    sensor._reset()
-    obs = MapObservation.from_entity(gym.state, sensor.entity)
-    out = sensor._step(gym.state, obs).map
+    sensor._reset(gym.state)
+    out = sensor._step(gym.state).map
 
     assert out.shape == (
         61,
@@ -32,9 +31,8 @@ def test_sensor(all_scenarios):
     sensor = RasterizedMapSensor(
         e, layers=RasterizedMapSensor._all_layers, height=30, width=30, n=61
     )
-    sensor._reset()
-    obs = MapObservation.from_entity(gym.state, sensor.entity)
-    out = sensor._step(gym.state, obs).map
+    sensor._reset(gym.state)
+    out = sensor._step(gym.state).map
 
     assert out.shape == (
         61,

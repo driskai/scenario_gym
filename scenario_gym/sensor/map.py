@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -9,15 +10,16 @@ from shapely.prepared import prep
 from shapely.vectorized import contains
 
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation
+from scenario_gym.observation import SingleEntityObservation
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.state import State
 
 from .base import Sensor
 
 
-class MapObservation(Observation):
-    """An observation with a rasterized map around the entity."""
+@dataclass
+class MapObservation(SingleEntityObservation):
+    """Observation with a raster map."""
 
     map: np.ndarray
 
@@ -126,21 +128,25 @@ class RasterizedMapSensor(Sensor):
                     f"Layer {layer} does not have a get and/or a prepare method."
                 )
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> SingleEntityObservation:
         """Reset the sensor at the start of the scenario."""
         self._road_network: Optional[RoadNetwork] = None
+        return super()._reset(state)
 
-    def _step(self, state: State, obs: MapObservation) -> MapObservation:
+    def _step(self, state: State) -> MapObservation:
         """Return the rasterized map around the entity."""
         if self._road_network is None:
             self._prepare_layers(state)
 
-        coords = self._get_coords(obs.pose).reshape(-1, 2)
-
+        pose = state.poses[self.entity]
+        coords = self._get_coords(pose).reshape(-1, 2)
         layers = [getattr(self, f"_{l}_layer")(state, coords) for l in self.layers]
         obs_map = np.array(layers).reshape(len(layers), self.nw, self.nw)
-        obs.map = obs_map if self.channels_first else obs_map.transpose(1, 2, 0)
-        return obs
+        return MapObservation(
+            self.entity,
+            *state.get_entity_data(self.entity),
+            obs_map if self.channels_first else obs_map.transpose(1, 2, 0),
+        )
 
     @property
     def output_shape(self) -> Tuple[int, int, int]:
