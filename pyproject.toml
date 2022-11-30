@@ -45,6 +45,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dynamic = ["version"]
+dependencies = [
+    "lxml>=4.7.1",
+    "matplotlib>=3.4.2",
+    "numpy>=1.22",
+    "opencv-python>=4.5.3.56",
+    "pyxodr==0.1.1",
+    "PyYAML>=6.0",
+    "setuptools>=58.0.4",
+    "scenariogeneration>=0.7.4",
+    "scipy>=1.6.3",
+    "Shapely>=1.8.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["scenario_gym", "scenario_gym.*"]
