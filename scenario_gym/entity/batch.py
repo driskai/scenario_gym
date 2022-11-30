@@ -1,10 +1,10 @@
 from typing import Dict, List, Optional
 
 import numpy as np
-from numpy.typing import ArrayLike
 from scipy.interpolate import interp1d
 
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import ArrayLike
 
 from .base import Entity
 

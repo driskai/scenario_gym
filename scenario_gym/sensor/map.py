@@ -2,7 +2,6 @@ import math
 from typing import List, Optional, Tuple
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 from shapely.geometry import MultiPolygon
 from shapely.ops import unary_union
 from shapely.prepared import prep
@@ -12,6 +11,7 @@ from scenario_gym.entity import Entity
 from scenario_gym.observation import Observation
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.state import State
+from scenario_gym.utils import ArrayLike, NDArray
 
 from .base import Sensor
 

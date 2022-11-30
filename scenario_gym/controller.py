@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, Union
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from scenario_gym.action import Action, TeleportAction, VehicleAction
 from scenario_gym.entity import Entity
 from scenario_gym.state import State
+from scenario_gym.utils import ArrayLike
 
 
 class Controller(ABC):

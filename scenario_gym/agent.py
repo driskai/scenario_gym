@@ -1,8 +1,6 @@
 from abc import ABC
 from typing import Optional
 
-from numpy.typing import ArrayLike
-
 from scenario_gym.action import Action, TeleportAction
 from scenario_gym.controller import (
     Controller,
@@ -15,6 +13,7 @@ from scenario_gym.scenario import Scenario
 from scenario_gym.sensor import EgoLocalizationSensor, Sensor
 from scenario_gym.state import State
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import ArrayLike
 
 
 class Agent(ABC):

@@ -3,11 +3,11 @@ from inspect import getfullargspec
 from typing import List, Optional, Tuple, Type
 
 import numpy as np
-from numpy.typing import ArrayLike
 from shapely.geometry import Polygon
 
 from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import ArrayLike
 
 
 class Entity(ABC):
