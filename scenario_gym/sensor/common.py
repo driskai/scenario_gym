@@ -21,6 +21,7 @@ class CombinedSensor(Sensor):
     def __init__(self, entity: Entity, *sensors: Sensor):
         """Init the sensor."""
         assert [s.entity == entity for s in sensors]
+        super().__init__(entity)
         self.sensors = sensors
         self.obs_class = None
 
