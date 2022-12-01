@@ -97,7 +97,7 @@ gym.get_metrics()
 For reinforcement learning applications Scenario Gym supports an OpenAI Gym compatible implementation. When creating the environment we need to specify the observation and action spaces used by the ego agent as well as our `create_agent` function. The observation from the ego agent's sensor will be returned by the environment and the action passed to `step` will be passed to the agent's controller.
 
 ```python
-from scenario_gym.environment import ScenarioGym
+from scenario_gym.integrations.openaigym import ScenarioGym
 
 env = ScenarioGym(
     observation_space=observation_space,

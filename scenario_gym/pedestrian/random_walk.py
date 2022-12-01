@@ -8,7 +8,6 @@ from scenario_gym.pedestrian.behaviour import (
     PedestrianBehaviour,
 )
 from scenario_gym.pedestrian.observation import PedestrianObservation
-from scenario_gym.state import State
 
 
 class RandomWalkParameters(BehaviourParameters):
@@ -32,7 +31,6 @@ class RandomWalk(PedestrianBehaviour):
 
     def _step(
         self,
-        state: State,
         observation: PedestrianObservation,
         agent: Agent,
     ) -> Tuple[float, float]:
@@ -40,7 +38,7 @@ class RandomWalk(PedestrianBehaviour):
         speed_rand = np.random.normal(
             agent.speed_desired + self.bias_lon, self.std_lon
         )
-        goal = agent.route[agent.goal_idx] - agent.entity.pose[[0, 1]]
+        goal = agent.route[agent.goal_idx] - observation.pose[[0, 1]]
         heading = np.arctan2(goal[1], goal[0])  # angle to goal point
         heading_rand = np.random.normal(heading + self.bias_lat, self.std_lat)
         return speed_rand, heading_rand

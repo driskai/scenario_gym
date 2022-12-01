@@ -9,7 +9,7 @@ from scenario_gym.entity import Entity
 from scenario_gym.pedestrian.behaviour import PedestrianBehaviour
 from scenario_gym.pedestrian.observation import PedestrianObservation
 from scenario_gym.pedestrian.random_walk import RandomWalkParameters
-from scenario_gym.state import State
+from scenario_gym.utils import NDArray
 from scenario_gym.viewer import rotate_coords
 
 
@@ -41,27 +41,16 @@ class SocialForce(PedestrianBehaviour):
         self.std_lon = params.std_lon
         self.std_lat = params.std_lat
 
-    def _step(
-        self,
-        state: State,
-        observation: PedestrianObservation,
-        agent: Agent,
-    ) -> Tuple:
+    def _step(self, observation: PedestrianObservation, agent: Agent) -> Tuple:
         """Return the new speed and heading using the social force model."""
         # Start with attraction force to goal point
-        force_sum = self._force_to_goal(agent, agent.route[agent.goal_idx])
+        force_sum = self._force_to_goal(
+            observation,
+            agent.route[agent.goal_idx],
+            agent.speed_desired,
+        )
 
-        # Distance to other pedestrians
-        peds = [
-            e
-            for e in state.scenario.get_entities_in_radius(
-                *agent.entity.pose[:2],
-                self.params.distance_threshold,
-            )
-            if (e.type == "Pedestrian") and (e != agent.entity)
-        ]
-
-        for pedestrian in peds:  # Forces from other pedestrians
+        for pedestrian in observation.near_peds:  # Forces from other pedestrians
             # Vector of agent's sight (velocity angle + head angle)
             view_dir_vector = rotate_coords(
                 agent.entity.velocity[[0, 1]], observation.head_rot_angle
@@ -86,28 +75,24 @@ class SocialForce(PedestrianBehaviour):
                 force_sum += force_repulsion
 
         # get current position
-        point = Point(agent.entity.pose[:2])
+        point = Point(*observation.pose[:2])
 
         # Force from closest walkable boundary
-        walkable_surface = observation.state.scenario.road_network.walkable_surface
-        if walkable_surface.area > 0:
-            if walkable_surface.contains(point):
+        if observation.walkable_surface.area > 0:
+            if observation.walkable_surface.contains(point):
                 force_sum += self._force_boundary(
                     agent,
-                    walkable_surface,
+                    observation.walkable_surface,
                     self.params.boundary_repulse_R,
                     self.params.boundary_repulse_U,
                 )
 
         # Force from immovable boundary
-        impenetrable_surface = (
-            observation.state.scenario.road_network.impenetrable_surface
-        )
-        if impenetrable_surface.area > 0:
-            sign = 1 - 2 * impenetrable_surface.contains(point)
+        if observation.impenetrable_surface.area > 0:
+            sign = 1 - 2 * observation.impenetrable_surface.contains(point)
             force_sum += sign * self._force_boundary(
                 agent,
-                impenetrable_surface,
+                observation.impenetrable_surface,
                 self.params.imp_boundary_repulse_R,
                 self.params.imp_boundary_repulse_U,
             )
@@ -125,10 +110,15 @@ class SocialForce(PedestrianBehaviour):
 
         return speed, heading
 
-    def _force_to_goal(self, agent: Agent, goal_point: np.ndarray) -> np.ndarray:
+    def _force_to_goal(
+        self,
+        obs: PedestrianObservation,
+        goal_point: NDArray,
+        speed_desired: float,
+    ) -> np.ndarray:
         """Compute the attraction force from the goal."""
-        agent_pos = agent.entity.pose[[0, 1]]
-        agent_vel = agent.entity.velocity[[0, 1]]
+        agent_pos = obs.pose[[0, 1]]
+        agent_vel = obs.velocity[[0, 1]]
         dir_vector = goal_point - agent_pos
         dir_vector_norm = np.linalg.norm(dir_vector)
         if dir_vector_norm == 0:
@@ -137,17 +127,20 @@ class SocialForce(PedestrianBehaviour):
         force_vector = (
             1
             / self.params.relaxation_time
-            * (agent.speed_desired * unit_dir_vector - agent_vel)
+            * (speed_desired * unit_dir_vector - agent_vel)
         )
         return force_vector
 
     def _force_pedestrian_repulsion(
-        self, agent: Agent, other_pedestrian: Entity
-    ) -> np.ndarray:
+        self,
+        obs: PedestrianObservation,
+        other_pedestrian: Tuple[Entity, NDArray, NDArray],
+    ) -> NDArray:
         """Compute the repulsion force from other pedestrians."""
-        agent_pos = agent.entity.pose[[0, 1]]
-        other_pos = other_pedestrian.pose[[0, 1]]
-        other_dir = other_pedestrian.velocity[[0, 1]]
+        agent_pos = obs.pose[[0, 1]]
+        other_ped, other_pose, other_v = other_pedestrian
+        other_pos = other_pose[[0, 1]]
+        other_dir = other_v[[0, 1]]
 
         # Vector to other agent
         r_ao = agent_pos - other_pos
@@ -156,7 +149,7 @@ class SocialForce(PedestrianBehaviour):
         # Auxiliary calculations
         v_vel_magnitude = np.linalg.norm(other_dir) + 0.0000000001
         unit_other_dir = other_dir / v_vel_magnitude
-        other_step = v_vel_magnitude * agent.entity.dt
+        other_step = v_vel_magnitude * (obs.next_t - obs.t)
         r_ao_other = r_ao - other_step * unit_other_dir
         r_ao_other_norm = np.linalg.norm(r_ao_other) + 0.0000000001
 
@@ -177,39 +170,39 @@ class SocialForce(PedestrianBehaviour):
         return force_vector
 
     def _force_pedestrian_attraction(
-        self, agent: Agent, other_pedestrian: Entity
-    ) -> np.ndarray:
+        self,
+        obs: PedestrianObservation,
+        other_pedestrian: Tuple[Entity, NDArray, NDArray],
+    ) -> NDArray:
         """Compute the attraction force from other pedestrians."""
-        agent_pos = agent.entity.pose[[0, 1]]
-        other_pos = other_pedestrian.pose[[0, 1]]
+        agent_pos = obs.pose[[0, 1]]
+        other_pos = other_pedestrian[1][[0, 1]]
         # Vector to other agent
         r_ao = agent_pos - other_pos
-        force_vector = 2 * self.params.ped_attract_C * r_ao  # gradient
-        return force_vector
+        return 2 * self.params.ped_attract_C * r_ao  # gradient
 
     def _force_boundary(
         self,
-        agent: Agent,
+        obs: PedestrianObservation,
         object: Union[Polygon, MultiPolygon],
         param_r: float,
         param_u: float,
-    ) -> np.ndarray:
+    ) -> NDArray:
         """
         Compute the force from the boundary of an object.
 
         Can be an attractive or a repulsive force.
         """
-        agent_pos = agent.entity.pose[[0, 1]]
-        agent_point = Point(agent_pos)
+        agent_pos = obs.pose[[0, 1]]
+        agent_point = Point(*agent_pos)
         closest_point, _ = nearest_points(object, agent_point)
         closest_pos = np.array(closest_point.xy).squeeze()
         r_aB = agent_pos - closest_pos
         r_aB_norm = np.linalg.norm(r_aB)
         r_aB_unit = r_aB / (r_aB_norm + 0.0000000001)
-        force_vector = (
+        return (
             param_u / param_r * r_aB_unit * np.exp(-r_aB_norm / param_r)
         )  # gradient
-        return force_vector
 
     def _sight_weight(
         self, force_vector: np.ndarray, view_dir_unit_vector: np.ndarray

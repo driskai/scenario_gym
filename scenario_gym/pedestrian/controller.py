@@ -18,7 +18,7 @@ class PedestrianController(Controller):
         super().__init__(entity)
         self.max_speed = max_speed
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> None:
         """Reset the controller."""
         self.speed = 0.0
 
@@ -35,11 +35,11 @@ class PedestrianController(Controller):
             The action. Contains speed and heading angle.
 
         """
-        pose = self.entity.pose.copy()
+        pose = state.poses[self.entity].copy()
         self.speed = np.clip(action.speed, -self.max_speed, self.max_speed)
         pose[[0, 1]] += (
             self.speed
-            * self.entity.dt
+            * state.dt
             * np.array([np.cos(action.heading), np.sin(action.heading)])
         )
         pose[3] = action.heading
