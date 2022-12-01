@@ -66,7 +66,7 @@ class ExampleAgent(Agent):
             sensor,
         )
 
-    def _step(self, state, observation):
+    def _step(self, observation):
         action = ...
         return action
 ```

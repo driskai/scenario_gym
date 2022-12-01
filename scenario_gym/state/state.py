@@ -293,7 +293,7 @@ class State:
 
     def get_entity_box_geom(self, e: Entity) -> Polygon:
         """Get the geometry of the bounding box of an entity."""
-        return e.get_entity_box_geom(self.poses[e])
+        return e.get_bounding_box_geom(self.poses[e])
 
     def get_road_info_at_entity(
         self, e: Entity
