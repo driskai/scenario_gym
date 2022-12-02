@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from contextlib import suppress
 from copy import copy, deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,6 +34,7 @@ class Scenario:
         path: Optional[str] = None,
         road_network: Optional[RoadNetwork] = None,
         actions: Optional[List[ScenarioAction]] = None,
+        properties: Optional[Dict[Any, Any]] = None,
     ):
         self._entities = entities
         self._ref_to_entity: Dict[str, Entity] = {e.ref: e for e in entities}
@@ -42,6 +43,7 @@ class Scenario:
         self.path = path
         self.road_network = road_network
         self.actions = actions if actions is not None else []
+        self.properties = properties if properties is not None else {}
 
         self._vehicles: Optional[List[Entity]] = None
         self._pedestrians: Optional[List[Entity]] = None
@@ -100,6 +102,7 @@ class Scenario:
             road_network=self.road_network,
             actions=deepcopy(self.actions),
             entities=[e.copy() for e in self.entities],
+            properties=self.properties,
         )
 
     def copy(self) -> Scenario:
@@ -203,7 +206,7 @@ Entities
 """
         )
 
-    def plot(self, figsize: Tuple[int, int] = (10, 10)) -> None:
+    def plot(self, figsize: Tuple[int, int] = (10, 10), show: bool = True) -> None:
         """
         Visualise the scenario.
 
@@ -211,6 +214,10 @@ Entities
         ----------
         figsize : Tuple[int, int]
             The figure size.
+
+        show : bool
+            If set to False will not call `plt.show` so the figure can be modified
+            or saved.
 
         """
         name = (
@@ -236,4 +243,5 @@ Entities
         plt.ylim(b_min[1] - 10.0, b_max[1] + 10.0)
         plt.legend()
         plt.title(name)
-        plt.show()
+        if show:
+            plt.show()
