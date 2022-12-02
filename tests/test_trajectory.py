@@ -27,6 +27,23 @@ def test_invalid_create():
         Trajectory(np.empty((2, 2)))
 
 
+def test_unordered_create():
+    """Test creating a trajectory with fields in a different order."""
+    data = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 2.0],
+            [0.0, 1.0, 2.0],
+            [1.0, 2.0, 3.0],
+        ]
+    )
+    traj = Trajectory(data, fields=["y", "x", "t"])
+    assert np.allclose(traj.t, [0.0, 1.0, 2.0, 3.0]), "t not set correctly."
+    assert np.allclose(traj.x, [0.0, 0.0, 1.0, 2.0]), "x not set correctly."
+    assert np.allclose(traj.y, [0.0, 0.0, 0.0, 1.0]), "y not set correctly."
+
+
 def test_filled_headings():
     """Test that headings are estimated when not provided."""
     data = np.array(

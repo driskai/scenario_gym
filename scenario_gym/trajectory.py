@@ -55,19 +55,19 @@ class Trajectory:
                 " pass `fields` to specify the columns given or ensure that columns"
                 f" for all of {self._fields} are provided."
             )
+        perm = [fields.index(f) for f in self._fields if f in fields]
+        data = np.unique(data[:, perm], axis=0)
+        n = data.shape[0]
 
-        data = np.unique(data, axis=0)
         _data: List[NDArray] = []
         for f in self._fields:
-            d = data[:, fields.index(f)] if f in fields else np.zeros(data.shape[0])
+            d = data[:, perm[fields.index(f)]] if f in fields else np.zeros(n)
             if f == "h":
                 d = _resolve_heading(d)
-            if f not in fields or (
-                f in fields and np.isnan(data[:, fields.index(f)]).sum() != 0
-            ):
-                if f == "h" and data.shape[0] == 1:
+            if f not in fields or (f in fields and np.isnan(d).sum() != 0):
+                if f == "h" and n == 1:
                     d = np.zeros(1)
-                elif f == "h" and data.shape[0] > 1:
+                elif f == "h" and n > 1:
                     t = _data[0]
                     fn = interp1d(
                         t,
@@ -78,13 +78,11 @@ class Trajectory:
                     d = np.arctan2(*np.flip(fn(t + 1e-2) - fn(t - 1e-2), axis=1).T)
                     d = _resolve_heading(d)
                 elif f in ("z", "p", "r"):
-                    d = np.zeros(data.shape[0])
+                    d = np.zeros(n)
                 else:
                     raise ValueError(
                         f"Invalid values found for {f}. Values required for xyt."
                     )
-            else:
-                d = data[:, fields.index(f)]
             _data.append(d)
             setattr(self, f, d)
 
