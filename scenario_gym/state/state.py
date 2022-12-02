@@ -339,13 +339,14 @@ class State:
         """
         return self.get_entities_in_area(Point(x, y).buffer(r))
 
-    def to_scenario(self) -> Scenario:
+    def to_scenario(self, name: Optional[str] = None) -> Scenario:
         """Create a scenario from the historical data in the state."""
-        name = (
-            f"Simulation of {self.scenario.name}"
-            if self.scenario.name is None
-            else None
-        )
+        if name is None:
+            name = (
+                f"Simulation of {self.scenario.name}"
+                if self.scenario.name is None
+                else None
+            )
         entities = []
         for entity, poses in self.recorded_poses().items():
             new_entity = deepcopy(entity)
