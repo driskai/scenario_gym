@@ -21,10 +21,10 @@ try:
     import gym
     from gym import Env
     from gym.spaces import Box, Space
-except ImportError:
+except ImportError as e:
     raise ImportError(
         "gym is required for this module. Install it with `pip install gym`."
-    )
+    ) from e
 
 
 class ScenarioGym(ScenarioGym, Env):
@@ -117,6 +117,14 @@ class ScenarioGym(ScenarioGym, Env):
         if select_scenario is not None:
             self.select_scenario = MethodType(select_scenario, self)
 
+    def on_reset(self) -> None:
+        """Run just before the reset is executed."""
+        pass
+
+    def after_reset(self) -> None:
+        """Run just after the reset is executed."""
+        pass
+
     def reset(
         self,
         seed: Optional[int] = None,
@@ -134,6 +142,8 @@ class ScenarioGym(ScenarioGym, Env):
             A chosen scenario object or filepath to the xosc to be used.
 
         """
+        self.on_reset()
+
         if self._new_reset:
             super().reset(seed=seed)
         else:
@@ -154,6 +164,8 @@ class ScenarioGym(ScenarioGym, Env):
 
         self.state.next_t = self.state.t + self.timestep
         ego_obs = self.ego_agent.sensor.step(self.state)
+
+        self.after_reset()
         return (ego_obs, {}) if return_info else ego_obs
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, Dict]:
@@ -227,7 +239,7 @@ class ScenarioGym(ScenarioGym, Env):
 
     def load_scenario(
         self, *args, create_agent: Optional[Callable] = None, **kwargs
-    ):
+    ) -> None:
         """
         Load a scenario from an OpenScenario file.
 
@@ -239,7 +251,7 @@ class ScenarioGym(ScenarioGym, Env):
 
     def set_scenario(
         self, *args, create_agent: Optional[Callable] = None, **kwargs
-    ):
+    ) -> None:
         """
         Set the scenario explicitly.
 
@@ -249,7 +261,7 @@ class ScenarioGym(ScenarioGym, Env):
             create_agent = self.create_agent
         super().set_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def select_scenario(self) -> Union[str, Scenario]:
+    def select_scenario(self) -> Optional[Union[str, Scenario]]:
         """Update the scenario when reset is called."""
         return None
 
@@ -261,8 +273,8 @@ class ScenarioGym(ScenarioGym, Env):
         super().create_agents(create_agent=create_agent)
         try:
             self.ego_agent = self.state.agents["ego"]
-        except KeyError:
-            raise KeyError("No agent named ego.")
+        except KeyError as e:
+            raise KeyError("No agent named ego.") from e
 
     @staticmethod
     def create_agent(scenario: Scenario, entity: Entity) -> Optional[Agent]:
