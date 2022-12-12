@@ -55,7 +55,7 @@ dependencies = [
     "setuptools>=61.0.0",
     "scenariogeneration>=0.7.4",
     "scipy>=1.7.0",
-    "Shapely>=1.8.4",
+    "Shapely==2.0rc1",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,10 +1,19 @@
 from abc import ABC, abstractclassmethod
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 from lxml.etree import Element
 
 from scenario_gym.utils import ArgsKwargs
+
+
+@dataclass(frozen=True)
+class Catalog:
+    """A catalog."""
+
+    catalog_name: str
+    rel_path: str
 
 
 class CatalogObject(ABC):
@@ -26,13 +35,13 @@ class CatalogObject(ABC):
     xosc_names: Optional[List[str]] = None
 
     @classmethod
-    def from_xml(cls, catalog_name: str, element: Element):
+    def from_xml(cls, catalog: Catalog, element: Element):
         """Create the class from an xml element."""
-        args, kwargs = cls.load_data_from_xml(catalog_name, element)
+        args, kwargs = cls.load_data_from_xml(catalog, element)
         return cls(*args, **kwargs)
 
     @abstractclassmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(cls, catalog: Catalog, element: Element) -> ArgsKwargs:
         """Load the object from an xml element."""
         raise NotImplementedError
 
@@ -47,7 +56,7 @@ class BoundingBox(CatalogObject):
     center_y: float
 
     @classmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(cls, catalog: Catalog, element: Element) -> ArgsKwargs:
         """Load the bounding box data form an xml element."""
         if element.tag != "BoundingBox":
             raise TypeError(f"Expected BoundingBox element not {element.tag}.")
@@ -68,8 +77,8 @@ class CatalogEntry(CatalogObject):
 
     Parameters
     ----------
-    catalog_name : str
-        The name of the catalog file.
+    catalog : Catalog
+        The catalog from which the entry is loaded.
 
     catalog_entry : str
         The name of the specific entry.
@@ -88,7 +97,7 @@ class CatalogEntry(CatalogObject):
 
     """
 
-    catalog_name: str
+    catalog: Catalog
     catalog_entry: str
     catalog_category: Optional[str]
     catalog_type: str
@@ -97,16 +106,16 @@ class CatalogEntry(CatalogObject):
     files: List[str]
 
     @classmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(cls, catalog: Catalog, element: Element) -> ArgsKwargs:
         """Load the catalog entry from an xml element."""
         entry_name = element.attrib["name"]
         cname = element.tag.lower() + "Category"
         category = element.attrib[cname] if cname in element.attrib else None
         bb = element.find("BoundingBox")
-        bb = BoundingBox.from_xml(catalog_name, bb)
+        bb = BoundingBox.from_xml(catalog, bb)
         properties, files = cls.load_properties_from_xml(element)
         return (
-            catalog_name,
+            catalog,
             entry_name,
             category,
             element.tag,
@@ -136,10 +145,8 @@ class CatalogEntry(CatalogObject):
             for child in prop.findall("Property"):
                 try:
                     v = child.attrib["value"]
-                    try:
+                    with suppress(ValueError):
                         v = float(v)
-                    except ValueError:
-                        pass
                     properties[child.attrib["name"]] = v
                 except KeyError:
                     raise RuntimeError(
@@ -148,3 +155,8 @@ class CatalogEntry(CatalogObject):
             for file in prop.findall("File"):
                 files.append(file.attrib["filepath"])
         return properties, files
+
+    @property
+    def catalog_name(self) -> str:
+        """Get the name of the catalog file."""
+        return self.catalog.catalog_name

@@ -7,7 +7,7 @@ from scenariogeneration import xosc
 
 from scenario_gym.entity import Entity
 from scenario_gym.scenario import Scenario
-from scenario_gym.xosc_interface.utils import is_stationary
+from scenario_gym.trajectory import is_stationary
 
 
 def write_scenario(
@@ -17,7 +17,7 @@ def write_scenario(
     osc_minor_version: int = 0,
 ) -> None:
     """
-    Write a recorded gym scenario to an OpenScenario file.
+    Write a scenario to an OpenScenario file.
 
     Parameters
     ----------
@@ -27,9 +27,6 @@ def write_scenario(
     filepath : str
         The desired filepath.
 
-    base_catalog_path : str
-        Base path to the catalogs.
-
     base_road_network_path : str
         Base path to the road networks.
 
@@ -37,6 +34,12 @@ def write_scenario(
         The OpenScenario minor version.
 
     """
+    name = (
+        scenario.name
+        if scenario.name is not None
+        else (os.path.splitext(os.path.basename(scenario.path)[-1])[0])
+    )
+
     rn_name = scenario.road_network.path.split("/")[-1].split(".")[0]
     scenegraph = os.path.join(base_road_network_path, f"{rn_name}.json")
     rn = xosc.RoadNetwork("", scenegraph)
@@ -53,11 +56,10 @@ def write_scenario(
 
     init = xosc.Init()
     for e in scenario.entities:
-        if is_stationary(e):
-            pose = e.recorded_poses[0][1:]
-            assert np.isfinite(
-                pose[2]
-            ), f"Heading should be finite but is {pose[2]}"
+        if is_stationary(e.trajectory.data[:, 1:]):
+            pose = e.trajectory.data[0, 1:]
+            if not np.isfinite(pose[3]):
+                raise ValueError(f"Heading must be finite but is {pose[2]}.")
             action = xosc.TeleportAction(
                 xosc.WorldPosition(
                     *(float(p) if np.isfinite(p) else None for p in pose)
@@ -66,7 +68,7 @@ def write_scenario(
             init.add_init_action(e.ref, action)
 
     act = xosc.Act(
-        scenario.name.replace(".xosc", ""),
+        scenario.path.replace(".xosc", ""),
         get_simulation_time_trigger(0),
     )
     maneuver_groups = []
@@ -78,16 +80,15 @@ def write_scenario(
             maneuver_groups.append(m_group)
             act.add_maneuver_group(m_group)
 
-    story = xosc.Story(scenario.name.replace(".xosc", ""))
+    story = xosc.Story(name)
     story.add_act(act)
     sb = xosc.StoryBoard(init)
     sb.add_story(story)
 
-    desc = f"\
-Scenario {scenario.name.replace('.xosc', '')} recorded \
-in the dRISK Scenario Gym subject to the dRISK License \
-Agreement (https://drisk.ai/license/).\
-"
+    desc = (
+        f"Scenario {name} recorded in the dRISK Scenario Gym subject to the dRISK "
+        "License Agreement (https://drisk.ai/license/)."
+    )
     s = xosc.Scenario(
         desc,
         "∂RISK",
@@ -99,19 +100,20 @@ Agreement (https://drisk.ai/license/).\
         osc_minor_version=osc_minor_version,
     )
     element = ET.Element("OpenSCENARIO")
-    element.append(s.header.get_element())
-    element.append(s.parameters.get_element())
-    element.append(s.catalog.get_element())
-    element.append(s.roadnetwork.get_element())
-    element.append(s.entities.get_element())
-    element.append(s.storyboard.get_element())
+    element.extend(
+        (
+            s.header.get_element(),
+            s.parameters.get_element(),
+            s.catalog.get_element(),
+            s.roadnetwork.get_element(),
+            s.entities.get_element(),
+            s.storyboard.get_element(),
+        )
+    )
     s.write_xml(filepath)
 
 
-def get_simulation_time_trigger(
-    t: float,
-    delay: float = 0.0,
-) -> xosc.ValueTrigger:
+def get_simulation_time_trigger(t: float, delay: float = 0.0) -> xosc.ValueTrigger:
     """Get a simulation time trigger."""
     return xosc.ValueTrigger(
         "startSimTrigger",
@@ -129,10 +131,9 @@ def get_follow_trajectory_event(
     check_stationary: bool = True,
 ) -> Optional[xosc.Event]:
     """Get a follow trajectory event for an entity."""
-    if check_stationary and is_stationary(e):
+    if check_stationary and is_stationary(e.trajectory.data):
         return None
-
-    ts, poses = e.recorded_poses[:, 0], e.recorded_poses[:, 1:]
+    ts, poses = e.trajectory.t, e.trajectory.data[:, 1:]
     positions = [
         xosc.WorldPosition(*(float(p) if np.isfinite(p) else None for p in pose))
         for pose in poses
@@ -188,8 +189,6 @@ def get_maneuver(
         for event in events:
             maneuver.add_event(event)
         return maneuver
-    else:
-        return None
 
 
 def get_maneuver_group(
@@ -204,5 +203,3 @@ def get_maneuver_group(
         mangrp.add_actor(e.ref)
         mangrp.add_maneuver(maneuver)
         return mangrp
-    else:
-        return None

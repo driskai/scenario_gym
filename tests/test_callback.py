@@ -11,38 +11,53 @@ def scenario_path(all_scenarios):
     return all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"]
 
 
-class TestCallback(StateCallback):
+class ExampleCallback(StateCallback):
     """A simple callback to add a feature to the state."""
+
+    my_feature: bool
 
     def __call__(self, state):
         """Set the feature to whether the time is <= 1."""
-        state.my_feature = state.t <= 1
+        self.my_feature = state.t <= 1
 
 
-class TestDependentCallback(StateCallback):
+class ExampleDependentCallback(StateCallback):
     """A simple callback that is dependented on the TestCallback."""
 
-    required_callbacks = [TestCallback]
+    required_callbacks = [ExampleCallback]
+
+    dependent_feature: bool
 
     def __call__(self, state):
         """Set the feature to the opposite of the existing features."""
-        state.dependent_feature = not state.my_feature
+        self.dependent_feature = not self.callbacks[0].my_feature
+
+
+def test_get_callback(scenario_path):
+    """Test getting a callback instance from the state."""
+    cb1, cb2 = ExampleCallback(), ExampleDependentCallback()
+    gym = ScenarioGym(state_callbacks=[cb1, cb2])
+    gym.load_scenario(scenario_path)
+    assert gym.state.get_callback(ExampleCallback) is cb1
+    assert gym.state.get_callback(ExampleDependentCallback) is cb2
 
 
 def test_callback(scenario_path):
     """Test that we can add a callback to the state."""
-    gym = ScenarioGym(state_callbacks=[TestCallback()])
+    gym = ScenarioGym(state_callbacks=[ExampleCallback()])
     gym.load_scenario(scenario_path)
-    assert gym.state.my_feature, "Feature should be added at reset."
+    assert gym.state_callbacks[0].my_feature, "Feature should be added at reset."
     gym.rollout()
-    assert gym.state.t > 1 and not gym.state.my_feature, "Feature should be False."
+    assert (
+        gym.state.t > 1 and not gym.state_callbacks[0].my_feature
+    ), "Feature should be False."
 
 
 def test_metric_requires(scenario_path):
     """Test that metrics can be forced to require callbacks."""
 
-    class TestMetric(Metric):
-        required_callbacks = [TestCallback]
+    class ExampleMetric(Metric):
+        required_callbacks = [ExampleCallback]
 
         def _reset(self, state):
             pass
@@ -53,29 +68,35 @@ def test_metric_requires(scenario_path):
         def get_state(self):
             pass
 
-    gym = ScenarioGym(state_callbacks=[TestCallback()], metrics=[TestMetric()])
+    gym = ScenarioGym(
+        state_callbacks=[ExampleCallback()], metrics=[ExampleMetric()]
+    )
     try:
         gym.load_scenario(scenario_path)
     except ValueError as e:
         raise "Should not raise any value error:" from e
 
-    gym = ScenarioGym(state_callbacks=[], metrics=[TestMetric()])
+    gym = ScenarioGym(state_callbacks=[], metrics=[ExampleMetric()])
     with pt.raises(ValueError):
         gym.load_scenario(scenario_path)
 
 
 def test_callback_requires(scenario_path):
     """Test that the callbacks can be forced to require callbacks."""
-    gym = ScenarioGym(state_callbacks=[TestCallback(), TestDependentCallback()])
+    gym = ScenarioGym(
+        state_callbacks=[ExampleCallback(), ExampleDependentCallback()]
+    )
     try:
         gym.load_scenario(scenario_path)
     except ValueError as e:
         raise "Should not raise any value error:" from e
 
-    gym = ScenarioGym(state_callbacks=[TestDependentCallback()])
+    gym = ScenarioGym(state_callbacks=[ExampleDependentCallback()])
     with pt.raises(ValueError):
         gym.load_scenario(scenario_path)
 
-    gym = ScenarioGym(state_callbacks=[TestDependentCallback(), TestCallback()])
+    gym = ScenarioGym(
+        state_callbacks=[ExampleDependentCallback(), ExampleCallback()]
+    )
     with pt.raises(ValueError):
         gym.load_scenario(scenario_path)

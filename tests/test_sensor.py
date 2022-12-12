@@ -1,8 +1,42 @@
 from scenario_gym.scenario_gym import ScenarioGym
-from scenario_gym.sensor import RasterizedMapSensor
+from scenario_gym.sensor.common import (
+    CombinedSensor,
+    EgoLocalizationSensor,
+    FutureCollisionDetector,
+    GlobalCollisionDetector,
+    KeyboardInputDetector,
+)
+from scenario_gym.sensor.map import RasterizedMapSensor
 
 
-def test_sensor(all_scenarios):
+def test_combined_sensor(all_scenarios):
+    """Test combining a sensor."""
+    s = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
+    gym = ScenarioGym()
+    gym.load_scenario(s)
+    ego = gym.state.scenario.entities[0]
+    state = gym.state
+
+    sensor = CombinedSensor(
+        ego,
+        EgoLocalizationSensor(ego),
+        FutureCollisionDetector(ego),
+        GlobalCollisionDetector(ego),
+        KeyboardInputDetector(ego),
+    )
+    assert sensor.obs_class is None
+    sensor.reset(state)
+    assert sensor.obs_class is not None
+    obs = sensor.step(state)
+
+    # check attributes exist
+    obs.pose
+    obs.future_collision
+    obs.collisions
+    obs.last_keystroke
+
+
+def test_map_sensor(all_scenarios):
     """Test the rasterized sensor module."""
     # load a test scenario
     s = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
@@ -12,8 +46,8 @@ def test_sensor(all_scenarios):
 
     # test with default layers
     sensor = RasterizedMapSensor(e, height=30, width=30, n=61)
-    sensor._reset()
-    out = sensor._step(gym.state)
+    sensor._reset(gym.state)
+    out = sensor._step(gym.state).map
 
     assert out.shape == (
         61,
@@ -31,8 +65,8 @@ def test_sensor(all_scenarios):
     sensor = RasterizedMapSensor(
         e, layers=RasterizedMapSensor._all_layers, height=30, width=30, n=61
     )
-    sensor._reset()
-    out = sensor._step(gym.state)
+    sensor._reset(gym.state)
+    out = sensor._step(gym.state).map
 
     assert out.shape == (
         61,

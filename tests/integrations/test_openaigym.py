@@ -1,4 +1,4 @@
-from scenario_gym.environment import ScenarioGym
+from scenario_gym.integrations.openaigym import ScenarioGym
 
 
 def test_env(all_scenarios) -> None:

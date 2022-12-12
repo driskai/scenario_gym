@@ -35,8 +35,7 @@ class RoadObject:
         """Check if another road object is the same as the current object."""
         if isinstance(other, str):
             return self.id == other
-        else:
-            return hasattr(other, "id") and (other.id == self.id)
+        return hasattr(other, "id") and (other.id == self.id)
 
     def __hash__(self) -> int:
         """Return a hash of the id."""

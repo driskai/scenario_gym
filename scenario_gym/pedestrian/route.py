@@ -153,7 +153,7 @@ def shortest_path(
         if node not in explored:
             neighbours = graph[node]
             for neighbour in neighbours:
-                new_path = list(path)
+                new_path = path.copy()
                 new_path.append(neighbour)
                 queue.append(new_path)
                 if neighbour == goal:
@@ -174,7 +174,7 @@ def find_route(
     them with the shortest path in the graph. Will return None if the
     start and finish are not path connected.
     """
-    if len(node_data) == 0:
+    if not node_data:
         return np.array([start] + [finish])
     start_node = min(
         node_data, key=lambda n: np.linalg.norm(np.array(node_data[n]) - start)

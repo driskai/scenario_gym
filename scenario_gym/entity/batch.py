@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypeVar
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -7,6 +7,8 @@ from scenario_gym.trajectory import Trajectory
 from scenario_gym.utils import ArrayLike
 
 from .base import Entity
+
+State = TypeVar("State")
 
 
 class BatchReplayEntity:
@@ -24,19 +26,7 @@ class BatchReplayEntity:
         self.timestep = timestep
         self.max_t = 0.0
 
-    def reset(self) -> None:
-        """Reset the entities at the start of the scenario."""
-        if len(self.entities) > 0:
-            for e, t in zip(self.entities, self.trajectories):
-                e.reset()
-                e.set_initial(
-                    0.0,
-                    e.trajectory.position_at_t(0.0),
-                    Entity.INIT_PREV_T,
-                    e.trajectory.position_at_t(Entity.INIT_PREV_T),
-                )
-
-    def step(self, state: "State") -> Dict[Entity, ArrayLike]:  # noqa: F821
+    def step(self, state: State) -> Dict[Entity, ArrayLike]:
         """
         Take a single step in the gym.
 
@@ -72,7 +62,7 @@ class BatchReplayEntity:
         self.entities.clear()
         self.trajectories.clear()
         self.max_t = 0.0
-        if len(entities) > 0:
+        if entities:
             self.entities.extend(entities)
             self.trajectories.extend(trajs)
 

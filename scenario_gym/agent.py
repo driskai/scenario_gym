@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Optional
 
 from scenario_gym.action import Action, TeleportAction
@@ -16,7 +15,7 @@ from scenario_gym.trajectory import Trajectory
 from scenario_gym.utils import ArrayLike
 
 
-class Agent(ABC):
+class Agent:
     """Base agent class. Processes observations to select an action."""
 
     def __init__(self, entity: Entity, controller: Controller, sensor: Sensor):
@@ -42,27 +41,18 @@ class Agent(ABC):
         self._last_reward: Optional[float] = None
         self._trajectory: Optional[Trajectory] = None
 
-    def reset(self) -> None:
+    def reset(self, state: State) -> None:
         """Reset the agent state at the start of the scenario."""
-        self.entity.reset()
         self.last_action = None
         self.last_reward = None
-
-        if self.trajectory is not None:
-            self.entity.set_initial(
-                0.0,
-                self.trajectory.position_at_t(0.0),
-                Entity.INIT_PREV_T,
-                self.trajectory.position_at_t(Entity.INIT_PREV_T),
-            )
-        self.controller.reset()
-        self.sensor.reset()
+        self.sensor.reset(state)
+        self.controller.reset(state)
         self._reset()
 
     def step(self, state: State) -> ArrayLike:
         """Select an action from the current observation."""
         obs = self.sensor.step(state)
-        action = self._step(state, obs)
+        action = self._step(obs)
         self.last_action = action
         return self.controller.step(state, action)
 
@@ -70,7 +60,7 @@ class Agent(ABC):
         """Reset the agent state at the start of the scenario."""
         pass
 
-    def _step(self, state: State, observation: Observation) -> Action:
+    def _step(self, observation: Observation) -> Action:
         """Select an action from the current observation."""
         pass
 
@@ -132,9 +122,9 @@ class ReplayTrajectoryAgent(Agent):
         """Reset the agent state at the start of the scenario."""
         pass
 
-    def _step(self, state: State, observation: Observation) -> Action:
+    def _step(self, observation: Observation) -> Action:
         """Return the agent's next pose."""
-        new_pose = self.trajectory.position_at_t(state.next_t)
+        new_pose = self.trajectory.position_at_t(observation.next_t)
         return TeleportAction(pose=new_pose)
 
 
@@ -152,9 +142,9 @@ class PIDAgent(Agent):
         """Reset the agent state at the start of the scenario."""
         pass
 
-    def _step(self, state: State, observation: Observation) -> TeleportAction:
+    def _step(self, observation: Observation) -> TeleportAction:
         """Get the next waypoint from the agent's trajectory."""
-        pos = self.trajectory.position_at_t(state.next_t)
+        pos = self.trajectory.position_at_t(observation.next_t)
         return TeleportAction(x=pos[0], y=pos[1], z=pos[2])
 
 

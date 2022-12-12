@@ -1,10 +1,9 @@
-from abc import ABC
 from typing import Optional
 
 import numpy as np
 
 
-class Action(ABC):
+class Action:
     """Base class for actions that agents commnicate to controllers."""
 
     pass

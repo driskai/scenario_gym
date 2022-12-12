@@ -7,9 +7,7 @@ def test_add_rss(all_scenarios):
     s = all_scenarios["3fee6507-fd24-432f-b781-ca5676c834ef"]
     gym = ScenarioGym(
         state_callbacks=[RSSDistances()],
-        metrics=[
-            RSS(),
-        ],
+        metrics=[RSS()],
     )
     gym.load_scenario(s)
     gym.rollout()

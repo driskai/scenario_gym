@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 from scenario_gym.agent import Agent, _create_agent
 from scenario_gym.entity import Entity
 from scenario_gym.metrics import Metric
-from scenario_gym.recorder import ScenarioRecorder
 from scenario_gym.scenario import Scenario
 from scenario_gym.state import State
 from scenario_gym.viewer import Viewer
@@ -13,6 +12,8 @@ from scenario_gym.xosc_interface import import_scenario
 
 class ScenarioGym:
     """The main class that loads and runs scenarios."""
+
+    INIT_PREV_T = -0.1
 
     @classmethod
     def run_scenarios(
@@ -83,8 +84,8 @@ class ScenarioGym:
         else:
             self.viewer_class = viewer_class
             self._render_enabled = True
+        self.state: Optional[State] = None
         self.viewer: Optional[Viewer] = None
-        self.recorder: Optional[ScenarioRecorder] = None
         self.reset_gym()
 
         if metrics is not None:
@@ -108,11 +109,7 @@ class ScenarioGym:
         Closes the viewer, removes any metrics and unloads the scenario.
         """
         self.close()
-        self.state = State(
-            conditions=self.terminal_conditions,
-            state_callbacks=self.state_callbacks,
-        )
-        self.recorder = None
+        self.state = None
         self.metrics = []
 
     def add_metrics(self, metrics: List[Metric]) -> None:
@@ -147,9 +144,9 @@ class ScenarioGym:
             relabel=relabel,
             **kwargs,
         )
-        self._set_scenario(scenario, create_agent=create_agent)
+        self.set_scenario(scenario, create_agent=create_agent)
 
-    def _set_scenario(
+    def set_scenario(
         self,
         scenario: Scenario,
         create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
@@ -169,10 +166,8 @@ class ScenarioGym:
         self.state = State(
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
+            scenario=scenario,
         )
-        self.state.scenario = scenario
-        if self.is_recording:
-            self.recorder.scenario = scenario
         self.create_agents(create_agent=create_agent)
         self.reset_scenario()
 
@@ -195,16 +190,16 @@ class ScenarioGym:
         for entity in self.state.scenario.entities:
             agent = create_agent(self.state.scenario, entity)
             if agent is not None:
-                self.state.scenario.agents[entity.ref] = agent
+                self.state.agents[entity.ref] = agent
             else:
                 non_agents.append(entity)
                 non_agent_trajs.append(entity.trajectory)
-        self.state.scenario.non_agents.add_entities(non_agents, non_agent_trajs)
+        self.state.non_agents.add_entities(non_agents, non_agent_trajs)
 
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        self.state.reset(Entity.INIT_PREV_T, 0.0)
+        self.state.reset(self.INIT_PREV_T, 0.0)
         for m in self.metrics:
             m.reset(self.state)
 
@@ -214,14 +209,12 @@ class ScenarioGym:
 
         # get the new poses
         new_poses = {}
-        for agent in self.state.scenario.agents.values():
+        for agent in self.state.agents.values():
             new_poses[agent.entity] = agent.step(self.state)
-        new_poses.update(self.state.scenario.non_agents.step(self.state))
+        new_poses.update(self.state.non_agents.step(self.state))
 
         # update the poses and current time
-        for e, p in new_poses.items():
-            e.pose = p
-        self.state.step()
+        self.state.step(new_poses)
 
         # metrics and rendering
         for m in self.metrics:
@@ -236,7 +229,7 @@ class ScenarioGym:
             self.state.last_keystroke = self.render(**kwargs)
         while not self.state.is_done:
             self.step()
-        for agent in self.state.scenario.agents.values():
+        for agent in self.state.agents.values():
             agent.finish(self.state)
         self.close()
 
@@ -259,7 +252,7 @@ class ScenarioGym:
         else:
             self.viewer.close()
         if video_path is None:
-            path = self.state.scenario.scenario_path
+            path = self.state.scenario.path
             video_dir = os.path.join(os.path.dirname(path), "../Recordings")
             if os.path.exists(video_dir):
                 video_path = os.path.join(
@@ -270,9 +263,7 @@ class ScenarioGym:
                     + ".mp4",
                 )
             else:
-                video_path = (
-                    os.path.splitext(self.state.scenario.scenario_path)[0] + ".mp4"
-                )
+                video_path = os.path.splitext(self.state.scenario.path)[0] + ".mp4"
         self.viewer.reset(video_path)
 
     def close(self) -> None:
@@ -280,29 +271,6 @@ class ScenarioGym:
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
-
-    def record(self, close: bool = False) -> None:
-        """
-        Record the scenario and write to OpenScenario.
-
-        Parameters
-        ----------
-        close : bool
-            If given will close the recorder and remove trajectory tracking.
-
-        """
-        if not close:
-            self.recorder = ScenarioRecorder(self.state.scenario)
-        else:
-            self.recorder.close()
-            self.recorder = None
-        if self.state.scenario is not None:
-            self.reset_scenario()
-
-    @property
-    def is_recording(self) -> bool:
-        """Return True if the gym is recording scenarios."""
-        return self.recorder is not None
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get the current metric states."""

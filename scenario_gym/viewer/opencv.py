@@ -211,8 +211,8 @@ class OpenCVViewer(Viewer):
             if layer != "entity" and layer != "text":
                 getattr(self, f"render_{layer}")(state, ego_pose)
 
-        for entity_idx, entity in enumerate(state.scenario.entities):
-            self.draw_entity(entity_idx, entity, ego_pose)
+        for entity_idx, (entity, pose) in enumerate(state.poses.items()):
+            self.draw_entity(state, entity_idx, entity, pose, ego_pose)
 
         if "text" in self.render_layers:
             self.render_text(state)
@@ -224,11 +224,7 @@ class OpenCVViewer(Viewer):
             entity = state.scenario.entity_by_name(e_ref)
             if entity is None:
                 entity = state.scenario.entities[0]
-                ego_pose = entity.pose
-            else:
-                ego_pose = entity.pose
-        if ego_pose is None:
-            ego_pose = np.zeros(6)
+            ego_pose = state.poses[entity]
         return ego_pose
 
     @property
@@ -259,14 +255,19 @@ class OpenCVViewer(Viewer):
         return c
 
     def draw_entity(
-        self, entity_idx: int, entity: Entity, ego_pose: np.ndarray
+        self,
+        state: State,
+        entity_idx: int,
+        entity: Entity,
+        pose: np.ndarray,
+        ego_pose: np.ndarray,
     ) -> None:
         """Draw the given entity onto the frame."""
         # get the bounding box in the global frame
-        bbox_coords = entity.get_bounding_box_points()
+        bbox_coords = entity.get_bounding_box_points(pose)
 
         # convert to the egos frame (rotated 90)
-        bbox_in_ego = to_ego_frame(bbox_coords, ego_pose, vertical=True)
+        bbox_in_ego = to_ego_frame(bbox_coords, ego_pose)
 
         # render front of the entity
         l = np.linalg.norm(bbox_in_ego[0] - bbox_in_ego[1])
@@ -290,7 +291,7 @@ class OpenCVViewer(Viewer):
 
     def render_text(self, state: State) -> None:
         """Add text to the frame."""
-        v = np.linalg.norm(state.scenario.entities[0].velocity[:3])
+        v = np.linalg.norm(state.velocities[state.scenario.entities[0]][:3])
         cv2.putText(
             self._frame,
             "Ego speed: {:.2f}".format(v),

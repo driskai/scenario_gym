@@ -3,7 +3,6 @@ from typing import Tuple
 
 from scenario_gym.agent import Agent
 from scenario_gym.pedestrian.observation import PedestrianObservation
-from scenario_gym.state import State
 
 
 class BehaviourParameters:
@@ -25,7 +24,6 @@ class PedestrianBehaviour:
 
     def step(
         self,
-        state: State,
         observation: PedestrianObservation,
         agent: Agent,
     ) -> Tuple[float, float]:
@@ -34,9 +32,6 @@ class PedestrianBehaviour:
 
         Parameters
         ----------
-        state : State
-           Global state.
-
         observation : PedestrianObservation
             The observation for the pedestrian.
 
@@ -50,14 +45,9 @@ class PedestrianBehaviour:
         heading : float
 
         """
-        return self._step(state, observation, agent)
+        return self._step(observation, agent)
 
     @abstractmethod
-    def _step(
-        self,
-        state: State,
-        observation: PedestrianObservation,
-        agent: Agent,
-    ) -> Tuple:
+    def _step(self, observation: PedestrianObservation, agent: Agent) -> Tuple:
         """Return the new speed and heading according to behavior model."""
         pass

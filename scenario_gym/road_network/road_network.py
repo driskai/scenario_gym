@@ -1,4 +1,5 @@
 import json
+from contextlib import suppress
 from functools import _lru_cache_wrapper, lru_cache
 from pathlib import Path
 from types import MethodType
@@ -165,10 +166,11 @@ class RoadNetwork:
             passed.
 
         """
-        self._elevation_func: Optional[Callable[[float, float], float]] = None
-
         self.name = name
         self.path = path
+
+        self._elevation_func: Optional[Callable[[float, float], float]] = None
+        self._lane_parents: Dict[Lane, Optional[Union[Road, Intersection]]] = {}
 
         self.object_names = self._default_object_names.copy()
         self.object_classes = {v: k for k, v in self.object_names.items()}
@@ -316,12 +318,15 @@ class RoadNetwork:
         """Get intersections that connect to the given road."""
         return [i for i in self.intersections if r in i.connecting_roads]
 
-    @lru_cache(maxsize=200)
-    def get_lane_parent(self, l: Lane) -> Union[Road, Intersection]:
+    def get_lane_parent(self, l: Lane) -> Optional[Union[Road, Intersection]]:
         """Get the object that the lane belongs to."""
-        for x in self.roads + self.intersections:
-            if l in x.lanes:
-                return x
+        if l not in self._lane_parents:
+            for x in self.roads + self.intersections:
+                if l in x.lanes:
+                    self._lane_parents[l] = x
+                    return x
+            self._lane_parents[l] = None
+        return self._lane_parents[l]
 
     def get_geometries_at_point(
         self,
@@ -367,6 +372,8 @@ class RoadNetwork:
 
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""
+        self._lane_parents.clear()
+        self._elevation_func = None
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
             if isinstance(obj, _lru_cache_wrapper):
@@ -378,14 +385,12 @@ class RoadNetwork:
             ):
                 del self.__dict__[method]
             else:
-                try:
-                    func = getattr(obj, "__func__")
+                with suppress(AttributeError):
+                    func = obj.__func__
                     if isinstance(func, _lru_cache_wrapper) and (
                         obj.__self__ is self
                     ):
                         func.cache_clear()
-                except AttributeError:
-                    continue
 
     def elevation_at_point(self, x: ArrayLike, y: ArrayLike) -> NDArray:
         """Estimate the elevation at (x, y) by interpolating."""
@@ -400,7 +405,7 @@ class RoadNetwork:
             for geom in self.road_network_geometries
             if geom.elevation is not None
         ]
-        if len(elevs) == 0:
+        if not elevs:
             self._elevation_func = lambda x, y: np.zeros_like(x)
         else:
             elevation_values = np.concatenate(elevs, axis=0)
