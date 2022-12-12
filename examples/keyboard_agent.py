@@ -12,7 +12,7 @@ from scenario_gym.controller import VehicleController
 from scenario_gym.entity import Entity
 from scenario_gym.manager import ScenarioManager
 from scenario_gym.scenario import Scenario
-from scenario_gym.sensor import KeyboardInputDetector
+from scenario_gym.sensor.common import KeyboardInputDetector, KeyboardObservation
 from scenario_gym.state import State
 
 
@@ -24,7 +24,7 @@ class KeyboardAgent(Agent):
         entity: Entity,
         controller: VehicleController,
         sensor: KeyboardInputDetector,
-        max_throttle: float = 2.0,
+        max_throttle: float = 5.0,
         max_steer: float = 0.3,
     ):
         """
@@ -73,10 +73,10 @@ class KeyboardAgent(Agent):
     def _reset(self):
         pass
 
-    def _step(self, state: State, observation) -> VehicleAction:
+    def _step(self, observation: KeyboardObservation) -> VehicleAction:
         # convert the key-stroke from the observation to a speed and steer
 
-        throttle, steer = self._keyboard_action(observation)
+        throttle, steer = self._keyboard_action(observation.last_keystroke)
 
         throttle *= self.max_throttle
         steer *= self.max_steer

@@ -22,12 +22,13 @@ def main():
 
     # define the gym and rendering config
     gym = ScenarioGym(
+        timestep=1 / 15,
         headless_rendering=True,
         render_layers=[
             "driveable_surface",
             "walkable_surface",
-            "building",
-            "road_center",
+            "buildings",
+            "road_centers",
         ],
     )
 
@@ -47,7 +48,7 @@ def main():
 
     # setup the scenario
     scenario = make_scenario()
-    gym._set_scenario(scenario, create_agent=config.create_agent)
+    gym.set_scenario(scenario, create_agent=config.create_agent)
 
     # rollout and render
     gym.rollout(render=True, video_path="crowd_model1.mp4")
@@ -55,8 +56,7 @@ def main():
 
 def make_scenario():
     """Setup a scenario with a crowd of pedestrians."""
-    s = Scenario()
-    s.road_network = construct_road_network()
+    ents = []
     _, veh_catalog = read_catalog(
         os.path.join(
             os.path.dirname(__file__),
@@ -80,7 +80,7 @@ def make_scenario():
         ),
         fields=["t", "x", "y", "h"],
     )
-    s.add_entity(e)
+    ents.append(e)
 
     _, ped_catalog = read_catalog(
         os.path.join(
@@ -95,7 +95,7 @@ def make_scenario():
         )
     )
     e_ped = deepcopy(ped_catalog["pedestrian1"])
-    for idx in range(60):
+    for idx in range(30):
         e = deepcopy(e_ped)
         e.ref = f"entity_{idx+1}"
         e.trajectory = Trajectory(
@@ -115,7 +115,8 @@ def make_scenario():
             ),
             fields=["t", "x", "y"],
         )
-        s.add_entity(e)
+        ents.append(e)
+    s = Scenario(ents, road_network=construct_road_network(), name="crowd_scenario")
     return s
 
 

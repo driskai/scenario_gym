@@ -34,10 +34,7 @@ from scenario_gym.state import State
 
 
 class PPOModel(nn.Module):
-    """
-    PPO model outputing parameters of a Beta distribution
-    over the actions.
-    """
+    """PPO model outputing parameters of a Beta distribution over the actions."""
 
     def __init__(
         self,
@@ -167,10 +164,14 @@ class AdvantageBuffer:
         return s, a, r, d, s_next, pi, advs, tds
 
 
+class MapSensor(RasterizedMapSensor):
+    def _step(self, state):
+        obs = super()._step(state)
+        return obs.map
+
+
 class PPOAgent(Agent):
-    """
-    An agent implementing a PPO policy.
-    """
+    """An agent implementing a PPO policy."""
 
     def __init__(
         self,
@@ -209,8 +210,8 @@ class PPOAgent(Agent):
         self.ep_length = 0
         self.ep_reward = 0.0
 
-    def _step(self, state: State, obs: np.ndarray):
-        obs = obs.transpose(2, 0, 1)[1:, :, :]
+    def step(self, state: State):
+        obs = self.sensor.step(state).transpose(2, 0, 1)[1:, :, :]
         self.r_prev = self.get_reward(state)
         if self.s_prev is not None and self.training:
             self.buffer.update(
@@ -224,18 +225,21 @@ class PPOAgent(Agent):
         self.ep_length += 1
         self.ep_reward += self.r_prev
         self.s_prev = obs
+        action = self._step(obs)
+        self.last_action = action
+        return self.controller.step(state, action)
+
+    def _step(self, obs: np.ndarray):
         s = torch.from_numpy(obs[None]).float()  # (1, ...)
         with torch.no_grad():
             a = self.model(s).squeeze()  # (2,)
         dist = Beta(a[0] + 1e-10, a[1] + 1e-10)
-
         if self.training:
             a = dist.sample()
         else:
             a = a[0] / (a.sum() + 1e-10)
         self.pi_prev = dist.log_prob(a).numpy()
         self.a_prev = a.numpy()
-
         steer = (self.a_prev * 2.0 - 1.0) * self.max_steer
         return VehicleAction(
             0.5 * (self.target_speed - self.controller.speed),
@@ -325,10 +329,7 @@ class PPOAgent(Agent):
 
 
 class PPOConfig(ScenarioManager):
-    """
-    Holds a replay buffer and neural network for a
-    PPO agent.
-    """
+    """Holds a replay buffer and neural network for a PPO agent."""
 
     PARAMETERS = {
         "timestep": 0.25,
@@ -364,7 +365,7 @@ class PPOConfig(ScenarioManager):
     def create_agent(self, scenario: Scenario, entity: Entity) -> Agent:
         if entity.ref == "ego":
             controller = VehicleController(entity, max_steer=self.max_steer)
-            sensor = RasterizedMapSensor(entity)
+            sensor = MapSensor(entity)
             return PPOAgent(
                 entity,
                 controller,
@@ -381,9 +382,7 @@ class PPOConfig(ScenarioManager):
             )
 
     def save_config(self, path: Optional[str] = None) -> None:
-        """
-        Save the parameters and state dict.
-        """
+        """Save the parameters and state dict."""
         super().save_config(path=path + ".yml")
         torch.save(
             {
@@ -396,13 +395,14 @@ class PPOConfig(ScenarioManager):
 
 class EpisodicReward(Metric):
     def __init__(self, entity_ref: str = "ego"):
+        super().__init__()
         self.entity_ref = entity_ref
         self.r = 0.0
         self.agent = None
 
     def _reset(self, state):
         self.r = 0.0
-        self.agent = state.scenario.agents[self.entity_ref]
+        self.agent = state.agents[self.entity_ref]
 
     def _step(self, state):
         self.r += self.agent.r_prev
@@ -412,9 +412,7 @@ class EpisodicReward(Metric):
 
 
 def seed_all(seed: int) -> None:
-    """
-    Make deterministic.
-    """
+    """Make deterministic."""
     random.seed(seed)
     np.random.seed(seed)
     torch.random.manual_seed(seed)
@@ -522,7 +520,7 @@ def run(FLAGS):
 
     rewards, loss = 0.0, 0.0
     for episode in range(FLAGS.episodes):
-        agent = gym.state.scenario.agents["ego"]
+        agent = gym.state.agents["ego"]
         agent.train()
         gym.rollout()
         agent.buffer.update(

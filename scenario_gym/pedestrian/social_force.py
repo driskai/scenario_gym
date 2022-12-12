@@ -50,17 +50,23 @@ class SocialForce(PedestrianBehaviour):
             agent.speed_desired,
         )
 
-        for pedestrian in observation.near_peds:  # Forces from other pedestrians
+        for (
+            pedestrian,
+            pose,
+            vel,
+        ) in observation.near_peds:  # Forces from other pedestrians
             # Vector of agent's sight (velocity angle + head angle)
-            view_dir_vector = rotate_coords(
-                agent.entity.velocity[[0, 1]], observation.head_rot_angle
-            )
+            view_dir_vector = rotate_coords(vel[[0, 1]], observation.head_rot_angle)
             view_dir_unit_vector = view_dir_vector / (
                 np.linalg.norm(view_dir_vector) + 0.0000000001
             )
 
-            force_repulsion = self._force_pedestrian_repulsion(agent, pedestrian)
-            force_attraction = self._force_pedestrian_attraction(agent, pedestrian)
+            force_repulsion = self._force_pedestrian_repulsion(
+                observation, (pedestrian, pose, vel)
+            )
+            force_attraction = self._force_pedestrian_attraction(
+                observation, (pedestrian, pose, vel)
+            )
             if self.params.sight_weight_use:
                 force_sum += (
                     self._sight_weight(force_repulsion, view_dir_unit_vector)
@@ -81,7 +87,7 @@ class SocialForce(PedestrianBehaviour):
         if observation.walkable_surface.area > 0:
             if observation.walkable_surface.contains(point):
                 force_sum += self._force_boundary(
-                    agent,
+                    observation,
                     observation.walkable_surface,
                     self.params.boundary_repulse_R,
                     self.params.boundary_repulse_U,
@@ -91,7 +97,7 @@ class SocialForce(PedestrianBehaviour):
         if observation.impenetrable_surface.area > 0:
             sign = 1 - 2 * observation.impenetrable_surface.contains(point)
             force_sum += sign * self._force_boundary(
-                agent,
+                observation,
                 observation.impenetrable_surface,
                 self.params.imp_boundary_repulse_R,
                 self.params.imp_boundary_repulse_U,
