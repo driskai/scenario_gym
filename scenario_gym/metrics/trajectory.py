@@ -13,12 +13,12 @@ class EgoAvgSpeed(Metric):
     def _reset(self, state: State) -> None:
         """Reset the average speed."""
         self.ego = state.scenario.entities[0]
-        self.ego_avg_speed = np.linalg.norm(self.ego.velocity[:3])
+        self.ego_avg_speed = np.linalg.norm(state.velocities[self.ego][:3])
         self.t = 0.0
 
     def _step(self, state: State) -> None:
         """Update the average speed."""
-        speed = np.linalg.norm(self.ego.velocity[:3])
+        speed = np.linalg.norm(state.velocities[self.ego][:3])
         w = self.t / state.t
         self.ego_avg_speed += (1.0 - w) * (speed - self.ego_avg_speed)
         self.t = state.t
@@ -36,11 +36,11 @@ class EgoMaxSpeed(Metric):
     def _reset(self, state: State) -> None:
         """Reset the maximum speed."""
         self.ego = state.scenario.entities[0]
-        self.ego_max_speed = np.linalg.norm(self.ego.velocity[:3])
+        self.ego_max_speed = np.linalg.norm(state.velocities[self.ego][:3])
 
     def _step(self, state: State) -> None:
         """Update the maximum speed."""
-        speed = np.linalg.norm(self.ego.velocity[:3])
+        speed = np.linalg.norm(state.velocities[self.ego][:3])
         self.ego_max_speed = np.maximum(speed, self.ego_max_speed)
 
     def get_state(self) -> float:
@@ -59,8 +59,8 @@ class EgoDistanceTravelled(Metric):
 
     def _step(self, state: State) -> None:
         """Pass as entity will update its distance."""
-        pass
+        self.dist = state.distances[self.ego]
 
     def get_state(self) -> float:
         """Return the current distance travelled."""
-        return self.ego.distance_travelled
+        return self.dist

@@ -1,9 +1,15 @@
+from dataclasses import dataclass
+from typing import List, Tuple
+
+from shapely.geometry import MultiPolygon
+
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation
-from scenario_gym.state import State
+from scenario_gym.observation import SingleEntityObservation
+from scenario_gym.utils import NDArray
 
 
-class PedestrianObservation(Observation):
+@dataclass
+class PedestrianObservation(SingleEntityObservation):
     """
     An observation for a pedestrian agent.
 
@@ -14,23 +20,7 @@ class PedestrianObservation(Observation):
     or ObjectDetectionSensor.
     """
 
-    def __init__(self, entity: Entity, head_rot_angle: float, state: State):
-        """
-        Init the pedestrian observation.
-
-        Parameters
-        ----------
-        entity : Entity
-            The pedestrian entity.
-
-        head_rot_angle : float
-            Rotation angle of pedestrian head in rad w.r.t. to heading
-            (0 means looking forward).
-
-        state : State
-            Global state.
-
-        """
-        super().__init__()
-        self.head_rot_angle = head_rot_angle
-        self.state = state
+    head_rot_angle: float
+    near_peds: List[Tuple[Entity, NDArray, NDArray]]
+    walkable_surface: MultiPolygon
+    impenetrable_surface: MultiPolygon

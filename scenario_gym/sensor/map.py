@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -8,12 +9,19 @@ from shapely.prepared import prep
 from shapely.vectorized import contains
 
 from scenario_gym.entity import Entity
-from scenario_gym.observation import Observation
+from scenario_gym.observation import SingleEntityObservation
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.state import State
 from scenario_gym.utils import ArrayLike, NDArray
 
 from .base import Sensor
+
+
+@dataclass
+class MapObservation(SingleEntityObservation):
+    """Observation with a raster map."""
+
+    map: np.ndarray
 
 
 class RasterizedMapSensor(Sensor):
@@ -120,28 +128,32 @@ class RasterizedMapSensor(Sensor):
                     f"Layer {layer} does not have a get and/or a prepare method."
                 )
 
-    def _reset(self) -> None:
+    def _reset(self, state: State) -> MapObservation:
         """Reset the sensor at the start of the scenario."""
         self._road_network: Optional[RoadNetwork] = None
+        return self._step(state)
 
-    def _step(self, state: State) -> Observation:
+    def _step(self, state: State) -> MapObservation:
         """Return the rasterized map around the entity."""
         if self._road_network is None:
             self._prepare_layers(state)
 
-        coords = self._get_coords(self.entity.pose).reshape(-1, 2)
-
+        pose = state.poses[self.entity]
+        coords = self._get_coords(pose).reshape(-1, 2)
         layers = [getattr(self, f"_{l}_layer")(state, coords) for l in self.layers]
-        obs = np.array(layers).reshape(len(layers), self.nw, self.nw)
-        return obs if self.channels_first else obs.transpose(1, 2, 0)
+        obs_map = np.array(layers).reshape(len(layers), self.nw, self.nw)
+        return MapObservation(
+            self.entity,
+            *state.get_entity_data(self.entity),
+            obs_map if self.channels_first else obs_map.transpose(1, 2, 0),
+        )
 
     @property
     def output_shape(self) -> Tuple[int, int, int]:
         """Return the output shape of the rasterized map."""
         if self.channels_first:
             return (len(self.layers), self.nw, self.nh)
-        else:
-            return (self.nw, self.nh, len(self.layers))
+        return (self.nw, self.nh, len(self.layers))
 
     def _get_coords(self, pose: ArrayLike) -> NDArray:
         """Get the coordinates at which the map should be constructed."""
@@ -174,7 +186,10 @@ class RasterizedMapSensor(Sensor):
         """
         entities = prep(
             MultiPolygon(
-                [e.get_bounding_box_geom() for e in state.scenario.entities]
+                [
+                    e.get_bounding_box_geom(state.poses[e])
+                    for e in state.scenario.entities
+                ]
             )
         )
         return contains(entities, coords[:, 0], coords[:, 1])

@@ -15,13 +15,13 @@ from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.sensor import EgoLocalizationSensor
 
 
-def load_keywords(obj: Type, exclude: List[str] = []) -> Dict[str, Any]:
+def load_keywords(obj: Type, exclude: Optional[List[str]] = None) -> Dict[str, Any]:
     """Find keyword arguments of the object."""
     sig = inspect.signature(obj.__init__)
     return {
         k: v.default
         for k, v in sig.parameters.items()
-        if v.default != inspect._empty and k not in exclude
+        if v.default != inspect._empty and (exclude is None or k not in exclude)
     }
 
 
@@ -227,7 +227,7 @@ class ScenarioManager:
         if isinstance(scenario, str):
             gym.load_scenario(scenario, create_agent=self.create_agent)
         elif isinstance(scenario, Scenario):
-            gym._set_scenario(scenario, create_agent=self.create_agent)
+            gym.set_scenario(scenario, create_agent=self.create_agent)
         else:
             raise ValueError(f"{scenario}: should be a scenario or a file.")
         self.on_rollout_start(gym)

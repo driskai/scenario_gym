@@ -41,13 +41,12 @@ def polygon_to_data(
 ) -> Union[List[Dict[str, float]], Dict[str, List[Dict[str, float]]]]:
     """Return a dict or list representing the polygon data."""
     exterior = [{"x": float(x), "y": float(y)} for x, y in poly.exterior.coords]
-    if len(poly.interiors) == 0:
+    if not poly.interiors:
         return exterior
-    else:
-        return {
-            "exterior": exterior,
-            "interiors": [
-                [{"x": float(x), "y": float(y)} for x, y in i.coords]
-                for i in poly.interiors
-            ],
-        }
+    return {
+        "exterior": exterior,
+        "interiors": [
+            [{"x": float(x), "y": float(y)} for x, y in i.coords]
+            for i in poly.interiors
+        ],
+    }

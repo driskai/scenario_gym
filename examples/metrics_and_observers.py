@@ -12,16 +12,17 @@ class EgoMaxSpeedMetric(Metric):
 
     def __init__(self):
         self.max_speed = 0.0
+        super().__init__()
 
     def _reset(self, state):
         """Reset the metric."""
-        self.ego = state.scenario.agents["ego"]
+        self.ego = state.agents["ego"]
         self.max_speed = 0.0
 
     def _step(self, state):
         """Update the max speed."""
         self.max_speed = np.maximum(
-            np.linalg.norm(self.ego.entity.velocity[:2]),
+            np.linalg.norm(state.velocities[self.ego.entity]),
             self.max_speed,
         )
 
@@ -36,6 +37,7 @@ class EgoCollisionObserver(Metric):
     def __init__(self):
         self.ego_collision = False
         self.ego = None
+        super().__init__()
 
     def _reset(self, state):
         """Reset the metric."""
@@ -44,7 +46,7 @@ class EgoCollisionObserver(Metric):
 
     def _step(self, state):
         """Check for collisions."""
-        self.ego_collision = len(state.collisions[self.ego]) > 0
+        self.ego_collision = len(state.collisions()[self.ego]) > 0
 
     def get_state(self) -> float:
         """Return current max speed."""

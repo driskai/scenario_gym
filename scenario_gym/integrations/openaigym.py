@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from math import inf
 from types import MethodType
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from packaging import version
@@ -11,20 +13,18 @@ from scenario_gym.controller import VehicleController
 from scenario_gym.entity import Entity
 from scenario_gym.observation import Observation
 from scenario_gym.scenario import Scenario
-from scenario_gym.scenario_gym import ScenarioGym
-from scenario_gym.sensor import RasterizedMapSensor
+from scenario_gym.scenario_gym import ScenarioGym, _create_agent
+from scenario_gym.sensor.map import RasterizedMapSensor
 from scenario_gym.state import TERMINAL_CONDITIONS, State
 
 try:
     import gym
     from gym import Env
     from gym.spaces import Box, Space
-except ImportError:
+except ImportError as e:
     raise ImportError(
         "gym is required for this module. Install it with `pip install gym`."
-    )
-
-Gym = TypeVar("ScenarioGym")
+    ) from e
 
 
 class ScenarioGym(ScenarioGym, Env):
@@ -51,7 +51,9 @@ class ScenarioGym(ScenarioGym, Env):
         create_agent: Optional[
             Callable[[Scenario, Entity], Optional[Agent]]
         ] = None,
-        select_scenario: Optional[Callable[[Gym], Union[Scenario, str]]] = None,
+        select_scenario: Optional[
+            Callable[[ScenarioGym], Union[Scenario, str]]
+        ] = None,
         **kwargs,
     ):
         """
@@ -115,6 +117,14 @@ class ScenarioGym(ScenarioGym, Env):
         if select_scenario is not None:
             self.select_scenario = MethodType(select_scenario, self)
 
+    def on_reset(self) -> None:
+        """Run just before the reset is executed."""
+        pass
+
+    def after_reset(self) -> None:
+        """Run just after the reset is executed."""
+        pass
+
     def reset(
         self,
         seed: Optional[int] = None,
@@ -132,6 +142,8 @@ class ScenarioGym(ScenarioGym, Env):
             A chosen scenario object or filepath to the xosc to be used.
 
         """
+        self.on_reset()
+
         if self._new_reset:
             super().reset(seed=seed)
         else:
@@ -142,19 +154,18 @@ class ScenarioGym(ScenarioGym, Env):
             s = self.select_scenario()
         if s is not None:
             if isinstance(s, Scenario):
-                self._set_scenario(s)
+                self.set_scenario(s)
             else:
                 self.load_scenario(s)
         elif self.state.scenario is None:
             raise ValueError("No scenario has been set.")
-
-        try:
-            self.ego_agent = self.state.scenario.agents["ego"]
-        except KeyError:
-            raise KeyError("No agent named ego.")
+        else:
+            self.reset_scenario()
 
         self.state.next_t = self.state.t + self.timestep
         ego_obs = self.ego_agent.sensor.step(self.state)
+
+        self.after_reset()
         return (ego_obs, {}) if return_info else ego_obs
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, Dict]:
@@ -184,18 +195,16 @@ class ScenarioGym(ScenarioGym, Env):
             raise ValueError("Step called when state is terminal.")
 
         new_poses = {}
-        for ref, agent in self.state.scenario.agents.items():
+        for ref, agent in self.state.agents.items():
             if ref == "ego":
                 agent.last_action = action
                 new_poses[agent.entity] = agent.controller.step(self.state, action)
             else:
                 new_poses[agent.entity] = agent.step(self.state)
-        new_poses.update(self.state.scenario.non_agents.step(self.state))
+        new_poses.update(self.state.non_agents.step(self.state))
 
         # update the poses and current time
-        for e, p in new_poses.items():
-            e.pose = p
-        self.state.step()
+        self.state.step(new_poses)
 
         # get reward of next state
         reward = self.ego_agent.reward(self.state)
@@ -211,7 +220,7 @@ class ScenarioGym(ScenarioGym, Env):
         ego_obs = self.ego_agent.sensor.step(self.state)
 
         if self.state.is_done:
-            for agent in self.state.scenario.agents.values():
+            for agent in self.state.agents.values():
                 agent.finish(self.state)
 
         return ego_obs, reward, self.state.is_done, {}
@@ -230,7 +239,7 @@ class ScenarioGym(ScenarioGym, Env):
 
     def load_scenario(
         self, *args, create_agent: Optional[Callable] = None, **kwargs
-    ):
+    ) -> None:
         """
         Load a scenario from an OpenScenario file.
 
@@ -240,9 +249,9 @@ class ScenarioGym(ScenarioGym, Env):
             create_agent = self.create_agent
         super().load_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def _set_scenario(
+    def set_scenario(
         self, *args, create_agent: Optional[Callable] = None, **kwargs
-    ):
+    ) -> None:
         """
         Set the scenario explicitly.
 
@@ -250,11 +259,22 @@ class ScenarioGym(ScenarioGym, Env):
         """
         if create_agent is None:
             create_agent = self.create_agent
-        super()._set_scenario(*args, create_agent=create_agent, **kwargs)
+        super().set_scenario(*args, create_agent=create_agent, **kwargs)
 
-    def select_scenario(self) -> Union[str, Scenario]:
+    def select_scenario(self) -> Optional[Union[str, Scenario]]:
         """Update the scenario when reset is called."""
         return None
+
+    def create_agents(
+        self,
+        create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
+    ) -> None:
+        """Check there is an ego agent."""
+        super().create_agents(create_agent=create_agent)
+        try:
+            self.ego_agent = self.state.agents["ego"]
+        except KeyError as e:
+            raise KeyError("No agent named ego.") from e
 
     @staticmethod
     def create_agent(scenario: Scenario, entity: Entity) -> Optional[Agent]:
@@ -263,10 +283,18 @@ class ScenarioGym(ScenarioGym, Env):
             return RLAgent(
                 entity,
                 VehicleController(entity, max_steer=0.9, max_accel=5.0),
-                RasterizedMapSensor(
+                MapOnlySensor(
                     entity, channels_first=True, height=30, width=30, n=128
                 ),
             )
+
+
+class MapOnlySensor(RasterizedMapSensor):
+    """Sensor returning only the rasterized map."""
+
+    def _step(self, state: State) -> np.ndarray:
+        """Get the map from the base sensor's observation."""
+        return super()._step(state).map
 
 
 class RLAgent(Agent):

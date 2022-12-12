@@ -234,9 +234,6 @@ def test_clear_cache(road_network):
         )
     ), "Cached objects found."
     assert (
-        road_network.get_lane_parent.__func__.cache_info().currsize == 0
-    ), "Lru caches not cleared."
-    assert (
         RoadNetwork.create_from_json.__func__.cache_info().currsize != 0
     ), "Class method caches cleared."
 

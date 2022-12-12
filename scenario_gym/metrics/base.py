@@ -9,13 +9,13 @@ class Metric(ABC):
     """
     Base class for a metric in scenario_gym.
 
-    All metrics implement reset and step methods to update internal
-    states during scenario rollout and the get_state method to return
-    the metric value.
+    All metrics implement reset and step methods to update internal states during
+    scenario rollout and the get_state method to return the metric value.
 
-    The `required_callbacks` attribute can be set to a list of
-    StateCallback subclasses. At reset the state will be checked
-    to make sure each is present.
+    The `required_callbacks` attribute can be set to a list of StateCallback
+    subclasses. At reset the state will be checked to make sure each is present and
+    the instance of each will be stored in `self.callbacks` in the same order as
+    required callbacks.
     """
 
     name: Optional[str] = None
@@ -36,17 +36,21 @@ class Metric(ABC):
             self.name = name
         elif self.name is None:
             self.name = self.__class__.__name__
+        self.callbacks: List[StateCallback] = []
 
     def reset(self, state: State) -> None:
         """Reset the metric at the start of a new scenario."""
+        self.callbacks.clear()
         for CB in self.required_callbacks:
-            if not any(isinstance(cb, CB) for cb in state.state_callbacks):
+            cb = state.get_callback(CB)
+            if cb is None:
                 raise ValueError(
                     "Cannot run metric {} without callback {}.".format(
                         self.__class__.__name__,
                         CB.__name__,
                     )
                 )
+            self.callbacks.append(cb)
         self._reset(state)
 
     def step(self, state: State) -> None:

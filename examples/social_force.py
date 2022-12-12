@@ -77,12 +77,8 @@ class PedestrianConfig(ScenarioManager):
             controller = ReplayTrajectoryController(entity)
             return ReplayTrajectoryAgent(entity, controller, sensor)
         elif entity.type == "Pedestrian":
-            controller = PedestrianController(entity)
-            # controller = ReplayTrajectoryController(entity)
-            sensor = PedestrianSensor(entity)
-            base_speed = self.speed
             speed_desired = np.random.uniform(
-                0.5 * base_speed, 1.5 * base_speed
+                0.5 * self.speed, 1.5 * self.speed
             )  # random desired speed
             behaviour = SocialForce(self.sf_params)
 
@@ -96,15 +92,16 @@ class PedestrianConfig(ScenarioManager):
                 route = route_finder.find_route(start, finish)
                 if route is None:
                     route = entity.trajectory.data[:, [1, 2]]
-            return PedestrianAgent(
-                entity, controller, sensor, route, speed_desired, behaviour
-            )
+            return PedestrianAgent(entity, route, speed_desired, behaviour)
 
     def add_random_pedestrians(self, sc: Scenario):
         _, catalog = read_catalog(
             os.path.join(
-                os.path.dirname(sc.scenario_path),
-                "../Catalogs/PedestrianCatalogs/ScenarioGymPedestrianCatalog.xosc",
+                os.path.dirname(sc.path),
+                (
+                    "../Catalogs/Scenario_Gym/PedestrianCatalogs/"
+                    "ScenarioGymPedestrianCatalog.xosc"
+                ),
             )
         )
         base_entity = catalog["pedestrian1"]
@@ -164,6 +161,6 @@ if __name__ == "__main__":
 
     scenario = import_scenario(scenario_path)
     config.add_random_pedestrians(scenario)
-    gym._set_scenario(scenario, create_agent=config.create_agent)
+    gym.set_scenario(scenario, create_agent=config.create_agent)
     gym.reset_scenario()
     gym.rollout(render=True)

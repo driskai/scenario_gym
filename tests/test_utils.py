@@ -1,13 +1,11 @@
-import warnings
-
 import numpy as np
 import pytest as pt
 
 from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
 from scenario_gym.entity import Entity
 from scenario_gym.scenario import Scenario
-from scenario_gym.scenario.utils import detect_collisions
 from scenario_gym.scenario_gym import ScenarioGym
+from scenario_gym.state import detect_collisions
 from scenario_gym.trajectory import Trajectory
 
 
@@ -38,11 +36,7 @@ def collision_scenario():
         fields=["t", "x", "y"],
     )
 
-    scenario = Scenario()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        scenario.add_entity(ego)
-        scenario.add_entity(hazard)
+    scenario = Scenario([ego, hazard])
     return scenario, ego, hazard
 
 
@@ -50,11 +44,17 @@ def test_detect_collisions(collision_scenario):
     """Test collisions are correctly detected."""
     s, ego, hazard = collision_scenario
     gym = ScenarioGym()
-    gym._set_scenario(s)
+    gym.set_scenario(s)
 
-    collisions = detect_collisions([ego], others=[hazard])
+    collisions = detect_collisions(
+        {ego: gym.state.poses[ego]},
+        others={hazard: gym.state.poses[hazard]},
+    )
     assert not collisions[ego], "No collision at start of scenario"
 
     gym.rollout()
-    collisions = detect_collisions([ego], others=[hazard])
+    collisions = detect_collisions(
+        {ego: gym.state.poses[ego]},
+        others={hazard: gym.state.poses[hazard]},
+    )
     assert collisions[ego], "Collision at end of scenario not found."

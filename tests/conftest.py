@@ -1,4 +1,8 @@
+import importlib
 import os
+import warnings
+from pathlib import Path
+from typing import Callable, Dict
 
 import pytest as pt
 
@@ -13,7 +17,7 @@ def pytest_addoption(parser):
     )
 
 
-@pt.fixture(scope="module")
+@pt.fixture(scope="session")
 def all_scenarios():
     """Get all scenarios in the module as a dictionary."""
     scenarios = [
@@ -43,7 +47,7 @@ def all_scenarios():
     return scenarios
 
 
-@pt.fixture(scope="module")
+@pt.fixture(scope="session")
 def all_road_networks():
     """Get all road networks as a dictionary."""
     base = os.path.join(
@@ -62,7 +66,7 @@ def all_road_networks():
     return {r: os.path.join(base, r + ".json") for r in road_networks}
 
 
-@pt.fixture(scope="module")
+@pt.fixture(scope="session")
 def all_xodr_networks():
     """Get all OpenDRIVE road networks as a dictionary."""
     base = os.path.join(
@@ -74,7 +78,7 @@ def all_xodr_networks():
     return {r: os.path.join(base, r + ".xodr") for r in road_networks}
 
 
-@pt.fixture(scope="module")
+@pt.fixture(scope="session")
 def all_catalogs():
     """Get all OpenDRIVE road networks as a dictionary."""
     base = os.path.join(
@@ -88,3 +92,37 @@ def all_catalogs():
         "Custom_Catalog/MiscCatalogs/CustomCatalog",
     ]
     return {r: os.path.join(base, r + ".xosc") for r in catalogs}
+
+
+def import_all_fixtures() -> Dict[str, Callable]:
+    """
+    Import all fixtures from any submodule named fixtures.
+
+    Returns a dict of functions which have the __pytest_wrapped__ attribute. These
+    can be added to the global scope to allow importing from other modules.
+    """
+    modules = []
+    base = Path(__file__).parent
+    for path in base.rglob("*/fixtures.py"):
+        if path.is_file():
+            rel_path = path.relative_to(base)
+            mod_path = str(Path(rel_path.parent, rel_path.stem)).replace("/", ".")
+            modules.append(mod_path)
+
+    fixtures = {
+        k: v for k, v in globals().items() if hasattr(v, "__pytest_wrapped__")
+    }
+    for mod in modules:
+        module = importlib.import_module(f"tests.{mod}")
+        for name, obj in module.__dict__.items():
+            if hasattr(obj, "__pytest_wrapped__"):
+                if name in fixtures and fixtures[name].__module__ != obj.__module__:
+                    warnings.warn(
+                        f"Duplicate fixtures found: {name} in modules "
+                        f"{obj.__module__} and {fixtures[name].__module__}."
+                    )
+                fixtures[name] = obj
+    return fixtures
+
+
+globals().update(import_all_fixtures())

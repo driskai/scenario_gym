@@ -4,14 +4,14 @@ from typing import Dict, List, Optional, Tuple, Type
 from lxml import etree
 from lxml.etree import Element
 
-from scenario_gym.catalog_entry import CatalogEntry
+from scenario_gym.catalog_entry import Catalog, CatalogEntry
 from scenario_gym.entity import Entity, Pedestrian, Vehicle
 
 DEFAULT_ENTITY_TYPES = (Vehicle, Pedestrian)
 
 
 def load_object(
-    catalog_name: str,
+    catalog: Catalog,
     entry: Element,
     entity_types: List[Type[Entity]],
     catalog_objects: List[Type[CatalogEntry]],
@@ -20,15 +20,16 @@ def load_object(
     for Ent, Obj in zip(entity_types, catalog_objects):
         types = Obj.xosc_names if Obj.xosc_names is not None else [Obj.__name__]
         if entry.tag in types:
-            obj = Obj.from_xml(catalog_name, entry)
+            obj = Obj.from_xml(catalog, entry)
             return Ent(obj)
 
 
 @lru_cache(maxsize=None)
 def read_catalog(
     catalog_file: str,
+    relative_catalog_path: Optional[str] = None,
     entity_types: Optional[Tuple[Type[Entity]]] = None,
-) -> Tuple[str, Dict[str, Entity]]:
+) -> Tuple[Catalog, Dict[str, Entity]]:
     """
     Read a catalog and return it's name and a dictionary of entities.
 
@@ -37,6 +38,9 @@ def read_catalog(
     catalog_file : str
         Filepath of the catalog file.
 
+    relative_catalog_path : Optional[str]
+        Relative path used by OpenSCENARIO files when loading this catalog.
+
     entity_types : Optional[Tuple[Type[CatalogObject]]]
         Tuple of extra subclasses of CatalogObject that will be used when reading
         catalogs. Can be used for reading custom objects from catalog files. Must
@@ -44,8 +48,8 @@ def read_catalog(
 
     Returns
     -------
-    catalog_name : str
-        The name of the catalog from the Catalog element.
+    catalog : Catalog
+        The catalog object.
 
     entries : Dict[str, Entity]
         A dictionary mapping each entry name to an entity with that catalog entry.
@@ -61,12 +65,13 @@ def read_catalog(
 
     et = etree.parse(catalog_file)
     osc_root = et.getroot()
-    catalog = osc_root.find("Catalog")
-    catalog_name = catalog.attrib["name"]
+    catalog_element = osc_root.find("Catalog")
+    catalog_name = catalog_element.attrib["name"]
+    catalog = Catalog(catalog_name, relative_catalog_path)
     entries = {}
-    for element in catalog.getchildren():
-        entry = load_object(catalog_name, element, entity_types, catalog_objects)
+    for element in catalog_element.getchildren():
+        entry = load_object(catalog, element, entity_types, catalog_objects)
         if entry is None:
-            entry = Entity(CatalogEntry.from_xml(catalog_name, element))
+            entry = Entity(CatalogEntry.from_xml(catalog, element))
         entries[entry.catalog_entry.catalog_entry] = entry
-    return catalog_name, entries
+    return catalog, entries

@@ -1,4 +1,3 @@
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar
 
@@ -11,8 +10,8 @@ class ScenarioAction(ABC):
     """
     Base class for scenario actions.
 
-    Actions are applied at the first timestamp with time greater than or equal
-    to the action time. They are applied with the _apply method which must be
+    Actions are applied at the first timestamp with time greater than or equal to
+    the action time. They are applied with the _apply method which must be
     implemented.
 
     """
@@ -47,17 +46,6 @@ class ScenarioAction(ABC):
         self.entity_ref = entity_ref
         self.action_variables = action_variables
 
-        self._applied = False
-
-    @property
-    def applied(self) -> bool:
-        """Return True if the action has been applied."""
-        return self._applied
-
-    def reset(self) -> None:
-        """Reset the action."""
-        self._applied = False
-
     def apply(self, state: State, entity: Optional[Entity]) -> None:
         """Apply the action to the environment state."""
         self._apply(state, entity)
@@ -76,12 +64,4 @@ class UpdateStateVariableAction(ScenarioAction):
         """Update the entity with action variables."""
         if entity is not None:
             for k, v in self.action_variables.items():
-                try:
-                    getattr(entity, k)
-                except AttributeError:
-                    warnings.warn(
-                        f"The entity {entity} has no attribute {k} but action "
-                        f"{self.__class__.__name__} is trying to set {k}."
-                    )
-                    continue
-                setattr(entity, k, v)
+                state.entity_state[entity] = k

@@ -25,6 +25,41 @@ def test_invalid_create():
         Trajectory(np.empty((2, 2, 2)))
         Trajectory(np.empty((2, 4)), fields=["t", "x", "y"])
         Trajectory(np.empty((2, 2)))
+        Trajectory(np.array([[0, np.nan, 0]]), fields=["t", "x", "y"])
+        Trajectory(np.array([[0, 0.0, np.nan, 0]]), fields=["t", "h", "x", "y"])
+
+
+def test_unordered_create():
+    """Test creating a trajectory with fields in a different order."""
+    data = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 2.0],
+            [0.0, 1.0, 2.0],
+            [1.0, 2.0, 3.0],
+        ]
+    )
+    traj = Trajectory(data, fields=["y", "x", "t"])
+    assert np.allclose(traj.t, [0.0, 1.0, 2.0, 3.0]), "t not set correctly."
+    assert np.allclose(traj.x, [0.0, 0.0, 1.0, 2.0]), "x not set correctly."
+    assert np.allclose(traj.y, [0.0, 0.0, 0.0, 1.0]), "y not set correctly."
+
+
+def test_create_with_duplicate_nan():
+    """Test creating with duplicate rows containing nan values."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, np.nan],
+                [1.0, 0.0, 0.0, np.nan],
+                [2.0, 0.0, 0.0, 0.0],
+            ]
+        ),
+        fields=["t", "x", "y", "h"],
+    )
+    assert traj.data.shape[0] == 3, "Duplicate rows should be removed."
 
 
 def test_filled_headings():
@@ -42,7 +77,7 @@ def test_filled_headings():
 
 
 def test_filled_zrp():
-    """Test that headings are estimated when not provided."""
+    """Test that angles are estimated when not provided."""
     data = np.array(
         [
             [0, 0, 0],
@@ -97,3 +132,71 @@ def test_immutable_traj():
 
     with pt.raises(ValueError):
         traj.data[-1][0] = 11
+
+
+def test_copy_traj():
+    """Test copying a trajectory."""
+    data = np.repeat(np.arange(10, dtype=np.float32)[:, None], 4, axis=1)  # (10, 4)
+    traj = Trajectory(data, fields=["t", "x", "y", "h"])
+
+    traj_new = traj.copy()
+    assert id(traj) != id(traj_new), "Should have different memory."
+    assert id(traj.data) != id(traj_new.data), "Should have different memory."
+    assert np.allclose(traj.data, traj_new.data), "Should have equal data."
+
+
+def test_subsample():
+    """Test subsampling a trajectory."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [2.0, 2.0, 0.0],
+                [3.0, 3.0, 0.0],
+                [4.0, 4.0, 0.0],
+            ]
+        ),
+        fields=["t", "x", "y"],
+    )
+    subsample_t = traj.subsample(points_per_t=0.5)
+    assert all(
+        (
+            subsample_t.min_t == 0.0,
+            subsample_t.max_t == 4.0,
+            subsample_t.arclength == 4.0,
+        )
+    ), "Incorrect trajectory produced."
+
+    subsample_s = traj.subsample(points_per_s=0.5)
+    assert all(
+        (
+            subsample_s.min_t == 0.0,
+            subsample_s.max_t == 4.0,
+            subsample_s.arclength == 4.0,
+        )
+    ), "Incorrect trajectory produced."
+
+
+def test_curvature_subsample():
+    """Test subsampling a trajectory."""
+    base_traj = np.array(
+        [[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [1.9, 1.9, 0.0]],
+    )
+    mid_y = np.linspace(0, 2, 20)
+    mid_x = 2 + np.sqrt(1 - (mid_y - 1) ** 2)
+    middle = np.array([np.linspace(2.0, 4.0, 20), mid_x, mid_y]).T
+    end = np.array(
+        [[4.1, 1.9, 2.0], [6.0, 0.0, 2.0]],
+    )
+    traj = Trajectory(np.vstack([base_traj, middle, end]), fields=["t", "x", "y"])
+    subsampled = traj.curvature_subsample(points_per_s=5)
+    assert all(
+        (
+            subsampled.min_t == 0.0,
+            subsampled.max_t == 6.0,
+        )
+    ), "Incorrect trajectory produced."
+    assert (subsampled.x >= 2).sum() > 0.5 * subsampled.x.shape[
+        0
+    ], "More points should be in the final part of the trajectory."

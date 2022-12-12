@@ -17,7 +17,7 @@ except ImportError:
         """
 `scikit-learn` and `scikit-optimize` are required for this example.
 Install them with:
-    ```pip install scikit-learn==0.24.2 scikit-optimize==0.9.0```
+    ```pip install scikit-learn>=0.24.2 scikit-optimize>=0.9.0```
 """
     )
 
@@ -34,7 +34,8 @@ class Displacement(Metric):
 
     def _step(self, state):
         self.disp += np.linalg.norm(
-            self.ego.pose[:3] - self.ego.trajectory.position_at_t(state.t)[:3]
+            state.poses[self.ego][:3]
+            - self.ego.trajectory.position_at_t(state.t)[:3]
         )
         self.n += 1
 

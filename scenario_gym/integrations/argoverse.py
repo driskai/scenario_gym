@@ -3,15 +3,15 @@ Import scenarios from the Argoverse 2 Motion Forecasting dataset.
 
 https://www.argoverse.org/about.html#terms-of-use
 """
-
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import Dict
 
 import numpy as np
 from shapely.geometry import LineString, Polygon
 
-from scenario_gym.catalog_entry import BoundingBox, CatalogEntry
+from scenario_gym.catalog_entry import BoundingBox, Catalog, CatalogEntry
 from scenario_gym.entity import Entity
 from scenario_gym.road_network import (
     Lane,
@@ -73,8 +73,9 @@ class Catalogs:
     """
 
     vehicle_box = BoundingBox(1.8, 3.8, 0.0, 0.0)
+    argoverse_catalog = Catalog("ArgoverseCatalog", None)
     vehicle = CatalogEntry(
-        "ArgoverseCatalog",
+        argoverse_catalog,
         "vehicle",
         "car",
         "Vehicle",
@@ -83,7 +84,7 @@ class Catalogs:
 
     pedestrian_box = BoundingBox(0.4, 0.4, 0.0, 0.0)
     pedestrian = CatalogEntry(
-        "ArgoverseCatalog",
+        argoverse_catalog,
         "pedestrian",
         "pedestrian",
         "Pedestrian",
@@ -92,7 +93,7 @@ class Catalogs:
 
     motorbike_box = BoundingBox(0.2, 0.8, 0.0, 0.0)
     motorcyclist = CatalogEntry(
-        "ArgoverseCatalog",
+        argoverse_catalog,
         "motorcyclist",
         "motorbike",
         "Vehicle",
@@ -110,7 +111,7 @@ class Catalogs:
 
     bus_box = BoundingBox(2.8, 11.0, 0.0, 0.0)
     bus = CatalogEntry(
-        "ArgoverseCatalog",
+        argoverse_catalog,
         "bus",
         "bus",
         "Vehicle",
@@ -119,7 +120,7 @@ class Catalogs:
 
     riderless_bicycle_box = BoundingBox(0.3, 1.5, 0.0, 0.0)
     riderless_bicycle = CatalogEntry(
-        "ArgoverseCatalog",
+        argoverse_catalog,
         "riderless_bicycle",
         "obstacle",
         "Vehicle",
@@ -138,14 +139,6 @@ def import_argoverse_scenario(path: str) -> Scenario:
     path = Path(path)
     scenario_id = path.parts[-1]
 
-    scenario = Scenario(name=scenario_id)
-    scenario.scenario_path = str(path.absolute())
-
-    road_network_data = json.load(
-        open(Path(path, f"log_map_archive_{scenario_id}.json"), "r")
-    )
-    scenario.road_network = create_argoverse_road_network(road_network_data)
-
     pq_path = Path(path, f"scenario_{scenario_id}.parquet")
     main_df = pd.read_parquet(pq_path).sort_values("timestep")
     dfs = list(main_df.groupby("track_id"))
@@ -153,6 +146,7 @@ def import_argoverse_scenario(path: str) -> Scenario:
     assert "AV" in all_ids, "No AV found to use as ego."
     all_ids.remove("AV")
 
+    entities = []
     for track_id, df in dfs:
 
         if track_id != "AV" and not df["observed"].any():
@@ -160,11 +154,8 @@ def import_argoverse_scenario(path: str) -> Scenario:
 
         # get catalog
         object_type = df["object_type"].iloc[0]
-        try:
+        with suppress(AttributeError):
             catalog_entry = getattr(Catalogs, object_type)
-        except AttributeError:
-            # print(f"Could not find object type: {object_type}.")
-            continue
 
         # get start and end in seconds
         start = df["start_timestamp"].iloc[0] / 1e9
@@ -206,11 +197,28 @@ def import_argoverse_scenario(path: str) -> Scenario:
         )
         entity = Entity(catalog_entry, ref=entity_ref)
         entity.trajectory = trajectory
-        scenario.add_entity(entity)
+        entities.append(entity)
 
-    ego = scenario.entity_by_name("ego")
-    scenario.make_ego(ego)
+    ego = None
+    for e in entities:
+        if e.ref == "ego":
+            ego = e
+            break
+    if ego is not None:
+        entities.remove(ego)
+        entities.insert(0, ego)
 
+    road_network_data = json.load(
+        open(Path(path, f"log_map_archive_{scenario_id}.json"), "r")
+    )
+    road_network = create_argoverse_road_network(road_network_data)
+
+    scenario = Scenario(
+        entities,
+        name=scenario_id,
+        path=str(path.absolute()),
+        road_network=road_network,
+    )
     return scenario
 
 
