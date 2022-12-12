@@ -56,7 +56,8 @@ class Trajectory:
                 f" for all of {self._fields} are provided."
             )
         perm = [fields.index(f) for f in self._fields if f in fields]
-        data = np.unique(data[:, perm], axis=0)
+        data = data[:, perm]
+        data = np.unique(np.where(np.isfinite(data), data, np.inf), axis=0)
         n = data.shape[0]
 
         _data: List[NDArray] = []
@@ -64,7 +65,7 @@ class Trajectory:
             d = data[:, perm[fields.index(f)]] if f in fields else np.zeros(n)
             if f == "h":
                 d = _resolve_heading(d)
-            if f not in fields or (f in fields and np.isnan(d).sum() != 0):
+            if f not in fields or (f in fields and np.isfinite(d).sum() != n):
                 if f == "h" and n == 1:
                     d = np.zeros(1)
                 elif f == "h" and n > 1:

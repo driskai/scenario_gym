@@ -25,6 +25,8 @@ def test_invalid_create():
         Trajectory(np.empty((2, 2, 2)))
         Trajectory(np.empty((2, 4)), fields=["t", "x", "y"])
         Trajectory(np.empty((2, 2)))
+        Trajectory(np.array([[0, np.nan, 0]]), fields=["t", "x", "y"])
+        Trajectory(np.array([[0, 0.0, np.nan, 0]]), fields=["t", "h", "x", "y"])
 
 
 def test_unordered_create():
@@ -44,6 +46,22 @@ def test_unordered_create():
     assert np.allclose(traj.y, [0.0, 0.0, 0.0, 1.0]), "y not set correctly."
 
 
+def test_create_with_duplicate_nan():
+    """Test creating with duplicate rows containing nan values."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, np.nan],
+                [1.0, 0.0, 0.0, np.nan],
+                [2.0, 0.0, 0.0, 0.0],
+            ]
+        ),
+        fields=["t", "x", "y", "h"],
+    )
+    assert traj.data.shape[0] == 3, "Duplicate rows should be removed."
+
+
 def test_filled_headings():
     """Test that headings are estimated when not provided."""
     data = np.array(
@@ -59,7 +77,7 @@ def test_filled_headings():
 
 
 def test_filled_zrp():
-    """Test that headings are estimated when not provided."""
+    """Test that angles are estimated when not provided."""
     data = np.array(
         [
             [0, 0, 0],
