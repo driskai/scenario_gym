@@ -115,9 +115,6 @@ class State:
 
         self.update_poses(t_minus1, prev_poses)
         self.update_poses(t_0, poses)
-
-        for action in self.scenario.actions:
-            action.reset()
         self.update_actions()
 
         for cb in self.state_callbacks:
