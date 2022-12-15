@@ -80,6 +80,8 @@ class Catalogs:
         "car",
         "Vehicle",
         vehicle_box,
+        {},
+        [],
     )
 
     pedestrian_box = BoundingBox(0.4, 0.4, 0.0, 0.0)
@@ -89,6 +91,8 @@ class Catalogs:
         "pedestrian",
         "Pedestrian",
         pedestrian_box,
+        {},
+        [],
     )
 
     motorbike_box = BoundingBox(0.2, 0.8, 0.0, 0.0)
@@ -98,6 +102,8 @@ class Catalogs:
         "motorbike",
         "Vehicle",
         motorbike_box,
+        {},
+        [],
     )
 
     cyclist_box = BoundingBox(0.7, 2.0, 0.0, 0.0)
@@ -107,6 +113,8 @@ class Catalogs:
         "bicycle",
         "Vehicle",
         cyclist_box,
+        {},
+        [],
     )
 
     bus_box = BoundingBox(2.8, 11.0, 0.0, 0.0)
@@ -116,6 +124,8 @@ class Catalogs:
         "bus",
         "Vehicle",
         bus_box,
+        {},
+        [],
     )
 
     riderless_bicycle_box = BoundingBox(0.3, 1.5, 0.0, 0.0)
@@ -125,6 +135,8 @@ class Catalogs:
         "obstacle",
         "Vehicle",
         riderless_bicycle_box,
+        {},
+        [],
     )
 
 
