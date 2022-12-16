@@ -12,7 +12,7 @@ hooks = [
     "pydocstyle~=6.1.1",
     "importlib-metadata<5.0.0",
 ]
-docs = ["Sphinx~=4.4.0"]
+docs = ["Sphinx~=4.4.0", "sphinx-rtd-theme>=1.1.1"]
 integrations = ["pandas>=1.1.5"]
 testing = ["pytest~=6.2.4"]
 dev = [
@@ -25,6 +25,7 @@ dev = [
     "pydocstyle~=6.1.1",
     "importlib-metadata<5.0.0",
     "Sphinx~=4.4.0",
+    "sphinx-rtd-theme>=1.1.1",
     "pandas>=1.1.5",
     "pytest~=6.2.4",
 ]
