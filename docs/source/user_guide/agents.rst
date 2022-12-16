@@ -61,8 +61,51 @@ Implementing Sensors
 ~~~~~~~~~~~~~~~~~~~~
 As with agents, sensors use the :code:`_reset` and :code:`_step` methods to reset their internal parameters and produce the observation at each timestep. The :code:`_reset` method should also return an initial observation for the sensor.
 
+.. code-block::
+
+    from scenario_gym import Sensor
+
+    class ExampleSensor(Sensor):
+
+        def _reset(self, state):
+            # reset internal state
+            ...
+            # return initial observation
+            obs = ...
+            return obs
+        
+        def _step(self, state):
+            # return the observation for the current state
+            obs = ...
+            return obs
+
+The base package includes some common sensors such as a rasterized map sensor and a keyboard input detector.
+
 Combined Sensors
 ~~~~~~~~~~~~~~~~
+A common use-case is combining multiple sensors that return different observations. For example two different cameras on a vehicle. Scenario Gym provides a `CombinedSensor` for this purpose. This will take multiple sensors as input and return a single observation formed by fusing together the observations from each base sensor.
+
+
+
 
 Controllers
 -----------
+Controllers should convert an agent's action into an updated pose. They contain the physical model for the motion of the entity. These include models of vehicle dynamics and pedestrian motion and higher level controllers like PID controllers. The controller's :code:`_reset` method resets its internal state and the :code:`_step` method returns the new pose for the entity.
+
+.. code-block::
+
+    from scenario_gym import Controller
+
+    class ExampleController(Controller):
+
+        def _reset(self, state):
+            # reset internal state
+            ...
+        
+        def _step(self, state, action):
+            # compute next pose from the action and the state
+            curent_pose = state.poses[self.entity]
+            next_pose = ...
+            return next_pose
+
+The base package includes an implementation of a kinematic vehicle model and a PID controller.
