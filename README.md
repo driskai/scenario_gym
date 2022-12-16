@@ -3,7 +3,7 @@
 ![Tests](https://github.com/driskai/scenario_gym/actions/workflows/test.yml/badge.svg)
 ![Python 3.7+](https://img.shields.io/badge/python-3.7+-brightgreen)
 
-Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
+Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such as agent modelling, controller parameter tuning and deep reinforcement learning.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/gym-ex1.gif" width="20%" />
@@ -82,7 +82,7 @@ gym.rollout()
 ```
 
 ## Metrics
-To track performance statistics or record events the `Metric` class can be used. These implement the `_reset` and `_step` method to maintin an internal state across the scenario and the `get_state` method to return their recorded data. A selection metrics are already implemented and can be run by passing them to the `ScenarioGym`:
+To track performance statistics or record events the `Metric` class can be used. These implement the `_reset` and `_step` method to maintin an internal state across the scenario and the `get_state` method to return their recorded data. A selection of metrics are already implemented and can be run by passing them to the `ScenarioGym`:
 ```python
 from scenario_gym.metrics import CollisionMetric, EgoAvgSpeed
 

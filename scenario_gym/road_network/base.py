@@ -13,8 +13,7 @@ class RoadObject:
     """
     Base class for an object in the road network.
 
-    All objects have an id attribute and implement __eq__ and
-    __hash__ methods.
+    All objects have an id attribute and implement __eq__ and __hash__ methods.
     """
 
     @classmethod

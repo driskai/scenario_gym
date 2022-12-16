@@ -1,5 +1,5 @@
-API Reference
-=============
+scenario_gym
+============
 
 .. toctree::
    :maxdepth: 4

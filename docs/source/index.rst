@@ -1,7 +1,7 @@
 Scenario Gym Documentation
 ==========================
 
-Welcome to :code:`scenario_gym` - the ultimate lightweight tool for working with scenario data. Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
+Welcome to :code:`scenario_gym` - the ultimate lightweight tool for working with scenario data. Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such as agent modelling, controller parameter tuning and deep reinforcement learning.
 
 .. image:: _static/system_overview.*
     :width: 100%
@@ -12,6 +12,7 @@ Welcome to :code:`scenario_gym` - the ultimate lightweight tool for working with
    :caption: Contents:
 
    installation
+   user_guide
    api/modules
 
 
@@ -48,7 +49,7 @@ Getting started
 ---------------
 To run a scenario in OpenSCENARIO format:
 
-.. code-block::python
+.. code-block::
 
     from scenario_gym import ScenarioGym
 
@@ -60,9 +61,10 @@ Several example scenarios are given in the :code:`tests/input_files/Scenarios` d
 
 Intelligent Agents
 ------------------
-Agents are defined by a subclass of :code:`Agent` as well as a `Sensor` and a `Controller`. They use implement the `_step` method to produce actions from the observations which will be passed to the controller.
+Agents are defined by a subclass of :code:`Agent` as well as a :code:`Sensor` and a :code:`Controller`. They use implement the :code:`_step` method to produce actions from the observations which will be passed to the controller.
 
-.. code-block::python
+.. code-block::
+
     from scenario_gym import Agent
     from scenario_gym.sensor import RasterizedMapSensor
     from scenario_gym.controller import VehicleController
@@ -85,7 +87,8 @@ Agents are defined by a subclass of :code:`Agent` as well as a `Sensor` and a `C
 
 To run scenarios with intelligent agents we just define a :code:`create_agent` method which will assign agents to each entity in the scenario. This is passed to the gym instance when loading a scenario. The function must take arguments :code:`scenario` and :code:`entity` and optionally return agents. If an agent is not returned for an entity then the entity will simply follow its predefined trajectory. For example, here we use the :code:`ExampleAgent` implemented above for the ego only:
 
-.. code-block::python
+.. code-block::
+
     def create_agent(scenario, entity):
         if entity.ref == "ego":
             return ExampleAgent(entity)
@@ -95,9 +98,10 @@ To run scenarios with intelligent agents we just define a :code:`create_agent` m
 
 Metrics
 -------
-To track performance statistics or record events the :code:`Metric` class can be used. These implement the :code:`_reset` and :code:`_step` method to maintin an internal state across the scenario and the :code:`get_state` method to return their recorded data. A selection metrics are already implemented and can be run by passing them to the :code:`ScenarioGym`:
+To track performance statistics or record events the :code:`Metric` class can be used. These implement the :code:`_reset` and :code:`_step` method to maintin an internal state across the scenario and the :code:`get_state` method to return their recorded data. A selection of metrics are already implemented and can be run by passing them to the :code:`ScenarioGym`:
 
-.. code-block::python
+.. code-block::
+
     from scenario_gym.metrics import CollisionMetric, EgoAvgSpeed
 
     gym = ScenarioGym(metrics=[CollisionMetric(), EgoAvgSpeed()])
@@ -110,7 +114,8 @@ Deep reinforcement learning
 ---------------------------
 For reinforcement learning applications Scenario Gym supports an OpenAI Gym compatible implementation. When creating the environment we need to specify the observation and action spaces used by the ego agent as well as our :code:`create_agent` function. The observation from the ego agent's sensor will be returned by the environment and the action passed to :code:`step` will be passed to the agent's controller.
 
-.. code-block::python
+.. code-block::
+
     from scenario_gym.integrations.openaigym import ScenarioGym
 
     env = ScenarioGym(
