@@ -194,7 +194,7 @@ class Scenario:
             f"""
 {title}
 {under_header}
-Filepath: {self.scenario_path}
+Filepath: {self.path}
 Road network: {rn}
 Number of entities: {len(self.entities)}
 Total duration: {self.length:.4}s

@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import numpy as np
 import pytest as pt
 
 from scenario_gym.road_network import RoadNetwork
@@ -46,3 +47,25 @@ def test_copy_scenarios(example_entity):
         s.road_network
     ), "Road networks should be the same."
     assert s_new.properties == s.properties, "Properties should be the same."
+
+
+def test_describe(example_scenario):
+    """Test the `describe` method."""
+    example_scenario.describe()
+
+
+def test_plot(example_scenario):
+    """Test the `describe` method."""
+    example_scenario.plot(show=False)
+
+
+def test_translate(example_scenario):
+    """Test the translating a scenario."""
+    shift = np.arange(7)
+    new_scenario = example_scenario.translate(shift)
+    ts = np.linspace(0.0, example_scenario.length, 10)
+    for e, e_new in zip(example_scenario.entities, new_scenario.entities):
+        ps = e.trajectory.position_at_t(ts)
+        ps_new = e_new.trajectory.position_at_t(ts)
+        deltas = ps_new - ps
+        assert np.allclose(deltas, shift[None, 1:])
