@@ -118,8 +118,8 @@ class VehicleCatalogEntry(CatalogEntry):
             data.get("max_speed"),
             data.get("max_deceleration"),
             data.get("max_acceleration"),
-            Axle.from_dict(data.get("front_axle")),
-            Axle.from_dict(data.get("rear_axle")),
+            Axle.from_dict(data["front_axle"]) if "front_axle" in data else None,
+            Axle.from_dict(data["rear_axle"]) if "rear_axle" in data else None,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -131,8 +131,12 @@ class VehicleCatalogEntry(CatalogEntry):
                 "max_speed": self.max_speed,
                 "max_deceleration": self.max_deceleration,
                 "max_acceleration": self.max_acceleration,
-                "front_axle": self.front_axle.to_dict(),
-                "rear_axle": self.rear_axle.to_dict(),
+                "front_axle": self.front_axle.to_dict()
+                if self.front_axle is not None
+                else None,
+                "rear_axle": self.rear_axle.to_dict()
+                if self.rear_axle is not None
+                else None,
             }
         )
         return data
