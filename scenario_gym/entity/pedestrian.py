@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from lxml.etree import Element
 
-from scenario_gym.catalog_entry import ArgsKwargs, CatalogEntry
+from scenario_gym.catalog_entry import ArgsKwargs, Catalog, CatalogEntry
 from scenario_gym.entity.base import Entity
 from scenario_gym.trajectory import Trajectory
 
@@ -24,6 +24,26 @@ class PedestrianCatalogEntry(CatalogEntry):
         if mass is not None:
             mass = float(mass)
         return base_args + (mass,), {}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the pedestrian from a dictionary."""
+        return cls(
+            Catalog(data["catalog"]["catalog_name"], data["catalog"]["rel_path"]),
+            data["catalog_entry"],
+            data["catalog_category"],
+            data["catalog_type"],
+            data["bounding_box"],
+            data.get("properties", {}),
+            data.get("files", []),
+            data["mass"],
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the pedestrian to a dictionary."""
+        data = super().to_dict()
+        data["mass"] = self.mass
+        return data
 
 
 class Pedestrian(Entity):

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import warnings
 from contextlib import suppress
 from copy import copy, deepcopy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -168,6 +169,74 @@ class Scenario:
         for e in scenario.entities:
             e.trajectory = e.trajectory.translate(x)
         return scenario
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Dict[str, Any],
+        e_classes: Tuple[Type[Entity]] = (Vehicle, Pedestrian, Entity),
+        a_classes: Tuple[Type[ScenarioAction]] = (ScenarioAction,),
+    ):
+        """Load the scenario from a dictionary."""
+        entities = []
+        for e_data in data["entities"]:
+            for Ent in e_classes:
+                if Ent.__name__ == e_data.get("entity_class", Entity):
+                    break
+            entities.append(Ent.from_dict(e_data))
+
+        road_network = data.get("road_network")
+        if road_network is not None:
+            road_network = RoadNetwork.create_from_json(road_network["path"])
+
+        actions = []
+        for a_data in data.get("actions", ()):
+            for Act in a_classes:
+                if Act.__name__ == a_data.get("action_class", ScenarioAction):
+                    break
+            actions.append(Act.from_dict(a_data))
+
+        return cls(
+            entities,
+            name=data.get("name"),
+            path=data.get("path"),
+            road_network=road_network,
+            actions=actions,
+            properties=data.get("properties", {}),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the scenario to a dictionary."""
+        return {
+            "entities": [e.to_dict() for e in self.entities],
+            "name": self.name,
+            "path": self.path,
+            "road_network": {
+                "name": self.road_network.name,
+                "path": self.road_network.path,
+            }
+            if self.road_network is not None
+            else None,
+            "actions": [act.to_dict() for act in self.actions],
+            "properties": self.properties,
+        }
+
+    @classmethod
+    def from_json(
+        cls,
+        path: str,
+        e_classes: Tuple[Type[Entity]] = (Vehicle, Pedestrian, Entity),
+        a_classes: Tuple[Type[ScenarioAction]] = (ScenarioAction,),
+    ):
+        """Load the scenario from a json file."""
+        with open(path, "r") as f:
+            data = json.load(f)
+        return cls.from_dict(data, e_classes=e_classes, a_classes=a_classes)
+
+    def to_json(self, path) -> None:
+        """Write the scenario to a json file."""
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f)
 
     def describe(self) -> None:
         """Generate a text overview of the scenario."""

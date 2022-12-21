@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import copy
 from inspect import getfullargspec
-from typing import Optional, Type
+from typing import Any, Dict, Optional, Type
 
 import numpy as np
 from shapely.geometry import Polygon
@@ -30,10 +30,10 @@ class Entity:
         ce = args.args[1]
         try:
             ce_type = args.annotations[ce]
-        except KeyError:
+        except KeyError as e:
             raise NotImplementedError(
                 f"Subclass {cls.__name__} has no type annotation for catalog entry."
-            )
+            ) from e
         if not issubclass(ce_type, CatalogEntry):
             raise TypeError("Catalog entry type must be a catalog entry subclass.")
         return ce_type
@@ -148,6 +148,24 @@ class Entity:
 
         """
         return Polygon(self.get_bounding_box_points(pose))
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the entity to a jsonable dictionary."""
+        return {
+            "ref": self.ref,
+            "trajectory": self.trajectory.to_json(),
+            "catalog_entry": self.catalog_entry.to_dict(),
+            "entity_class": self.__class__.__name__,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Create the entity from the json dictionary."""
+        return cls(
+            cls._catalog_entry_type().from_dict(data["catalog_entry"]),
+            trajectory=Trajectory(np.array(data["trajectory"])),
+            ref=data.get("ref"),
+        )
 
 
 class StaticEntity(Entity):

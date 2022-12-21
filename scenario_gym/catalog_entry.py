@@ -1,7 +1,7 @@
 from abc import ABC, abstractclassmethod
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from lxml.etree import Element
 
@@ -45,6 +45,23 @@ class CatalogObject(ABC):
         """Load the object from an xml element."""
         raise NotImplementedError
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """
+        Create the object from a dictionary.
+
+        Must be implemented to allow json serialization.
+        """
+        raise NotImplementedError
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Write the object to a dictionary.
+
+        Must be implemented to allow json serialization.
+        """
+        raise NotImplementedError
+
 
 @dataclass
 class BoundingBox(CatalogObject):
@@ -68,6 +85,25 @@ class BoundingBox(CatalogObject):
             float(bb_center.attrib["x"]),
             float(bb_center.attrib["y"]),
         ), {}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, float]):
+        """Load the bounding box from a dictionary."""
+        return cls(
+            data["width"],
+            data["length"],
+            data["center_x"],
+            data["center_y"],
+        )
+
+    def to_dict(self) -> Dict[str, float]:
+        """Write the bounding box to a jsonable dictionary."""
+        return {
+            "width": self.width,
+            "length": self.length,
+            "center_x": self.center_x,
+            "center_y": self.center_y,
+        }
 
 
 @dataclass
@@ -148,10 +184,10 @@ class CatalogEntry(CatalogObject):
                     with suppress(ValueError):
                         v = float(v)
                     properties[child.attrib["name"]] = v
-                except KeyError:
+                except KeyError as e:
                     raise RuntimeError(
                         "Property could not be loaded without `value` key."
-                    )
+                    ) from e
             for file in prop.findall("File"):
                 files.append(file.attrib["filepath"])
         return properties, files
@@ -160,3 +196,31 @@ class CatalogEntry(CatalogObject):
     def catalog_name(self) -> str:
         """Get the name of the catalog file."""
         return self.catalog.catalog_name
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the catalog entry from a dictionary."""
+        return cls(
+            Catalog(data["catalog"]["catalog_name"], data["catalog"]["rel_path"]),
+            data["catalog_entry"],
+            data["catalog_category"],
+            data["catalog_type"],
+            data["bounding_box"],
+            data.get("properties", {}),
+            data.get("files", []),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the catalog entry to a dictionary."""
+        return {
+            "catalog": {
+                "catalog_name": self.catalog.catalog_name,
+                "rel_path": self.catalog.rel_path,
+            },
+            "catalog_entry": self.catalog_entry,
+            "catalog_category": self.catalog_category,
+            "catalog_type": self.catalog_type,
+            "bounding_box": self.bounding_box.to_dict(),
+            "properties": self.properties,
+            "files": self.files,
+        }

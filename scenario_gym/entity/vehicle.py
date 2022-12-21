@@ -1,9 +1,14 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from lxml.etree import Element
 
-from scenario_gym.catalog_entry import ArgsKwargs, CatalogEntry, CatalogObject
+from scenario_gym.catalog_entry import (
+    ArgsKwargs,
+    Catalog,
+    CatalogEntry,
+    CatalogObject,
+)
 from scenario_gym.entity.base import Entity
 from scenario_gym.trajectory import Trajectory
 
@@ -28,6 +33,27 @@ class Axle(CatalogObject):
             float(element.attrib["positionX"]),
             float(element.attrib["positionZ"]),
         ), {}
+
+    def to_dict(self) -> None:
+        """Write the vehicle catalog entry to a dictionary."""
+        return {
+            "max_steering": self.max_steering,
+            "wheel_diameter": self.wheel_diameter,
+            "track_width": self.track_width,
+            "position_x": self.position_x,
+            "position_z": self.position_z,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the vehicle catalog entry from a dictionary."""
+        return cls(
+            data["max_steering"],
+            data["wheel_diameter"],
+            data["track_width"],
+            data["position_x"],
+            data["position_z"],
+        )
 
 
 @dataclass
@@ -76,6 +102,40 @@ class VehicleCatalogEntry(CatalogEntry):
             rear_axle,
         )
         return base_args + veh_args, {}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the vehicle from a dictionary."""
+        return cls(
+            Catalog(data["catalog"]["catalog_name"], data["catalog"]["rel_path"]),
+            data["catalog_entry"],
+            data["catalog_category"],
+            data["catalog_type"],
+            data["bounding_box"],
+            data.get("properties", {}),
+            data.get("files", []),
+            data.get("mass"),
+            data.get("max_speed"),
+            data.get("max_deceleration"),
+            data.get("max_acceleration"),
+            Axle.from_dict(data.get("front_axle")),
+            Axle.from_dict(data.get("rear_axle")),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the scenario to a dictionary."""
+        data = super().to_dict()
+        data.update(
+            {
+                "mass": self.mass,
+                "max_speed": self.max_speed,
+                "max_deceleration": self.max_deceleration,
+                "max_acceleration": self.max_acceleration,
+                "front_axle": self.front_axle.to_dict(),
+                "rear_axle": self.rear_axle.to_dict(),
+            }
+        )
+        return data
 
 
 class Vehicle(Entity):
