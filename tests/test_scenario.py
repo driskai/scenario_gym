@@ -1,5 +1,8 @@
+import os
 from copy import deepcopy
+from tempfile import TemporaryDirectory
 
+import numpy as np
 import pytest as pt
 
 from scenario_gym.road_network import RoadNetwork
@@ -46,3 +49,59 @@ def test_copy_scenarios(example_entity):
         s.road_network
     ), "Road networks should be the same."
     assert s_new.properties == s.properties, "Properties should be the same."
+
+
+def test_describe(example_scenario):
+    """Test the `describe` method."""
+    example_scenario.describe()
+
+
+def test_plot(example_scenario):
+    """Test the `describe` method."""
+    example_scenario.plot(show=False)
+
+
+def test_translate(example_scenario):
+    """Test the translating a scenario."""
+    shift = np.arange(7)
+    new_scenario = example_scenario.translate(shift)
+    ts = np.linspace(0.0, example_scenario.length, 10)
+    for e, e_new in zip(example_scenario.entities, new_scenario.entities):
+        ps = e.trajectory.position_at_t(ts)
+        ps_new = e_new.trajectory.position_at_t(ts)
+        deltas = ps_new - ps
+        assert np.allclose(deltas, shift[None, 1:])
+
+
+def test_to_dict(example_scenario):
+    """Test writing and reading the scenario from a dictionary."""
+    data = example_scenario.to_dict()
+    s2 = Scenario.from_dict(data)
+    assert (
+        example_scenario.road_network.name == s2.road_network.name
+    ), "Road networks should have same name."
+    assert all(
+        e.ref == e2.ref for e, e2 in zip(example_scenario.entities, s2.entities)
+    ), "Entities should be in the same order."
+    ego, ego2 = example_scenario.entities[0], s2.entities[0]
+    assert (
+        ego.trajectory.data == ego2.trajectory.data
+    ).all(), "Ego trajectories should be the same."
+
+
+def test_jsonable(example_scenario):
+    """Test reading and writing scenarios from json."""
+    with TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "example.json")
+        example_scenario.to_json(path)
+        s2 = Scenario.from_json(path)
+    assert (
+        example_scenario.road_network.name == s2.road_network.name
+    ), "Road networks should have same name."
+    assert all(
+        e.ref == e2.ref for e, e2 in zip(example_scenario.entities, s2.entities)
+    ), "Entities should be in the same order."
+    ego, ego2 = example_scenario.entities[0], s2.entities[0]
+    assert (
+        ego.trajectory.data == ego2.trajectory.data
+    ).all(), "Ego trajectories should be the same."

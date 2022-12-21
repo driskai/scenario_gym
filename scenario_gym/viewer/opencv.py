@@ -322,7 +322,7 @@ class OpenCVViewer(Viewer):
             cv2.fillPoly(self._frame, [xy], c)
             for interior in geom.interiors:
                 # cannot cache as the id is different each time
-                xy = to_ego_frame(np.array(interior.xy).T)
+                xy = to_ego_frame(np.array(interior.xy).T, ego_pose)
                 xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
                 cv2.fillPoly(self._frame, [xy], self.background_color)
 

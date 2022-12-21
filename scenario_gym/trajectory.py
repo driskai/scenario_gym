@@ -344,6 +344,10 @@ class Trajectory:
         s_vals = s[np.hstack([[0], 1 + np.sort(idxs), [s.shape[0] - 1]])]
         return self.__class__(fn(s_vals))
 
+    def to_json(self) -> List[List[float]]:
+        """Write the trajectory to a jsonable list."""
+        return self.data.tolist()
+
 
 def _resolve_heading(h: NDArray) -> NDArray:
     """Update heading so that there are no large jumps."""

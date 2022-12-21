@@ -56,6 +56,25 @@ class ScenarioAction(ABC):
         """Apply the action to the environment state."""
         raise NotImplementedError
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the action to a dictionary."""
+        return {
+            "t": self.t,
+            "action_class": self.action_class,
+            "entity_ref": self.entity_ref,
+            "action_variables": self.action_variables,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the action from a dictionary."""
+        return cls(
+            data["t"],
+            data["action_class"],
+            data["entity_ref"],
+            data["action_variables"],
+        )
+
 
 class UpdateStateVariableAction(ScenarioAction):
     """Action that sets state variables for the entity."""
@@ -63,5 +82,7 @@ class UpdateStateVariableAction(ScenarioAction):
     def _apply(self, state: State, entity: Optional[Entity]) -> None:
         """Update the entity with action variables."""
         if entity is not None:
+            if state.entity_state[entity] is None:
+                state.entity_state[entity] = {}
             for k, v in self.action_variables.items():
-                state.entity_state[entity] = k
+                state.entity_state[entity][k] = v
