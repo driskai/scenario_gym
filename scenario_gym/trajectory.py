@@ -244,6 +244,31 @@ class Trajectory:
         new_data[:, 4] = (new_data[:, 4] + h) % (2.0 * np.pi)
         return self.__class__(new_data)
 
+    def smooth_headings(self) -> Trajectory:
+        """
+        Create a new trajectory by smoothing the existing headings.
+
+        Returns
+        -------
+        Trajectory
+            The smoothed trajectory.
+
+        """
+        s = self.s
+
+        d = np.arctan2(
+            *np.flip(
+                self.position_at_s(s + 1e-2)[:, 1:3]
+                - self.position_at_s(s - 1e-2)[:, 1:3],
+                axis=1,
+            ).T
+        )
+        d = _resolve_heading(d)
+
+        new_data = self.data.copy()
+        new_data[:, 4] = d
+        return self.__class__(new_data)
+
     def subsample(
         self,
         points_per_s: Optional[float] = None,
