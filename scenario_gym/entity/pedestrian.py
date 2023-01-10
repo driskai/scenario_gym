@@ -36,7 +36,7 @@ class PedestrianCatalogEntry(CatalogEntry):
             data["bounding_box"],
             data.get("properties", {}),
             data.get("files", []),
-            data["mass"],
+            data.get("mass"),
         )
 
     def to_dict(self) -> Dict[str, Any]:

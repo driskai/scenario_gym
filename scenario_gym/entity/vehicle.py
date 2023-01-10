@@ -48,11 +48,11 @@ class Axle(CatalogObject):
     def from_dict(cls, data: Dict[str, Any]):
         """Load the vehicle catalog entry from a dictionary."""
         return cls(
-            data["max_steering"],
-            data["wheel_diameter"],
-            data["track_width"],
-            data["position_x"],
-            data["position_z"],
+            data.get("max_steering"),
+            data.get("wheel_diameter"),
+            data.get("track_width"),
+            data.get("position_x"),
+            data.get("position_z"),
         )
 
 
@@ -118,8 +118,12 @@ class VehicleCatalogEntry(CatalogEntry):
             data.get("max_speed"),
             data.get("max_deceleration"),
             data.get("max_acceleration"),
-            Axle.from_dict(data["front_axle"]) if "front_axle" in data else None,
-            Axle.from_dict(data["rear_axle"]) if "rear_axle" in data else None,
+            Axle.from_dict(data["front_axle"])
+            if data.get("front_axle") is not None
+            else None,
+            Axle.from_dict(data["rear_axle"])
+            if data.get("rear_axle") is not None
+            else None,
         )
 
     def to_dict(self) -> Dict[str, Any]:

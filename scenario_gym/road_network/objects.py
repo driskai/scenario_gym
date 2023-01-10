@@ -14,20 +14,32 @@ class LaneType(Enum):
 
     none = 0
     driving = 1
-    biking = 3
-    border = 4
-    connectingRamp = 5
-    curb = 6
-    entry = 7
-    exit = 8
-    median = 9
-    offRamp = 10
-    onRamp = 11
-    parking = 12
-    restricted = 13
-    sidewalk = 14
-    shoulder = 15
-    stop = 16
+    HOV = 2
+    bidirectional = 3
+    biking = 4
+    border = 5
+    bus = 6
+    connectingRamp = 7
+    curb = 8
+    entry = 9
+    exit = 10
+    median = 11
+    mwyEntry = 12
+    mwyExit = 13
+    offRamp = 14
+    onRamp = 15
+    parking = 16
+    rail = 17
+    restricted = 18
+    roadWorks = 19
+    shoulder = 20
+    sidewalk = 21
+    special1 = 22
+    special2 = 23
+    special3 = 24
+    stop = 25
+    taxi = 26
+    tram = 27
 
 
 class Lane(RoadLike):
