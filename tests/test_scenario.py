@@ -87,6 +87,7 @@ def test_to_dict(example_scenario):
     assert (
         ego.trajectory.data == ego2.trajectory.data
     ).all(), "Ego trajectories should be the same."
+    assert ego.bounding_box == ego2.bounding_box
 
 
 def test_jsonable(example_scenario):
@@ -102,6 +103,40 @@ def test_jsonable(example_scenario):
         e.ref == e2.ref for e, e2 in zip(example_scenario.entities, s2.entities)
     ), "Entities should be in the same order."
     ego, ego2 = example_scenario.entities[0], s2.entities[0]
+    assert (
+        ego.trajectory.data == ego2.trajectory.data
+    ).all(), "Ego trajectories should be the same."
+
+
+@pt.fixture()
+def scenario_with_none_values(example_scenario):
+    """Create a scenario with None values in one of the catalog entries."""
+    s = deepcopy(example_scenario)
+    s.entities[0].catalog_entry.front_axle.max_steering = None
+    s.entities[0].catalog_entry.reat_axle = None
+    return s
+
+
+def test_jsonable_with_none(scenario_with_none_values):
+    """Test reading and writing scenarios from json."""
+    with TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "example.json")
+        scenario_with_none_values.to_json(path)
+        s2 = Scenario.from_json(path)
+    assert (
+        s2.entities[0].catalog_entry.front_axle.max_steering is None
+    ), "The max steering should be None."
+    assert (
+        scenario_with_none_values.road_network.name == s2.road_network.name
+    ), "Road networks should have same name."
+    assert all(
+        e.ref == e2.ref
+        for e, e2 in zip(
+            scenario_with_none_values.entities,
+            s2.entities,
+        )
+    ), "Entities should be in the same order."
+    ego, ego2 = scenario_with_none_values.entities[0], s2.entities[0]
     assert (
         ego.trajectory.data == ego2.trajectory.data
     ).all(), "Ego trajectories should be the same."

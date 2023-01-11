@@ -3,7 +3,12 @@ from typing import Any, Dict, Optional
 
 from lxml.etree import Element
 
-from scenario_gym.catalog_entry import ArgsKwargs, Catalog, CatalogEntry
+from scenario_gym.catalog_entry import (
+    ArgsKwargs,
+    BoundingBox,
+    Catalog,
+    CatalogEntry,
+)
 from scenario_gym.entity.base import Entity
 from scenario_gym.trajectory import Trajectory
 
@@ -33,10 +38,10 @@ class PedestrianCatalogEntry(CatalogEntry):
             data["catalog_entry"],
             data["catalog_category"],
             data["catalog_type"],
-            data["bounding_box"],
+            BoundingBox.from_dict(data["bounding_box"]),
             data.get("properties", {}),
             data.get("files", []),
-            data["mass"],
+            data.get("mass"),
         )
 
     def to_dict(self) -> Dict[str, Any]:

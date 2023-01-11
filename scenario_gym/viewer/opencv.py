@@ -118,10 +118,10 @@ class OpenCVViewer(Viewer):
             if layer != "entity" and layer != "text":
                 try:
                     getattr(self, f"render_{layer}")
-                except AttributeError:
+                except AttributeError as e:
                     raise NotImplementedError(
                         f"Rendering method `render_{layer}` is not implemented."
-                    )
+                    ) from e
         self.render_layers = render_layers
 
         for k, v in {
