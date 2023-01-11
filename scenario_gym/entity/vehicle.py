@@ -5,6 +5,7 @@ from lxml.etree import Element
 
 from scenario_gym.catalog_entry import (
     ArgsKwargs,
+    BoundingBox,
     Catalog,
     CatalogEntry,
     CatalogObject,
@@ -111,7 +112,7 @@ class VehicleCatalogEntry(CatalogEntry):
             data["catalog_entry"],
             data["catalog_category"],
             data["catalog_type"],
-            data["bounding_box"],
+            BoundingBox.from_dict(data["bounding_box"]),
             data.get("properties", {}),
             data.get("files", []),
             data.get("mass"),

@@ -87,6 +87,7 @@ def test_to_dict(example_scenario):
     assert (
         ego.trajectory.data == ego2.trajectory.data
     ).all(), "Ego trajectories should be the same."
+    assert ego.bounding_box == ego2.bounding_box
 
 
 def test_jsonable(example_scenario):
