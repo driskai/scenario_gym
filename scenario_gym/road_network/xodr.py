@@ -29,7 +29,13 @@ def xodr_lane_to_sg(
         ]
     )
     lane_boundary = Polygon(boundary)
-    lane_type = LaneType[lane.type]
+    try:
+        lane_type = LaneType[lane.type]
+    except KeyError as e:
+        raise KeyError(
+            f"Lane {lane.id} has an invalid lane type: {lane.type}. Allowed lane "
+            f"types are {list(LaneType.__members__)}."
+        ) from e
 
     return Lane(
         str(uuid4()),
