@@ -13,10 +13,12 @@ DEFAULT_ENTITY_TYPES = (Vehicle, Pedestrian)
 def load_object(
     catalog: Catalog,
     entry: Element,
-    entity_types: List[Type[Entity]],
-    catalog_objects: List[Type[CatalogEntry]],
+    entity_types: Tuple[Type[Entity]] = DEFAULT_ENTITY_TYPES,
+    catalog_objects: Optional[List[Type[CatalogEntry]]] = None,
 ) -> Optional[Entity]:
     """Try to load a catalog entry with given catalog objects."""
+    if catalog_objects is None:
+        catalog_objects = [Ent._catalog_entry_type() for Ent in entity_types]
     for Ent, Obj in zip(entity_types, catalog_objects):
         types = Obj.xosc_names if Obj.xosc_names is not None else [Obj.__name__]
         if entry.tag in types:
@@ -70,7 +72,12 @@ def read_catalog(
     catalog = Catalog(catalog_name, relative_catalog_path)
     entries = {}
     for element in catalog_element.getchildren():
-        entry = load_object(catalog, element, entity_types, catalog_objects)
+        entry = load_object(
+            catalog,
+            element,
+            entity_types=entity_types,
+            catalog_objects=catalog_objects,
+        )
         if entry is None:
             entry = Entity(CatalogEntry.from_xml(catalog, element))
         entries[entry.catalog_entry.catalog_entry] = entry
