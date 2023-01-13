@@ -87,7 +87,7 @@ class Entity:
         """Create a copy of an entity without copying the catalog_entry."""
         return self.__class__(
             self.catalog_entry,
-            trajectory=self.trajectory.copy(),
+            trajectory=None if self.trajectory is None else self.trajectory.copy(),
             ref=self.ref,
         )
 

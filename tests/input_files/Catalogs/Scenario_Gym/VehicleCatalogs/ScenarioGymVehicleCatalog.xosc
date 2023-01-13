@@ -14,5 +14,28 @@
         <RearAxle maxSteering="0" wheelDiameter="0.688" trackWidth="1.53" positionX="0" positionZ="0.344" />
       </Axles>
     </Vehicle>
+    <Vehicle vehicleCategory="bus" name="bus1" mass="10000">
+      <Properties />
+      <BoundingBox>
+        <Center x="3.01" y="0" z="2.19" />
+        <Dimensions width="2.79" length="11.2" height="4.0" />
+      </BoundingBox>
+      <Performance maxSpeed="60" maxDeceleration="9" maxAcceleration="6" />
+      <Axles>
+        <FrontAxle maxSteering="1.5" wheelDiameter="0.688" trackWidth="1.53" positionX="2.574" positionZ="0.344" />
+        <RearAxle maxSteering="0" wheelDiameter="0.688" trackWidth="1.53" positionX="0" positionZ="0.344" />
+      </Axles>
+    </Vehicle>
+    <Vehicle vehicleCategory="bicycle" name="bike1" mass="75">
+      <BoundingBox>
+        <Center x="0.508" y="0" z="0.535" />
+        <Dimensions width="0.62" length="1.7" height="1.5" />
+      </BoundingBox>
+      <Performance maxSpeed="60" maxDeceleration="9" maxAcceleration="6" />
+      <Axles>
+        <FrontAxle maxSteering="1.5" wheelDiameter="0.679" trackWidth="0" positionX="1.016" positionZ="0.340" />
+        <RearAxle maxSteering="0" wheelDiameter="0.679" trackWidth="0" positionX="0" positionZ="0.340" />
+      </Axles>
+    </Vehicle>
   </Catalog>
 </OpenSCENARIO>

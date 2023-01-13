@@ -1,7 +1,6 @@
 import os
 import warnings
 from contextlib import suppress
-from copy import deepcopy
 from typing import Dict, List, Optional, Type
 
 import numpy as np
@@ -12,7 +11,7 @@ from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario import Scenario
 from scenario_gym.trajectory import Trajectory
 
-from .catalogs import read_catalog
+from .catalogs import Catalog, load_object, read_catalog
 
 
 def import_scenario(
@@ -57,53 +56,68 @@ def import_scenario(
                     entity_types=entity_types,
                 )
                 catalogs[catalog.catalog_name] = entries
+    # create a temporary catalog for entities that are not specified with a
+    # catalog reference
+    tmp_catalog = Catalog("tmp_catalog", osc_file)
 
     # Import road network:
+    rn_path = None
     scene_graph_file = osc_root.find("RoadNetwork/SceneGraphFile")
     if scene_graph_file is not None:
         rn_path = scene_graph_file.attrib["filepath"]
     else:
         logic_file = osc_root.find("RoadNetwork/LogicFile")
-        rn_path = logic_file.attrib["filepath"]
+        if logic_file is not None:
+            rn_path = logic_file.attrib["filepath"]
 
-    filepath = os.path.join(cwd, rn_path)
-    extension = os.path.splitext(filepath)[1]
-    if extension == "":
-        filepath = f"{filepath}.json"
-
-    if not os.path.exists(filepath):
-        warnings.warn(f"Could not find road network file: {filepath}.")
-
-    if extension in (".json", ""):
-        road_network = RoadNetwork.create_from_json(filepath)
-    elif extension == ".xodr":
-        road_network = RoadNetwork.create_from_xodr(filepath)
-    else:
-        road_network = None
+    road_network = None
+    if rn_path is not None:
+        filepath = os.path.join(cwd, rn_path)
+        extension = os.path.splitext(filepath)[1]
+        if extension == "":
+            filepath = f"{filepath}.json"
+        if not os.path.exists(filepath):
+            # warnings.warn(f"Could not find road network file: {filepath}.")
+            road_network = None
+        elif extension in (".json", ""):
+            road_network = RoadNetwork.create_from_json(filepath)
+        elif extension == ".xodr":
+            road_network = RoadNetwork.create_from_xodr(filepath)
 
     # add the entities to the scenario
     for scenario_object in osc_root.iterfind("Entities/ScenarioObject"):
         entity_ref = scenario_object.attrib["name"]
         cat_ref = scenario_object.find("CatalogReference")
         if cat_ref is None:
-            raise NotImplementedError(
-                "Scenario objects can only be loaded from catalog references."
-            )
-        catalog_name = cat_ref.attrib["catalogName"]
-        entry_name = cat_ref.attrib["entryName"]
-        try:
-            entity = deepcopy(catalogs[catalog_name][entry_name])
-            entity.ref = entity_ref
-            entities[entity_ref] = entity
-        except KeyError as e:
-            if catalog_name not in catalogs:
-                warnings.warn(f"Could not find catalog: {catalog_name}")
-            elif entry_name not in catalogs[catalog_name]:
+            ent = None
+            for element in scenario_object.getchildren():
+                ent = load_object(tmp_catalog, element)
+            if ent is None:
                 warnings.warn(
-                    f"Could not find entry {entry_name} in catalog {catalog_name}."
+                    "Could not find a catalog reference or entry for entity "
+                    f"{ent.tag}.Perhaps you need to add an entity type to "
+                    "`entity_types`."
                 )
             else:
-                raise e
+                ent.ref = entity_ref
+                entities[entity_ref] = ent
+        else:
+            catalog_name = cat_ref.attrib["catalogName"]
+            entry_name = cat_ref.attrib["entryName"]
+            try:
+                entity = catalogs[catalog_name][entry_name].copy()
+                entity.ref = entity_ref
+                entities[entity_ref] = entity
+            except KeyError as e:
+                if catalog_name not in catalogs:
+                    warnings.warn(f"Could not find catalog: {catalog_name}")
+                elif entry_name not in catalogs[catalog_name]:
+                    warnings.warn(
+                        f"Could not find entry {entry_name} in catalog "
+                        f"{catalog_name}."
+                    )
+                else:
+                    raise e
 
     # Read init actions:
     for private in osc_root.iterfind("Storyboard/Init/Actions/Private"):

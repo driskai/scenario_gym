@@ -40,6 +40,7 @@ def all_scenarios():
         "e1bdb607-206b-4f40-9bc4-59ded182ecc8",
         "e56ae853-4266-4c30-865f-96737d87b601",
         "fbb6b5ca-3fcb-4a7b-9757-b8554a753e69",
+        "no_references",
         "mixed_catalogs",
     ]
     base = os.path.join(os.path.dirname(__file__), "input_files", "Scenarios")
