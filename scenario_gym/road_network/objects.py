@@ -60,8 +60,8 @@ class Lane(RoadLike):
         lane_type = LaneType[typ if typ in LaneType.__members__ else "driving"]
         return (
             *args,
-            l["successors"] if "successors" in l else [],
-            l["predecessors"] if "predecessors" in l else [],
+            list(set(l["successors"])) if "successors" in l else [],
+            list(set(l["predecessors"])) if "predecessors" in l else [],
             lane_type,
         ), kwargs
 

@@ -1,8 +1,7 @@
 import json
 from contextlib import suppress
-from functools import _lru_cache_wrapper, lru_cache
+from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
-from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
@@ -215,14 +214,19 @@ class RoadNetwork:
         try:
             getattr(self, f"add_{obj_name}")
         except AttributeError:
+            setattr(
+                self,
+                f"add_{obj_name}",
+                partial(self._add_obj, obj_name=obj_name),
+            )
 
-            def add_obj(self, objs):
-                getattr(self, f"_{obj_name}").extend(
-                    objs if isinstance(objs, list) else [objs]
-                )
-                self.clear_cache()
-
-            setattr(self, f"add_{obj_name}", MethodType(add_obj, self))
+    def _add_obj(self, objs: List[RoadObject], obj_name: Optional[str] = None):
+        if obj_name is None:
+            raise ValueError("Must provide obj_name")
+        getattr(self, f"_{obj_name}").extend(
+            objs if isinstance(objs, list) else [objs]
+        )
+        self.clear_cache()
 
     @cached_property
     def roads(self) -> List[Road]:
@@ -394,9 +398,14 @@ class RoadNetwork:
 
     def elevation_at_point(self, x: ArrayLike, y: ArrayLike) -> NDArray:
         """Estimate the elevation at (x, y) by interpolating."""
+        x = np.array(x)
+        y = np.array(y)
         if self._elevation_func is None:
             self._interpolate_elevation()
-        return self._elevation_func(x, y)
+        z = self._elevation_func(x, y)
+        if x.ndim == 0 or y.ndim == 0 or x.shape[0] == 1 or y.shape[0] == 1:
+            return np.squeeze(z)
+        return np.diagonal(z)
 
     def _interpolate_elevation(self) -> None:
         """Interpolate the elevation values of the geometries."""
@@ -406,14 +415,21 @@ class RoadNetwork:
             if geom.elevation is not None
         ]
         if not elevs:
-            self._elevation_func = lambda x, y: np.zeros_like(x)
+            # this used to be a lambda function returning zeros but
+            # that was not pickleable so interp2d is used with zero inputs
+            elevation_values = np.array(
+                [
+                    [0, 1, 0],
+                    [1, 0, 0],
+                    [1, 1, 0],
+                    [0, 0, 0],
+                ]
+            )
         else:
             elevation_values = np.concatenate(elevs, axis=0)
-            x, y, z = elevation_values.T
-            self._elevation_func = interp2d(
-                x,
-                y,
-                z,
-                kind="linear",
-                bounds_error=False,
-            )
+        self._elevation_func = interp2d(
+            *elevation_values[:, :2].T,
+            elevation_values[:, 2],
+            kind="linear",
+            bounds_error=False,
+        )

@@ -332,13 +332,13 @@ class OpenCVViewer(Viewer):
         use_cache: bool = True,
     ) -> np.ndarray:
         """Get the coordinates for the given geometry."""
-        if id(geom) in self._coords_cache:
-            return self._coords_cache[id(geom)]
+        if geom in self._coords_cache:
+            return self._coords_cache[geom]
         coords = np.array(
             geom.exterior.xy if isinstance(geom, Polygon) else geom.xy
         ).T
         if use_cache:
-            self._coords_cache[id(geom)] = coords
+            self._coords_cache[geom] = coords
         return coords
 
     def render_driveable_surface(
@@ -350,7 +350,7 @@ class OpenCVViewer(Viewer):
         road_network = state.scenario.road_network
         for geom in road_network.driveable_surface.geoms:
             self.draw_geom(
-                geom, ego_pose, self.driveable_surface_color, use_cache=False
+                geom, ego_pose, self.driveable_surface_color, use_cache=True
             )
 
     def render_driveable_surface_boundary(
@@ -365,14 +365,14 @@ class OpenCVViewer(Viewer):
                 geom.exterior,
                 ego_pose,
                 self.driveable_surface_boundary_color,
-                use_cache=False,
+                use_cache=True,
             )
             for interior in geom.interiors:
                 self.draw_geom(
                     interior,
                     ego_pose,
                     self.driveable_surface_boundary_color,
-                    use_cache=False,
+                    use_cache=True,
                 )
 
     def render_walkable_surface(
@@ -383,7 +383,9 @@ class OpenCVViewer(Viewer):
         """Render the walkable surface."""
         road_network = state.scenario.road_network
         for g in road_network.pavements + road_network.crossings:
-            self.draw_geom(g.boundary, ego_pose, self.walkable_surface_color)
+            self.draw_geom(
+                g.boundary, ego_pose, self.walkable_surface_color, use_cache=True
+            )
 
     def render_buildings(
         self,
@@ -393,7 +395,9 @@ class OpenCVViewer(Viewer):
         """Render any buildings."""
         road_network = state.scenario.road_network
         for b in road_network.buildings:
-            self.draw_geom(b.boundary, ego_pose, self.buildings_color)
+            self.draw_geom(
+                b.boundary, ego_pose, self.buildings_color, use_cache=True
+            )
 
     def render_roads(
         self,
@@ -403,7 +407,7 @@ class OpenCVViewer(Viewer):
         """Render the road boundary polygons."""
         road_network = state.scenario.road_network
         for r in road_network.roads:
-            self.draw_geom(r.boundary, ego_pose, self.roads_color)
+            self.draw_geom(r.boundary, ego_pose, self.roads_color, use_cache=True)
 
     def render_road_centers(
         self,
@@ -413,7 +417,9 @@ class OpenCVViewer(Viewer):
         """Render the road centers."""
         road_network = state.scenario.road_network
         for r in road_network.roads:
-            self.draw_geom(r.center, ego_pose, self.road_centers_color)
+            self.draw_geom(
+                r.center, ego_pose, self.road_centers_color, use_cache=True
+            )
 
     def render_lanes(
         self,
@@ -423,7 +429,7 @@ class OpenCVViewer(Viewer):
         """Render the lane boudnary polygons."""
         road_network = state.scenario.road_network
         for l in road_network.lanes:
-            self.draw_geom(l.boundary, ego_pose, self.lanes_color)
+            self.draw_geom(l.boundary, ego_pose, self.lanes_color, use_cache=True)
 
     def render_lane_centers(
         self,
@@ -433,7 +439,9 @@ class OpenCVViewer(Viewer):
         """Render the lane centers."""
         road_network = state.scenario.road_network
         for l in road_network.lanes:
-            self.draw_geom(l.center, ego_pose, self.lane_centers_color)
+            self.draw_geom(
+                l.center, ego_pose, self.lane_centers_color, use_cache=True
+            )
 
     def render_intersections(
         self,
@@ -443,4 +451,6 @@ class OpenCVViewer(Viewer):
         """Render the road boundary polygons."""
         road_network = state.scenario.road_network
         for i in road_network.intersections:
-            self.draw_geom(i.boundary, ego_pose, self.intersections_color)
+            self.draw_geom(
+                i.boundary, ego_pose, self.intersections_color, use_cache=True
+            )

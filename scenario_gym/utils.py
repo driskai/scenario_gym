@@ -26,7 +26,7 @@ ArgsKwargs = Tuple[Tuple[Any, ...], Dict[str, Any]]
 def detect_geom_collisions(
     geoms: List[Polygon],
     others: Optional[List[Polygon]] = None,
-) -> Dict[str, List[Polygon]]:
+) -> Dict[Polygon, List[Polygon]]:
     """
     Detect collisions between polygons.
 
@@ -41,9 +41,9 @@ def detect_geom_collisions(
 
     Returns
     -------
-    Dict[str, List[Polygon]]
-        A dictionary that maps the id of each polygon in geoms to the
-        polygons that it intersects.
+    Dict[Polygon, List[Polygon]]
+        A dictionary that maps each polygon in geoms to the polygons which it
+        intersects.
 
     """
     all_geoms = geoms if others is None else geoms + others
