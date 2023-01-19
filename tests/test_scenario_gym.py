@@ -1,6 +1,9 @@
+import multiprocessing as mp
+
 import numpy as np
 
 from scenario_gym.scenario_gym import ScenarioGym
+from scenario_gym.xosc_interface import import_scenario
 
 
 def test_gym(all_scenarios):
@@ -73,3 +76,21 @@ def test_run_scenarios(all_scenarios):
         [scenario_path, scenario_path],
         timestep=0.075,
     )
+
+
+def _render_scenario(scenario):
+    """Render one scenario."""
+    gym = ScenarioGym(timestep=0.075)
+    gym.set_scenario(scenario)
+    gym.rollout(render=True)
+
+
+def test_multi_process_scenarios(all_scenarios):
+    """Test running scenarios in multiple processes."""
+    scenarios = []
+    num_processes = 4
+    for _, path in zip(range(num_processes), all_scenarios.values()):
+        scenarios.append(import_scenario(path))
+
+    with mp.Pool(num_processes) as p:
+        p.map(_render_scenario, scenarios)

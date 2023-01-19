@@ -1,4 +1,6 @@
 import os
+import pickle
+import tempfile
 
 import numpy as np
 import pytest as pt
@@ -253,7 +255,21 @@ def test_elevation(road_network, z_road_network):
     assert 0.0 <= z2 <= 2.0, "z-value outside of total range."
 
     z3 = z_road_network.elevation_at_point(np.zeros(3), np.zeros(3))
+    assert z3.shape == (3,)
     assert np.allclose(z3, np.ones(3)), "Incorrect broadcasting"
+
+    z3 = z_road_network.elevation_at_point(np.arange(3), np.arange(1))
+    assert z3.shape == (3,)
+    z3 = z_road_network.elevation_at_point(np.arange(1), np.arange(3))
+    assert z3.shape == (3,)
+    z3 = z_road_network.elevation_at_point(np.arange(5), np.arange(5))
+    assert z3.shape == (5,)
+    z3 = z_road_network.elevation_at_point(np.arange(1), np.arange(1))
+    assert z3.shape == ()
+
+    z4 = road_network.elevation_at_point(np.arange(11), np.arange(11))
+    assert z4.shape == (11,)
+    assert np.allclose(z4, np.zeros(11)), "Incorrect broadcasting"
 
 
 def test_new_object(road_network):
@@ -352,3 +368,16 @@ def test_io(z_road_network):
     finally:
         if os.path.exists(output_path):
             os.remove(output_path)
+
+
+def test_pickle_road_network(road_network):
+    """Test that a road network can be pickled."""
+    with tempfile.TemporaryFile() as f:
+        pickle.dump(road_network, f)
+        f.seek(0)
+        loaded_road_network = pickle.load(f)
+    assert loaded_road_network.roads == road_network.roads, "Roads not equal."
+    assert loaded_road_network.lanes == road_network.lanes, "Lanes not equal."
+    assert (
+        loaded_road_network.intersections == road_network.intersections
+    ), "Intersections not equal."

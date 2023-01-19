@@ -1,6 +1,7 @@
 import os
+import pickle
 from copy import deepcopy
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, TemporaryFile
 
 import numpy as np
 import pytest as pt
@@ -140,3 +141,19 @@ def test_jsonable_with_none(scenario_with_none_values):
     assert (
         ego.trajectory.data == ego2.trajectory.data
     ).all(), "Ego trajectories should be the same."
+
+
+def test_pickle_scenario(example_scenario):
+    """Test pickling a scenario."""
+    with TemporaryFile() as f:
+        pickle.dump(example_scenario, f)
+        f.seek(0)
+        new_scenario = pickle.load(f)
+    assert all(
+        e_new.ref == e.ref
+        for e_new, e in zip(new_scenario.entities, example_scenario.entities)
+    ), "Different entities"
+    assert new_scenario.length == example_scenario.length, "Different length."
+    assert (
+        new_scenario.road_network.name == example_scenario.road_network.name
+    ), "Different road networks."
