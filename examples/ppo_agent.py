@@ -550,7 +550,7 @@ def run(FLAGS):
 
     # record a video of the agent
     gym.reset_scenario()
-    gym.state.scenario.agents["ego"].eval()
+    gym.state.agents["ego"].eval()
     gym.rollout(render=True)
 
 
