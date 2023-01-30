@@ -83,15 +83,39 @@ class RoadGeometry(RoadObject):
     ):
         super().__init__(id)
 
-        if not boundary.is_valid:
-            boundary = make_valid(boundary)
-        self.boundary = boundary
+        self.boundary = self._fix_boundary(boundary)
 
         if elevation is not None:
             assert (
                 elevation.ndim == 2 and elevation.shape[1] == 3
             ), "Invalid shape for elevation profile."
         self.elevation = elevation
+
+    def _fix_boundary(
+        self,
+        boundary: Polygon,
+        maxiter: int = 2000,
+        tol: float = 1e-3,
+    ) -> Polygon:
+        """
+        Fix the boundary if it is invalid.
+
+        If the boundary is not a polygon or is not a valid geometry then tries to
+        fix it with the `make_valid` function or by repeatedly buffering it with a
+        small tolerance. If this fails then a ValueError is raised.
+        """
+        if isinstance(boundary, Polygon) and boundary.is_valid:
+            return boundary
+        if not boundary.is_valid:
+            new = make_valid(boundary)
+            if isinstance(new, Polygon) and new.is_valid:
+                return new
+        new = boundary.buffer(0.0)
+        for _ in range(maxiter):
+            new = new.buffer(tol)
+            if new.is_valid and isinstance(new, Polygon):
+                return new
+        raise ValueError("Invalid geometry.")
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a dictionary with id and boundary."""
