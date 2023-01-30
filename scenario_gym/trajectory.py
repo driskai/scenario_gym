@@ -124,7 +124,9 @@ class Trajectory:
         """Total distance travelled."""
         return self.s[-1]
 
-    def position_at_t(self, t: float) -> NDArray:
+    def position_at_t(
+        self, t: float, extrapolate: bool = True
+    ) -> Optional[NDArray]:
         """
         Compute the position of the entity at time t.
 
@@ -134,10 +136,16 @@ class Trajectory:
             The time at which the position is returned. Linearly interpolates
             the trajectory control points to find the position.
 
+        extrapolate : bool
+            Whether to extrapolate the trajectory if the time given is outside
+            of the range of the trajectory. If False then None will be returned
+            for such times.
+
         Returns
         -------
-        np.ndarray
-            The position as a numpy array.
+        Optional[np.ndarray]
+            The position as a numpy array. If the time given is outside of the
+            range of the trajectory and extrapolate is False then None is returned.
 
         """
         if self._interpolated is None:
@@ -152,6 +160,8 @@ class Trajectory:
                 fill_value=(data[0, 1:], data[-1, 1:]),
                 axis=0,
             )
+        if not extrapolate and (t < self.min_t or t > self.max_t):
+            return None
         return self._interpolated(t)
 
     def position_at_s(self, s: float) -> NDArray:

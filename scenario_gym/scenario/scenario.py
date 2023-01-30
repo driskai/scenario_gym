@@ -56,11 +56,17 @@ class Scenario:
         return self._entities
 
     @property
-    def vehicles(self) -> List[Entity]:
-        """Get the entities that have vehicle catalogs."""
-        if self._vehicles is None:
-            self._vehicles = [e for e in self.entities if isinstance(e, Vehicle)]
-        return self._vehicles
+    def ego(self) -> Entity:
+        """
+        Get the ego entity.
+
+        The ego entity is defined as the entity with the ref "ego" or the first
+        entity if no entity has the ref "ego".
+        """
+        ego = self.entity_by_name("ego")
+        if ego is not None:
+            return ego
+        return self.entities[0]
 
     @property
     def catalog_locations(self) -> Dict[str, str]:
@@ -71,6 +77,13 @@ class Scenario:
                 catalog.catalog_name: catalog.rel_path for catalog in catalogs
             }
         return self._catalog_locations
+
+    @property
+    def vehicles(self) -> List[Entity]:
+        """Get the entities that have vehicle catalogs."""
+        if self._vehicles is None:
+            self._vehicles = [e for e in self.entities if isinstance(e, Vehicle)]
+        return self._vehicles
 
     @property
     def pedestrians(self) -> List[Entity]:

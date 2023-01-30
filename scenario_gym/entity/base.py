@@ -149,6 +149,10 @@ class Entity:
         """
         return Polygon(self.get_bounding_box_points(pose))
 
+    def is_static(self) -> bool:
+        """Return True if the entity is static."""
+        return self.trajectory.data.shape[0] == 1
+
     def to_dict(self) -> Dict[str, Any]:
         """Write the entity to a jsonable dictionary."""
         return {

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from collections import OrderedDict
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
@@ -35,6 +34,7 @@ class State:
     def __init__(
         self,
         scenario: Scenario,
+        enduring_entities: bool = True,
         conditions: Optional[List[Union[str, Callable[[State], bool]]]] = None,
         state_callbacks: Optional[Dict[str, StateCallback]] = None,
     ):
@@ -45,6 +45,10 @@ class State:
         ----------
         scenario : Scenario
             The scenario to be simulated.
+
+        enduring_entities : bool
+            If True entities will exist for the entire duration of the simulation
+            rather than just for the duration of their individual trajectory.
 
         conditions : Optional[List[Union[str, Callable[[State], bool]]]]
             Terminal conditions that will end the scenario if any is met. May be a
@@ -65,6 +69,7 @@ class State:
                 for cond in conditions
             ]
         self.state_callbacks = [] if state_callbacks is None else state_callbacks
+        self.enduring_entities = enduring_entities
 
         self.next_t: Optional[float] = None
         self._t: Optional[float] = None
@@ -76,6 +81,7 @@ class State:
         self._callbacks: Dict[Type[StateCallback], StateCallback] = {}
 
         self.unapplied_actions: List[ScenarioAction]
+        self.all_entities: List[Entity]
         self.poses: Dict[Entity, np.ndarray]
         self.prev_poses: Dict[Entity, np.ndarray]
         self.velocities: Dict[Entity, np.ndarray]
@@ -84,14 +90,14 @@ class State:
         self._recorded_poses: Dict[Entity, List[Tuple[float, np.ndarray]]]
 
         self.agents: Dict[Entity, Agent] = {}
-        self.non_agents = BatchReplayEntity()
+        self.non_agents = BatchReplayEntity(enduring_entities=enduring_entities)
 
     @property
     def scenario(self) -> Scenario:
         """Get the current scenario."""
         return self._scenario
 
-    def reset(self, t_minus1: float, t_0: float):
+    def reset(self, t_minus1: float, t_0: float) -> None:
         """
         Reset the state to the initial timestep.
 
@@ -108,11 +114,17 @@ class State:
         self.is_done = False
 
         # set initial poses
+        # always use extrapolation for previous poses to get the initial velocity
         prev_poses, poses = {}, {}
-        for entity in self.scenario.entities:
-            prev_poses[entity] = entity.trajectory.position_at_t(t_minus1)
-            poses[entity] = entity.trajectory.position_at_t(t_0)
-
+        for entity in self.all_entities:
+            pose = entity.trajectory.position_at_t(
+                t_0, extrapolate=self.enduring_entities
+            )
+            if pose is not None:
+                poses[entity] = pose
+                prev_poses[entity] = entity.trajectory.position_at_t(
+                    t_minus1, extrapolate=True
+                )
         self.update_poses(t_minus1, prev_poses)
         self.update_poses(t_0, poses)
         self.update_actions()
@@ -131,25 +143,20 @@ class State:
         self._prev_t: Optional[float] = None
         self.unapplied_actions = self.scenario.actions.copy()
 
-        entities = self.scenario.entities
-        self.poses: Dict[Entity, np.ndarray] = OrderedDict.fromkeys(entities)
-        self.prev_poses: Dict[Entity, np.ndarray] = OrderedDict.fromkeys(entities)
-        self.velocities: Dict[Entity, np.ndarray] = OrderedDict.fromkeys(entities)
-        self.distances: Dict[Entity, float] = OrderedDict.fromkeys(
-            entities,
-            value=0.0,
-        )
-        self.entity_state: Dict[Entity, Any] = OrderedDict.fromkeys(entities, None)
-        self._recorded_poses: Dict[
-            Entity, List[Tuple[float, np.ndarray]]
-        ] = OrderedDict()
-        for entity in self.poses:
+        self.all_entities = self.scenario.entities.copy()
+        self.poses: Dict[Entity, np.ndarray] = {}
+        self.prev_poses: Dict[Entity, np.ndarray] = {}
+        self.velocities: Dict[Entity, np.ndarray] = {}
+        self.distances: Dict[Entity, float] = dict.fromkeys(self.all_entities, 0.0)
+        self.entity_state: Dict[Entity, Any] = dict.fromkeys(self.all_entities)
+        self._recorded_poses: Dict[Entity, List[Tuple[float, np.ndarray]]] = {}
+        for entity in self.all_entities:
             self._recorded_poses[entity] = []
 
     def step(self, new_poses: Dict[Entity, np.ndarray]) -> None:
         """Update by one timestep."""
         self._clear_cache()
-        self.update_poses(self.next_t, new_poses)
+        self.update_poses(self.next_t, new_poses.copy())
         self.update_actions()
         self.update_callbacks()
         self.is_done = self.check_terminal()
@@ -180,15 +187,32 @@ class State:
         self._prev_t = prev_t
 
     @property
-    def dt(self):
+    def dt(self) -> float:
         """Get the previous timestep."""
         return self.t - self.prev_t
 
-    def update_poses(self, t: float, new_poses: Dict[Entity, np.ndarray]):
-        """Update poses of all entities."""
+    def update_poses(self, t: float, new_poses: Dict[Entity, np.ndarray]) -> None:
+        """
+        Update poses of all entities.
+
+        The poses dictionary will be replaced with the new_poses and previous poses
+        will be updated for those entities in new_poses. For an entity in new_poses
+        which is not in the current poses (i.e. a new entity) the previous pose will
+        be estimated using trajectory extrapolation (to correctly calculate the
+        initial velocity).
+        """
         self.t = t
-        self.prev_poses.update(self.poses)
-        self.poses.update(new_poses)
+
+        prev_poses = {}
+        for e in new_poses:
+            if e in self.poses:
+                prev_poses[e] = self.poses[e]
+            elif self.prev_t is not None:
+                prev_poses[e] = e.trajectory.position_at_t(
+                    self.prev_t, extrapolate=True
+                )
+        self.prev_poses = prev_poses
+        self.poses = new_poses
         if self.prev_t is not None:
             self.update_statistics()
         for entity, pose in self.poses.items():
@@ -196,7 +220,8 @@ class State:
 
     def update_statistics(self) -> None:
         """Update entity velocities and distance travelled."""
-        for entity in self.scenario.entities:
+        self.velocities = {}
+        for entity in self.poses:
             self.velocities[entity] = (
                 self.poses[entity] - self.prev_poses[entity]
             ) / self.dt
@@ -368,5 +393,7 @@ TERMINAL_CONDITIONS = {
         s.scenario.road_network.driveable_surface.contains(
             Point(*s.poses[s.scenario.entities[0]][:2])
         )
+        if s.scenario.entities[0] in s.poses
+        else False
     ),
 }

@@ -19,24 +19,34 @@ class BatchReplayEntity:
     vectorized for efficiency.
     """
 
-    def __init__(self, timestep: Optional[float] = None):
+    def __init__(
+        self,
+        timestep: Optional[float] = None,
+        enduring_entities: bool = True,
+    ):
         """Init the batch entity with no assigned entities."""
         self.entities: List[Entity] = []
         self.trajectories: List[Trajectory] = []
         self.timestep = timestep
+        self.enduring_entities = enduring_entities
         self.max_t = 0.0
 
     def step(self, state: State) -> Dict[Entity, ArrayLike]:
         """
         Take a single step in the gym.
 
-        Returns the pose of each entity at the next timestamp.
+        Returns the pose of each entity at the next timestamp. If enduring entities
+        is set to True then only entities present at the current time will be
+        returned.
         """
         new_poses = {}
         if len(self.entities) > 0:
             pos = self.fn(state.next_t)  # (m, num_ents)
             for e, p in zip(self.entities, pos):
-                new_poses[e] = p
+                if self.enduring_entities or (
+                    state.t >= e.trajectory.min_t and state.t <= e.trajectory.max_t
+                ):
+                    new_poses[e] = p
         return new_poses
 
     def add_entities(

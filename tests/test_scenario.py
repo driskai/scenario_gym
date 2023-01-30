@@ -23,6 +23,25 @@ def example_entity(example_scenario):
     return deepcopy(example_scenario.entities[0])
 
 
+def test_ego(example_scenario):
+    """Test getting the ego entity."""
+    assert example_scenario.ego is not None, "Ego entity should not be None."
+    ego = example_scenario.entity_by_name("ego")
+    first = example_scenario.entities[0]
+    assert (
+        ego == first == example_scenario.ego
+    ), "Here the ego entity should be first and named 'ego'."
+
+    other = [e.copy() for e in example_scenario.entities]
+    other[0].ref = "not_ego"
+    s = Scenario(other)
+    assert s.ego == s.entities[0], "Ego should still be the first entity."
+
+    other[1].ref = "ego"
+    s2 = Scenario(other)
+    assert s2.ego == s.entities[1], "Ego should now be the second entity."
+
+
 def test_length(example_scenario):
     """Test the length of the scenario is computed correctly."""
     l = max((e.trajectory.max_t for e in example_scenario.entities))
