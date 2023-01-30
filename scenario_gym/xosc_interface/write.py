@@ -14,6 +14,7 @@ def write_scenario(
     scenario: Scenario,
     filepath: str,
     base_road_network_path: str = "../Road_Networks",
+    default_catalog_rel_path: str = "../Catalogs",
     osc_minor_version: int = 0,
 ) -> None:
     """
@@ -30,6 +31,10 @@ def write_scenario(
     base_road_network_path : str
         Base path to the road networks.
 
+    default_catalog_rel_path : str
+        Default relative path to the catalogs. This is used if the catalog location
+        is not specified in the scenario.
+
     osc_minor_version : int
         The OpenScenario minor version.
 
@@ -37,7 +42,7 @@ def write_scenario(
     name = (
         scenario.name
         if scenario.name is not None
-        else (os.path.splitext(os.path.basename(scenario.path)[-1])[0])
+        else (os.path.splitext(os.path.basename(filepath)[-1])[0])
     )
 
     rn_name = scenario.road_network.path.split("/")[-1].split(".")[0]
@@ -49,7 +54,9 @@ def write_scenario(
     for e in scenario.entities:
         ce = e.catalog_entry
         if ce.catalog_type not in catalog.catalogs:
-            catalog_dir = scenario.catalog_locations[ce.catalog_name]
+            catalog_dir = scenario.catalog_locations.get(ce.catalog_name)
+            if catalog_dir is None:
+                catalog_dir = default_catalog_rel_path
             catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
         catalog_ref = xosc.CatalogReference(ce.catalog_name, ce.catalog_entry)
         entities.add_scenario_object(e.ref, catalog_ref)
@@ -68,7 +75,7 @@ def write_scenario(
             init.add_init_action(e.ref, action)
 
     act = xosc.Act(
-        scenario.path.replace(".xosc", ""),
+        filepath.replace(".xosc", ""),
         get_simulation_time_trigger(0),
     )
     maneuver_groups = []
