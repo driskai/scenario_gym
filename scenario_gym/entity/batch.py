@@ -39,12 +39,15 @@ class BatchReplayEntity:
         is set to True then only entities present at the current time will be
         returned.
         """
+        t = state.next_t
         new_poses = {}
         if len(self.entities) > 0:
-            pos = self.fn(state.next_t)  # (m, num_ents)
+            pos = self.fn(t)  # (m, num_ents)
             for e, p in zip(self.entities, pos):
-                if self.enduring_entities or (
-                    state.t >= e.trajectory.min_t and state.t <= e.trajectory.max_t
+                if (
+                    self.enduring_entities
+                    or e.is_static()
+                    or (t >= e.trajectory.min_t and t <= e.trajectory.max_t)
                 ):
                     new_poses[e] = p
         return new_poses
