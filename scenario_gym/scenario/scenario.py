@@ -113,6 +113,7 @@ class Scenario:
         """Create a copy of a scenario without copying the road network."""
         return self.__class__(
             name=f"Copy of {self.name}" if self.name is not None else None,
+            path=self.path,
             road_network=self.road_network,
             actions=deepcopy(self.actions),
             entities=[e.copy() for e in self.entities],

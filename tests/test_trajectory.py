@@ -145,6 +145,25 @@ def test_copy_traj():
     assert np.allclose(traj.data, traj_new.data), "Should have equal data."
 
 
+def test_position_at_t():
+    """Test the position at t method."""
+    data = np.array([[0, 0, 0], [1, 1, 1], [2, 2, 2]])
+    traj = Trajectory(data, fields=["t", "x", "y"])
+    assert np.allclose(traj.position_at_t(0.5)[:2], [0.5, 0.5]), "Should be 0.5."
+    assert np.allclose(traj.position_at_t(1.5)[:2], [1.5, 1.5]), "Should be 1.5."
+    assert np.allclose(traj.position_at_t(2.5)[:2], [2.0, 2.0]), "Should be 2.0."
+    assert np.allclose(traj.position_at_t(-1.0)[:2], [-1.0, -1.0]), "Should be -1."
+    assert traj.position_at_t(-1.0, extrapolate=False) is None, "Should be None."
+    assert traj.position_at_t(3.0, extrapolate=False) is None, "Should be None."
+    assert np.allclose(
+        traj.position_at_t(data[:, 0])[:, :2], data[:, 1:]
+    ), "Incorrect broadcasting."
+    assert np.allclose(
+        traj.position_at_t(np.array([-1.0, 3.0]))[:, :2],
+        np.array([[-1.0, -1.0], [2.0, 2.0]]),
+    ), "Incorrect extrapolation."
+
+
 def test_subsample():
     """Test subsampling a trajectory."""
     traj = Trajectory(

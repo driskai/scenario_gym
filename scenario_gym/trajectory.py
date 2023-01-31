@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -125,7 +125,7 @@ class Trajectory:
         return self.s[-1]
 
     def position_at_t(
-        self, t: float, extrapolate: bool = True
+        self, t: Union[float, ArrayLike], extrapolate: bool = True
     ) -> Optional[NDArray]:
         """
         Compute the position of the entity at time t.
@@ -157,12 +157,19 @@ class Trajectory:
                 data[:, 0],
                 data[:, 1:],
                 bounds_error=False,
-                fill_value=(data[0, 1:], data[-1, 1:]),
+                fill_value="extrapolate",
                 axis=0,
             )
         if not extrapolate and (t < self.min_t or t > self.max_t):
             return None
-        return self._interpolated(t)
+        if isinstance(t, float):
+            return self._interpolated(t) if t <= self.max_t else self.data[-1, 1:]
+        else:
+            return np.where(
+                (t <= self.max_t)[:, None],
+                self._interpolated(t),
+                self.data[-1, None, 1:],
+            )
 
     def position_at_s(self, s: float) -> NDArray:
         """

@@ -220,11 +220,16 @@ class OpenCVViewer(Viewer):
     def get_center_pose(self, state: State, e_ref: str) -> np.ndarray:
         """Get the pose for the center of the frame."""
         ego_pose = None
-        if e_ref is not None:
-            entity = state.scenario.entity_by_name(e_ref)
-            if entity is None:
-                entity = state.scenario.entities[0]
+        entity = state.scenario.entity_by_name(e_ref)
+        if entity is None:
+            entity = state.scenario.ego
+        if entity in state.poses:
             ego_pose = state.poses[entity]
+        else:
+            ego_pose = state.recorded_poses(entity)
+            ego_pose = (
+                entity.trajectory[0][1:] if len(ego_pose) == 0 else ego_pose[0, 1:]
+            )
         return ego_pose
 
     @property

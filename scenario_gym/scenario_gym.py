@@ -197,16 +197,21 @@ class ScenarioGym:
         for entity in self.state.scenario.entities:
             agent = create_agent(self.state.scenario, entity)
             if agent is not None:
-                self.state.agents[entity.ref] = agent
+                self.state.agents[entity] = agent
             else:
                 non_agents.append(entity)
                 non_agent_trajs.append(entity.trajectory)
         self.state.non_agents.add_entities(non_agents, non_agent_trajs)
 
+    def _get_start_time(self, scenario: Scenario) -> float:
+        """Get the start time of the scenario."""
+        return 0.0  # scenario.ego.trajectory.min_t
+
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        self.state.reset(self.INIT_PREV_T, 0.0)
+        t0 = self._get_start_time(self.state.scenario)
+        self.state.reset(t0 + self.INIT_PREV_T, t0)
         for m in self.metrics:
             m.reset(self.state)
 
@@ -216,10 +221,16 @@ class ScenarioGym:
 
         # get the new poses
         new_poses = {}
-        for agent in self.state.agents.values():
-            pose = agent.step(self.state)
-            if pose is not None:
-                new_poses[agent.entity] = pose
+        for entity, agent in self.state.agents.items():
+            if entity in self.state.poses:
+                pose = agent.step(self.state)
+                if pose is not None:
+                    new_poses[entity] = pose
+            elif entity.trajectory.min_t >= self.state.t:
+                # the agent is initialised at its start position
+                new_poses[entity] = entity.trajectory.position_at_t(
+                    self.state.next_t
+                )
         new_poses.update(self.state.non_agents.step(self.state))
 
         # update the poses and current time

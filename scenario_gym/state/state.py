@@ -118,7 +118,7 @@ class State:
         prev_poses, poses = {}, {}
         for entity in self.all_entities:
             pose = entity.trajectory.position_at_t(
-                t_0, extrapolate=self.enduring_entities
+                t_0, extrapolate=self.enduring_entities or entity.is_static()
             )
             if pose is not None:
                 poses[entity] = pose
@@ -262,7 +262,7 @@ class State:
     def recorded_poses(
         self,
         entity: Optional[Entity] = None,
-    ) -> Dict[Entity, np.ndarray]:
+    ) -> Union[np.ndarray, Dict[Entity, np.ndarray]]:
         """Get recorded poses for each or a given entity."""
         if entity is not None:
             poses = self._recorded_poses.get(entity, None)

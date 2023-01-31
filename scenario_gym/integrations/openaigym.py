@@ -195,8 +195,8 @@ class ScenarioGym(ScenarioGym, Env):
             raise ValueError("Step called when state is terminal.")
 
         new_poses = {}
-        for ref, agent in self.state.agents.items():
-            if ref == "ego":
+        for agent in self.state.agents.values():
+            if agent is self.ego_agent:
                 agent.last_action = action
                 new_poses[agent.entity] = agent.controller.step(self.state, action)
             else:
@@ -272,9 +272,9 @@ class ScenarioGym(ScenarioGym, Env):
         """Check there is an ego agent."""
         super().create_agents(create_agent=create_agent)
         try:
-            self.ego_agent = self.state.agents["ego"]
+            self.ego_agent = self.state.agents[self.state.scenario.ego]
         except KeyError as e:
-            raise KeyError("No agent named ego.") from e
+            raise KeyError("No agent for ego.") from e
 
     @staticmethod
     def create_agent(scenario: Scenario, entity: Entity) -> Optional[Agent]:
