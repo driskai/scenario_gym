@@ -22,13 +22,13 @@ class BatchReplayEntity:
     def __init__(
         self,
         timestep: Optional[float] = None,
-        enduring_entities: bool = True,
+        persist: bool = False,
     ):
         """Init the batch entity with no assigned entities."""
         self.entities: List[Entity] = []
         self.trajectories: List[Trajectory] = []
+        self.persist = persist
         self.timestep = timestep
-        self.enduring_entities = enduring_entities
         self.max_t = 0.0
 
     def step(self, state: State) -> Dict[Entity, ArrayLike]:
@@ -45,7 +45,7 @@ class BatchReplayEntity:
             pos = self.fn(t)  # (m, num_ents)
             for e, p in zip(self.entities, pos):
                 if (
-                    self.enduring_entities
+                    self.persist
                     or e.is_static()
                     or (t >= e.trajectory.min_t and t <= e.trajectory.max_t)
                 ):

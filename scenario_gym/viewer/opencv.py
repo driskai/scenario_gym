@@ -296,7 +296,7 @@ class OpenCVViewer(Viewer):
 
     def render_text(self, state: State) -> None:
         """Add text to the frame."""
-        v = np.linalg.norm(state.velocities[state.scenario.entities[0]][:3])
+        v = np.linalg.norm(state.velocities[state.scenario.ego][:3])
         cv2.putText(
             self._frame,
             "Ego speed: {:.2f}".format(v),

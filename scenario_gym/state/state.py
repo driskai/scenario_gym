@@ -34,7 +34,7 @@ class State:
     def __init__(
         self,
         scenario: Scenario,
-        enduring_entities: bool = True,
+        persist: bool = False,
         conditions: Optional[List[Union[str, Callable[[State], bool]]]] = None,
         state_callbacks: Optional[Dict[str, StateCallback]] = None,
     ):
@@ -46,9 +46,8 @@ class State:
         scenario : Scenario
             The scenario to be simulated.
 
-        enduring_entities : bool
-            If True entities will exist for the entire duration of the simulation
-            rather than just for the duration of their individual trajectory.
+        persist : bool
+            Whether entities should persist in the simulation.
 
         conditions : Optional[List[Union[str, Callable[[State], bool]]]]
             Terminal conditions that will end the scenario if any is met. May be a
@@ -61,6 +60,7 @@ class State:
 
         """
         self._scenario = scenario
+        self.persist = persist
         if conditions is None:
             self.terminal_conditions = [TERMINAL_CONDITIONS["max_length"]]
         else:
@@ -69,7 +69,6 @@ class State:
                 for cond in conditions
             ]
         self.state_callbacks = [] if state_callbacks is None else state_callbacks
-        self.enduring_entities = enduring_entities
 
         self.next_t: Optional[float] = None
         self._t: Optional[float] = None
@@ -90,7 +89,7 @@ class State:
         self._recorded_poses: Dict[Entity, List[Tuple[float, np.ndarray]]]
 
         self.agents: Dict[Entity, Agent] = {}
-        self.non_agents = BatchReplayEntity(enduring_entities=enduring_entities)
+        self.non_agents = BatchReplayEntity(persist=persist)
 
     @property
     def scenario(self) -> Scenario:
@@ -118,12 +117,16 @@ class State:
         prev_poses, poses = {}, {}
         for entity in self.all_entities:
             pose = entity.trajectory.position_at_t(
-                t_0, extrapolate=self.enduring_entities or entity.is_static()
+                t_0,
+                extrapolate=(
+                    entity.is_static()
+                    or ((False, False) if self.persist else False)
+                ),
             )
             if pose is not None:
                 poses[entity] = pose
                 prev_poses[entity] = entity.trajectory.position_at_t(
-                    t_minus1, extrapolate=True
+                    t_minus1, extrapolate=((False, False) if self.persist else True)
                 )
         self.update_poses(t_minus1, prev_poses)
         self.update_poses(t_0, poses)
@@ -386,7 +389,7 @@ class State:
 
 
 TERMINAL_CONDITIONS = {
-    "max_length": lambda s: s.t > s.scenario.length,
+    "max_length": lambda s: s.t + s.dt > s.scenario.length,
     "collision": lambda s: any(len(l) > 0 for l in s.collisions().values()),
     "ego_collision": lambda s: len(s.collisions()[s.scenario.entities[0]]) > 0,
     "ego_off_road": lambda s: not (

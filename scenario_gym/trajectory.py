@@ -125,10 +125,14 @@ class Trajectory:
         return self.s[-1]
 
     def position_at_t(
-        self, t: Union[float, ArrayLike], extrapolate: bool = True
+        self,
+        t: Union[float, ArrayLike],
+        extrapolate: Union[bool, Tuple[bool, bool]] = (False, False),
     ) -> Optional[NDArray]:
         """
         Compute the position of the entity at time t.
+
+        Can vectorise over t.
 
         Parameters
         ----------
@@ -136,10 +140,12 @@ class Trajectory:
             The time at which the position is returned. Linearly interpolates
             the trajectory control points to find the position.
 
-        extrapolate : bool
+        extrapolate : Union[bool, Tuple[bool, bool]]
             Whether to extrapolate the trajectory if the time given is outside
             of the range of the trajectory. If False then None will be returned
-            for such times.
+            for such times. If a Tuple is given then first and second elements
+            correspond to whether to extrapolate before and after the trajectory
+            respectively or to fix them.
 
         Returns
         -------
@@ -160,16 +166,27 @@ class Trajectory:
                 fill_value="extrapolate",
                 axis=0,
             )
-        if not extrapolate and (t < self.min_t or t > self.max_t):
-            return None
-        if isinstance(t, float):
-            return self._interpolated(t) if t <= self.max_t else self.data[-1, 1:]
+        if isinstance(extrapolate, tuple):
+            ext_bck, ext_fwd = extrapolate
+            extrapolate = True
         else:
-            return np.where(
-                (t <= self.max_t)[:, None],
-                self._interpolated(t),
-                self.data[-1, None, 1:],
+            ext_bck = ext_fwd = extrapolate
+        if isinstance(t, float):
+            if not extrapolate and (t < self.min_t or t > self.max_t):
+                return None
+            elif t < self.min_t and not ext_bck:
+                return self.data[0, 1:]
+            elif t > self.max_t and not ext_fwd:
+                return self.data[-1, 1:]
+            return self._interpolated(t)
+        poses = self._interpolated(t)
+        if not ext_bck:
+            poses = np.where(t[:, None] < self.min_t, self.data[0, None, 1:], poses)
+        if not ext_fwd:
+            poses = np.where(
+                t[:, None] > self.max_t, self.data[-1, None, 1:], poses
             )
+        return poses
 
     def position_at_s(self, s: float) -> NDArray:
         """

@@ -63,21 +63,6 @@ def test_batch_entity(example_catalog_entry):
 
     batch = BatchReplayEntity()
     batch.add_entities([e1, e2], [e1.trajectory, e2.trajectory])
-    poses = batch.step(fake_state)
-    assert np.allclose(poses[e1][:2], np.zeros(2)), "Entity 1 should be at origin."
-    assert np.allclose(
-        poses[e2][:2], np.array([1.0, 0.0])
-    ), "Entity 2 should be at 1, 0."
-
-    fake_state.next_t = 2.0
-    poses = batch.step(fake_state)
-    assert np.allclose(poses[e1][:2], np.zeros(2)), "Entity 1 should be at origin."
-    assert np.allclose(
-        poses[e2][:2], np.array([2.0, 0.0])
-    ), "Entity 2 should be at 2, 0."
-
-    batch = BatchReplayEntity(enduring_entities=False)
-    batch.add_entities([e1, e2], [e1.trajectory, e2.trajectory])
 
     fake_state.next_t = 1.0
     poses = batch.step(fake_state)

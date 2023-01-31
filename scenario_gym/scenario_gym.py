@@ -31,7 +31,7 @@ class ScenarioGym:
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
-        enduring_entities: bool = True,
+        persist: bool = False,
         viewer_class: Optional[Type[Viewer]] = None,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
@@ -51,9 +51,8 @@ class ScenarioGym:
         timestep: float
             Time between steps in the gym.
 
-        enduring_entities: bool
-            If True entities will exist for the entire duration of the simulation
-            rather than just for the duration of their individual trajectory.
+        persist: bool
+            If True then entities will persist for the entire scenario.
 
         viewer_class: Type[Viewer]
             Class type of the viewer that will be inisitalised.
@@ -72,7 +71,7 @@ class ScenarioGym:
 
         """
         self.timestep = timestep
-        self.enduring_entities = enduring_entities
+        self.persist = persist
         if viewer_class is None and "fps" not in viewer_parameters:
             viewer_parameters["fps"] = int(1.0 / self.timestep)
         self.viewer_parameters = viewer_parameters.copy()
@@ -170,10 +169,10 @@ class ScenarioGym:
 
         """
         self.state = State(
-            enduring_entities=self.enduring_entities,
+            scenario,
+            persist=self.persist,
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
-            scenario=scenario,
         )
         self.create_agents(create_agent=create_agent)
         self.reset_scenario()
@@ -203,14 +202,14 @@ class ScenarioGym:
                 non_agent_trajs.append(entity.trajectory)
         self.state.non_agents.add_entities(non_agents, non_agent_trajs)
 
-    def _get_start_time(self, scenario: Scenario) -> float:
+    def get_start_time(self, scenario: Scenario) -> float:
         """Get the start time of the scenario."""
-        return 0.0  # scenario.ego.trajectory.min_t
+        return max((0.0, scenario.ego.trajectory.min_t))
 
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        t0 = self._get_start_time(self.state.scenario)
+        t0 = self.get_start_time(self.state.scenario)
         self.state.reset(t0 + self.INIT_PREV_T, t0)
         for m in self.metrics:
             m.reset(self.state)
@@ -226,6 +225,8 @@ class ScenarioGym:
                 pose = agent.step(self.state)
                 if pose is not None:
                     new_poses[entity] = pose
+                elif self.persist:
+                    new_poses[entity] = self.state.poses[entity]
             elif entity.trajectory.min_t >= self.state.t:
                 # the agent is initialised at its start position
                 new_poses[entity] = entity.trajectory.position_at_t(

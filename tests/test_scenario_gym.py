@@ -37,7 +37,7 @@ def test_gym(scenario):
 
     gym.timestep = 0.2
     gym.step()
-    assert np.allclose(gym.state.t, 0.7)
+    assert np.allclose(gym.state.t, gym.state.prev_t + 0.2)
 
     gym.rollout()
     v = gym.state.velocities[gym.state.scenario.entities[0]]
@@ -48,7 +48,7 @@ def test_reset_scenario(scenario):
     """Test loading and reseting a scenario."""
     gym = ScenarioGym()
     gym.set_scenario(scenario)
-    assert [gym.state.poses[e] is not None for e in gym.state.scenario.entities]
+    assert [gym.state.poses[e] is not None for e in gym.state.poses]
 
     gym.set_scenario(scenario)
     assert (gym.state.scenario.entities[0].ref == "ego") and (
@@ -58,49 +58,54 @@ def test_reset_scenario(scenario):
 
 def test_reset_scenario_with_vanishing(vanishing_scenario):
     """Test loading and reseting a scenario."""
-    gym = ScenarioGym(enduring_entities=False)
+    gym = ScenarioGym()
     gym.set_scenario(vanishing_scenario)
     for e in vanishing_scenario.entities:
         if e.trajectory.min_t <= gym.state.t:
             assert e in gym.state.poses, f"{e.ref} should be in poses"
 
 
-def test_rollout(scenario):
+def test_rollout(vanishing_scenario):
     """Test rollout."""
     gym = ScenarioGym(timestep=0.1)
-    gym.set_scenario(scenario)
-    gym.rollout()
-
-
-def test_vanising_rollout(vanishing_scenario):
-    """Test rollout with vanishing."""
-    gym = ScenarioGym(enduring_entities=False)
     gym.set_scenario(vanishing_scenario)
     gym.rollout()
     assert gym.state.scenario.entities[1] not in gym.state.poses
 
 
-def test_render(scenario):
+def test_persist(vanishing_scenario):
+    """Test rollout."""
+    gym = ScenarioGym(timestep=0.1, persist=True)
+    gym.set_scenario(vanishing_scenario)
+    assert len(gym.state.poses) == len(vanishing_scenario.entities), (
+        "Entities not found in poses: ",
+        str(
+            [e.ref for e in vanishing_scenario.entities if e not in gym.state.poses]
+        ),
+    )
+    while not gym.state.is_done:
+        gym.step()
+        assert len(gym.state.poses) == len(vanishing_scenario.entities), (
+            "Entities not found in poses: ",
+            str(
+                [
+                    e.ref
+                    for e in vanishing_scenario.entities
+                    if e not in gym.state.poses
+                ]
+            ),
+        )
+
+
+def test_render(scenario, vanishing_scenario):
     """Test the rendering of the gym."""
     gym = ScenarioGym()
     gym.set_scenario(scenario)
     gym.rollout(render=True)
-    gym.rollout(
-        render=True,
-        video_path=scenario.path.replace("Scenarios", "Recordings").replace(
-            ".xosc", ".mp4"
-        ),
-    )
-
-
-def test_render_with_vanishing(vanishing_scenario):
-    """Test the rendering of the gym."""
-    pth = vanishing_scenario.path
-    gym = ScenarioGym(enduring_entities=False)
     gym.set_scenario(vanishing_scenario)
     gym.rollout(
         render=True,
-        video_path=pth.replace("Scenarios", "Recordings").replace(
+        video_path=scenario.path.replace("Scenarios", "Recordings").replace(
             ".xosc", "_vanishing.mp4"
         ),
     )

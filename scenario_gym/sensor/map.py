@@ -186,10 +186,7 @@ class RasterizedMapSensor(Sensor):
         """
         entities = prep(
             MultiPolygon(
-                [
-                    e.get_bounding_box_geom(state.poses[e])
-                    for e in state.scenario.entities
-                ]
+                [e.get_bounding_box_geom(pose) for e, pose in state.poses.items()]
             )
         )
         return contains(entities, coords[:, 0], coords[:, 1])

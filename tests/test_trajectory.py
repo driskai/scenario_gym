@@ -149,18 +149,61 @@ def test_position_at_t():
     """Test the position at t method."""
     data = np.array([[0, 0, 0], [1, 1, 1], [2, 2, 2]])
     traj = Trajectory(data, fields=["t", "x", "y"])
-    assert np.allclose(traj.position_at_t(0.5)[:2], [0.5, 0.5]), "Should be 0.5."
-    assert np.allclose(traj.position_at_t(1.5)[:2], [1.5, 1.5]), "Should be 1.5."
-    assert np.allclose(traj.position_at_t(2.5)[:2], [2.0, 2.0]), "Should be 2.0."
-    assert np.allclose(traj.position_at_t(-1.0)[:2], [-1.0, -1.0]), "Should be -1."
+
+    # test basic interpolation
+    assert np.allclose(
+        traj.position_at_t(0.5, extrapolate=True)[:2], [0.5, 0.5]
+    ), "Should be 0.5."
+    assert np.allclose(
+        traj.position_at_t(1.5, extrapolate=True)[:2], [1.5, 1.5]
+    ), "Should be 1.5."
+
+    # test simple extrapolation
+    assert np.allclose(
+        traj.position_at_t(2.5, extrapolate=True)[:2], [2.5, 2.5]
+    ), "Should be 2.5."
+    assert np.allclose(
+        traj.position_at_t(-1.0, extrapolate=True)[:2], [-1.0, -1.0]
+    ), "Should be -1."
     assert traj.position_at_t(-1.0, extrapolate=False) is None, "Should be None."
     assert traj.position_at_t(3.0, extrapolate=False) is None, "Should be None."
     assert np.allclose(
-        traj.position_at_t(data[:, 0])[:, :2], data[:, 1:]
-    ), "Incorrect broadcasting."
+        traj.position_at_t(-1.0, extrapolate=(False, True))[:2], [0.0, 0.0]
+    ), "Should not extrapolate backward."
     assert np.allclose(
-        traj.position_at_t(np.array([-1.0, 3.0]))[:, :2],
+        traj.position_at_t(-1.0, extrapolate=(True, True))[:2], [-1.0, -1.0]
+    ), "Should extrapolate backward."
+    assert np.allclose(
+        traj.position_at_t(3.0, extrapolate=(True, False))[:2], [2.0, 2.0]
+    ), "Should not extrapolate forward."
+    assert np.allclose(
+        traj.position_at_t(3.0, extrapolate=(True, True))[:2], [3.0, 3.0]
+    ), "Should extrapolate forward."
+
+    # test broadcasting
+    assert np.allclose(
+        traj.position_at_t(data[:, 0], extrapolate=True)[:, :2], data[:, 1:]
+    ), "Incorrect broadcasting."
+    x = np.array([-1.0, 3.0])
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=True)[:, :2],
+        np.array([[-1.0, -1.0], [3.0, 3.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=False)[:, :2],
+        np.array([[0.0, 0.0], [2.0, 2.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(False, True))[:, :2],
+        np.array([[0, 0], [3.0, 3.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(True, False))[:, :2],
         np.array([[-1.0, -1.0], [2.0, 2.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(True, True))[:, :2],
+        np.array([[-1.0, -1.0], [3.0, 3.0]]),
     ), "Incorrect extrapolation."
 
 

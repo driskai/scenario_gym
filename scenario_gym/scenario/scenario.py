@@ -184,6 +184,13 @@ class Scenario:
             e.trajectory = e.trajectory.translate(x)
         return scenario
 
+    def reset_start(self, entity: Optional[Entity] = None) -> Scenario:
+        """Reset the start time to the start of an entity's trajectory."""
+        if entity is None:
+            entity = self.ego
+        start_time = entity.trajectory.min_t
+        return self.translate(np.array([-start_time, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
+
     @classmethod
     def from_dict(
         cls,

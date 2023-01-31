@@ -60,10 +60,11 @@ def test_write_scenario(all_scenarios) -> None:
     out_path = scenario_path.replace("Scenarios", "Recordings").replace(
         ".xosc", "_test.xosc"
     )
+    scenario = import_scenario(scenario_path).reset_start()
 
     # rollout
     gym = ScenarioGym()
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
     gym.rollout()
     old_scenario = gym.state.scenario
     traj1 = old_scenario.entities[0].trajectory
