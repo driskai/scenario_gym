@@ -133,8 +133,9 @@ class Scenario:
 
     def remove_entity(self, e: Entity, inplace: bool = False) -> Scenario:
         """Create a new scenario with the entity added."""
+        idx = self._entities.index(e)
         scenario = self.copy() if not inplace else self
-        scenario._entities.remove(e)
+        scenario._entities.pop(idx)
         scenario._ref_to_entity.pop(e.ref)
         scenario._vehicles = None
         scenario._pedestrians = None
