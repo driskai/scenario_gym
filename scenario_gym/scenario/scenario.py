@@ -13,7 +13,7 @@ from scenario_gym.entity import Entity
 from scenario_gym.entity.pedestrian import Pedestrian
 from scenario_gym.entity.vehicle import Vehicle
 from scenario_gym.road_network import RoadNetwork
-from scenario_gym.scenario.actions import ScenarioAction
+from scenario_gym.scenario.actions import ScenarioAction, UpdateStateVariableAction
 from scenario_gym.trajectory import Trajectory
 from scenario_gym.utils import cached_property
 
@@ -175,7 +175,7 @@ class Scenario:
         cls,
         data: Dict[str, Any],
         e_classes: Tuple[Type[Entity]] = (Vehicle, Pedestrian, Entity),
-        a_classes: Tuple[Type[ScenarioAction]] = (ScenarioAction,),
+        a_classes: Tuple[Type[ScenarioAction]] = (UpdateStateVariableAction,),
     ):
         """Load the scenario from a dictionary."""
         entities = []
@@ -192,7 +192,9 @@ class Scenario:
         actions = []
         for a_data in data.get("actions", ()):
             for Act in a_classes:
-                if Act.__name__ == a_data.get("action_class", ScenarioAction):
+                if Act.__name__ == a_data.get(
+                    "action_class", "UpdateStateVariableAction"
+                ):
                     break
             actions.append(Act.from_dict(a_data))
 
@@ -226,7 +228,7 @@ class Scenario:
         cls,
         path: str,
         e_classes: Tuple[Type[Entity]] = (Vehicle, Pedestrian, Entity),
-        a_classes: Tuple[Type[ScenarioAction]] = (ScenarioAction,),
+        a_classes: Tuple[Type[ScenarioAction]] = (UpdateStateVariableAction,),
     ):
         """Load the scenario from a json file."""
         with open(path, "r") as f:
