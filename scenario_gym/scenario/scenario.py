@@ -293,7 +293,9 @@ Entities
         name = (
             self.name.replace(".xosc", "")
             if self.name
-            else self.scenario_path.split("/")[-1].split(".")[0]
+            else (
+                self.path.split("/")[-1].split(".")[0] if self.path else "Scenario"
+            )
         )
         plt.figure(figsize=figsize)
         for geom in self.road_network.driveable_surface.geoms:
