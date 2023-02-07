@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import warnings
 from contextlib import suppress
 from copy import copy, deepcopy
@@ -238,8 +239,19 @@ class Scenario:
 
     def to_json(self, path) -> None:
         """Write the scenario to a json file."""
+        data = self.to_dict()
+        if data["road_network"] is not None:  # save the road network if it exists
+            rn_path = data["road_network"]["path"]
+            if rn_path is None or not os.path.exists(rn_path):
+                if rn_path is None:
+                    rn_path = (
+                        "road_network.json"
+                        if self.road_network.name is None
+                        else f"{self.road_network.name}.json"
+                    )
+                self.road_network.to_json(rn_path)
         with open(path, "w") as f:
-            json.dump(self.to_dict(), f)
+            json.dump(data, f)
 
     def describe(self) -> None:
         """Generate a text overview of the scenario."""
