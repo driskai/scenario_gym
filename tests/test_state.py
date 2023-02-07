@@ -1,7 +1,9 @@
 import numpy as np
 import pytest as pt
 
+from scenario_gym.scenario.actions import UpdateStateVariableAction
 from scenario_gym.scenario_gym import ScenarioGym
+from scenario_gym.xosc_interface import import_scenario
 
 
 @pt.fixture
@@ -10,10 +12,19 @@ def scenario_path(all_scenarios):
     return all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"]
 
 
-def test_poses(scenario_path):
+@pt.fixture
+def scenario(scenario_path):
+    """Get a scenario to test."""
+    s = import_scenario(scenario_path)
+    action = UpdateStateVariableAction(2.0, "TestAction", "ego", {"var": 1.0})
+    s.add_action(action, inplace=True)
+    return s
+
+
+def test_poses(scenario):
     """Test the basic pose data recoreded in the gym state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
 
     assert gym.state.t == 0.0
     assert gym.state.poses
@@ -45,10 +56,10 @@ def test_poses(scenario_path):
     ), "Wrong number of recorded poses."
 
 
-def test_state_info(scenario_path):
+def test_state_info(scenario):
     """Test running a scenario and getting data from the state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
 
     for _ in range(10):
         gym.step()
@@ -73,10 +84,10 @@ def test_state_info(scenario_path):
     assert "Road" in names, "Entity is on the road."
 
 
-def test_step(scenario_path):
+def test_step(scenario):
     """Test the basic pose data recoreded in the gym state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
     (ego, hazard) = gym.state.scenario.entities[:2]
 
     poses = {ego: np.random.randn(6)}
@@ -90,10 +101,23 @@ def test_step(scenario_path):
     assert gym.state.t == 1.0
 
 
-def test_reset(scenario_path):
+def test_state_actions(scenario):
+    """Test simulation a scenario with actions."""
+    gym = ScenarioGym(timestep=0.1)
+    gym.set_scenario(scenario)
+    assert not gym.state.entity_state[
+        scenario.entities[0]
+    ], "No actions should be applied."
+    gym.rollout()
+    assert (
+        gym.state.entity_state[scenario.entities[0]]["var"] == 1.0
+    ), "Action not applied."
+
+
+def test_reset(scenario):
     """Test the basic pose data recoreded in the gym state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
 
     ego = gym.state.scenario.entities[0]
     poses = gym.state.recorded_poses(ego).copy()
@@ -107,19 +131,16 @@ def test_reset(scenario_path):
     assert gym.state.t == 0.0
 
 
-def test_to_scenario(all_scenarios) -> None:
+def test_to_scenario(scenario) -> None:
     """
     Rollout a single scenario and write to a new scenario.
 
     Output the xosc then load it again and rollout the
     recorded version.
-
     """
-    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
-
     # rollout
     gym = ScenarioGym()
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
     gym.rollout()
     old_scenario = gym.state.scenario
 

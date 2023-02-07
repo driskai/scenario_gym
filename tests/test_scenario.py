@@ -8,13 +8,17 @@ import pytest as pt
 
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario import Scenario
+from scenario_gym.scenario.actions import UpdateStateVariableAction
 from scenario_gym.xosc_interface import import_scenario
 
 
 @pt.fixture
 def example_scenario(all_scenarios):
     """Get a scenario to test."""
-    return import_scenario(all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"])
+    s = import_scenario(all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"])
+    action = UpdateStateVariableAction(2.0, "TestAction", "ego", {"var": 1.0})
+    s.add_action(action, inplace=True)
+    return s
 
 
 @pt.fixture
