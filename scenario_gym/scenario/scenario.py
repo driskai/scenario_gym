@@ -189,7 +189,18 @@ class Scenario:
 
         road_network = data.get("road_network")
         if road_network is not None:
-            road_network = RoadNetwork.create_from_json(road_network["path"])
+            if road_network.get("path") is not None:
+                path = road_network["path"]
+                if path.endswith(".json"):
+                    road_network = RoadNetwork.create_from_json(path)
+                elif road_network.path.endswith(".xodr"):
+                    road_network = RoadNetwork.create_from_xodr(path)
+            else:
+                road_network = RoadNetwork(
+                    roads=[],
+                    intersections=[],
+                    name=road_network.get("name"),
+                )
 
         actions = []
         for a_data in data.get("actions", ()):
