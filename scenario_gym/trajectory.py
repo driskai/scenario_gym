@@ -63,7 +63,12 @@ class Trajectory:
         _data: List[NDArray] = []
         for f in self._fields:
             d = data[:, perm[fields.index(f)]] if f in fields else np.zeros(n)
-            if f == "h":
+            if f == "t":
+                if np.unique(d).size != n:
+                    raise ValueError(
+                        "Duplicate timestamps found. All timestamps must be unique."
+                    )
+            elif f == "h":
                 d = _resolve_heading(d)
             if f not in fields or (f in fields and np.isfinite(d).sum() != n):
                 if f == "h" and n == 1:
