@@ -94,9 +94,9 @@ def add_connection(conn: Tuple[Lane, Lane]) -> None:
     """Connect a pair of successive lanes."""
     pre, suc = conn
     if pre not in suc.predecessors:
-        suc.predecessors.append(pre)
+        suc.predecessors.append(pre.id)
     if suc not in pre.successors:
-        pre.successors.append(suc)
+        pre.successors.append(suc.id)
 
 
 def xodr_to_sg_roads(
