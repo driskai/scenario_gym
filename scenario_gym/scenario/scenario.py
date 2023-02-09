@@ -237,10 +237,10 @@ class Scenario:
             data = json.load(f)
         return cls.from_dict(data, e_classes=e_classes, a_classes=a_classes)
 
-    def to_json(self, path) -> None:
+    def to_json(self, path, export_road_network: bool = False) -> None:
         """Write the scenario to a json file."""
         data = self.to_dict()
-        if data["road_network"] is not None:  # save the road network if it exists
+        if export_road_network and data["road_network"] is not None:
             rn_path = data["road_network"]["path"]
             if rn_path is None or not os.path.exists(rn_path):
                 if rn_path is None:
