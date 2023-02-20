@@ -62,7 +62,7 @@ class Trajectory:
 
         _data: List[NDArray] = []
         for f in self._fields:
-            d = data[:, perm[fields.index(f)]] if f in fields else np.zeros(n)
+            d = data[:, perm.index(fields.index(f))] if f in fields else np.zeros(n)
             if f == "t":
                 if np.unique(d).size != n:
                     raise ValueError(
