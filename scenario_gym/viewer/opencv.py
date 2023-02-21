@@ -362,6 +362,11 @@ class OpenCVViewer(Viewer):
 
         # add to frame
         c = self.entity_colors[entity_idx]
+        # Extra check that c is an instance of Color, for backwards compatibility
+        # with subclasses of OpenCVViewer.
+        if isinstance(c, tuple):
+            c = Color.create_from_tuple(c)
+
         xy = vec2pix(bbox_in_ego, mag=self.mag, h=self.h, w=self.w)
         xy_front = vec2pix(front_bbox, mag=self.mag, h=self.h, w=self.w)
 
