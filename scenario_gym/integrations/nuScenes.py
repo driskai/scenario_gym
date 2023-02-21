@@ -130,7 +130,7 @@ class NuScenesImporter:
 
     def convert_instance_sample_token_to_gym(
         self,
-        instance_token: str,
+        ego_instance_token: str,
         sample_token: str,
         seconds_history: float = 2.0,
         seconds_future: float = 6.0,
@@ -144,7 +144,7 @@ class NuScenesImporter:
 
         Parameters
         ----------
-        instance_token : str
+        ego_instance_token : str
             Instance token. This instance (entity) will be treated as the ego.
         sample_token : str
             Sample token to treat as t == 0. Later and earlier sample tokens will
@@ -225,12 +225,12 @@ class NuScenesImporter:
         map_name = self.predict_helper.get_map_name_from_sample_token(sample_token)
 
         entities, road_network = self._convert_to_entities_road_network(
-            instance_token_to_data, map_name, ego_instance_token=instance_token
+            instance_token_to_data, map_name, ego_instance_token=ego_instance_token
         )
 
         scenario = Scenario(
             entities,
-            name="_".join(((instance_token, sample_token))),
+            name="_".join(((ego_instance_token, sample_token))),
             road_network=road_network,
         )
         return scenario
