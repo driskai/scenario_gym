@@ -119,6 +119,9 @@ class OpenCVViewer(Viewer):
         width: int = 100,
         height: int = 100,
         window_name: str = "frame",
+        entity_color_dict: Optional[
+            Dict[Entity, Union[Color, BGRTuple, BGRATuple]]
+        ] = None,
         **colors: Union[Color, BGRTuple, BGRATuple],
     ):
         """
@@ -160,6 +163,12 @@ class OpenCVViewer(Viewer):
         window_name : str
             Name for the rendering window in non-headless mode.
 
+        entity_color_dict : Optional[
+            Dict[Entity, Union[Color, BGRTuple, BGRATuple]]
+        ]
+            Dictionary linking entities to colors in which they should be rendered.
+            By default None, meaning all entities will use their default colors.
+
         colors : Union[Color, BGRTuple, BGRATuple]
             Color changes as keyword arguments.
 
@@ -174,6 +183,9 @@ class OpenCVViewer(Viewer):
         self.entity_ref = render_entity
         self.window_name = window_name
         self.line_thickness = line_thickness
+        self.preset_entity_color_dict = (
+            {} if entity_color_dict is None else entity_color_dict
+        )
         self.centring_position = np.array([self.w / 2, self.h / 2])
         self.origin = np.array([0.0, 0.0])
         self._coords_cache = {}
@@ -306,7 +318,11 @@ class OpenCVViewer(Viewer):
 
     def get_entity_color(self, entity_idx: int, entity: Entity) -> Color:
         """Get the color to draw the given entity."""
-        if entity_idx == 0:
+        if entity in self.preset_entity_color_dict.keys():
+            c = self.preset_entity_color_dict[entity]
+            if isinstance(c, tuple):
+                c = Color.create_from_tuple(c)
+        elif entity_idx == 0:
             c = Color(0, 0, 128)
         elif isinstance(entity, Vehicle):
             c = Color(128, 0, 0)
