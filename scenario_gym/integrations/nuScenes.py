@@ -54,6 +54,9 @@ class NuScenesImporter:
         x and y range of coordinates. All lanes within this radius multiplied by
         the map_radius_multiplier of the centrepoint will be included. By default
         1.5
+    pre_loaded_data : NuScenes, optional
+        Pre-loaded (indexed) data object, for much faster init if the NuScenes
+        dataset has been pre-loaded already, by default None.
 
     """
 
@@ -62,11 +65,15 @@ class NuScenesImporter:
         data_root: str,
         dataset: str = "v1.0-mini",
         map_radius_multiplier: float = 1.5,
+        pre_loaded_data: Optional[NuScenes] = None,
     ):
         self.data_root = data_root
         self.dataset = dataset
 
-        self.data = NuScenes(self.dataset, dataroot=self.data_root)
+        if pre_loaded_data is not None:
+            self.data = pre_loaded_data
+        else:
+            self.data = NuScenes(self.dataset, dataroot=self.data_root)
         self.predict_helper = PredictHelper(self.data)
 
         self.maps = load_all_maps(self.predict_helper)
