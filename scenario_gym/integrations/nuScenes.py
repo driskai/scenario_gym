@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from random import choice
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 from nuscenes import NuScenes
@@ -128,11 +128,118 @@ class NuScenesImporter:
 
         return road_network
 
-    def convert_to_gym(
+    def convert_instance_sample_token_to_gym(
+        self,
+        instance_token: str,
+        sample_token: str,
+        seconds_history: float = 2.0,
+        seconds_future: float = 6.0,
+    ) -> Scenario:
+        """
+        Convert an (instance token, sample token) pair to a scenario gym scenario.
+
+        Note in the resulting scenario, the sample token will occur at t==0. Since
+        rendering begins at t==0, to render the entire scenario, translate all
+        entities in time.
+
+        Parameters
+        ----------
+        instance_token : str
+            Instance token. This instance (entity) will be treated as the ego.
+        sample_token : str
+            Sample token to treat as t == 0. Later and earlier sample tokens will
+            be queried to create the scenario.
+        seconds_history : float, optional
+            Seconds before the provided sample_token to query samples for, by
+            default 2.0
+        seconds_future : float, optional
+            Seconds after the provided sample_token to query samples for, by
+            default 6.0
+
+        Returns
+        -------
+        Scenario
+            Scenario gym scenario corresponding to this NuScenes data.
+
+        """
+        # Link from instance IDs to relevant instance (entity) data
+        # We will use the current sample token as t = 0.
+        # Note scenario simulation starts at t=0, so to simulate the whole scenario
+        # including past, the scenario.translate method should be used.
+        instance_token_to_data: Dict[str, NuScenesInstanceData] = {}
+
+        instance_token_to_past_data = self.predict_helper.get_past_for_sample(
+            sample_token,
+            seconds=seconds_history,
+            in_agent_frame=False,
+            just_xy=False,
+        )
+        instance_token_to_current_data = {
+            d["instance_token"]: [d]
+            for d in self.predict_helper.get_annotations_for_sample(sample_token)
+        }
+        instance_token_to_future_data = self.predict_helper.get_future_for_sample(
+            sample_token,
+            seconds=seconds_future,
+            in_agent_frame=False,
+            just_xy=False,
+        )
+
+        for instance_token in (
+            instance_token_to_past_data.keys()
+            | instance_token_to_future_data.keys()
+            | instance_token_to_current_data.keys()
+        ):
+            past_data = instance_token_to_past_data.get(instance_token, [])
+            current_data = instance_token_to_current_data.get(instance_token, [])
+            future_data = instance_token_to_future_data.get(instance_token, [])
+
+            past_times = np.linspace(
+                -0.5,
+                -0.5 * (len(past_data)),
+                len(past_data),
+            )
+            future_times = np.linspace(
+                0.5,
+                0.5 * (len(future_data)),
+                len(future_data),
+            )
+
+            combined_times = list(past_times) + [0.0] + list(future_times)
+            combined_data = past_data + current_data + future_data
+
+            assert len(combined_data) == len(combined_times)
+
+            trajectory = [annotation["translation"] for annotation in combined_data]
+            sizes = [annotation["size"] for annotation in combined_data]
+            rotations = [annotation["rotation"] for annotation in combined_data]
+
+            instance_token_to_data[instance_token] = NuScenesInstanceData(
+                combined_data[0]["category_name"],
+                trajectory=trajectory,
+                times=combined_times,
+                sizes=sizes,
+                rotations=rotations,
+            )
+
+        map_name = self.predict_helper.get_map_name_from_sample_token(sample_token)
+
+        entities, road_network = self._convert_to_entities_road_network(
+            instance_token_to_data, map_name, ego_instance_token=instance_token
+        )
+
+        scenario = Scenario(
+            entities,
+            name="_".join(((instance_token, sample_token))),
+            road_network=road_network,
+        )
+        return scenario
+
+    def convert_scene_to_gym(
         self, scene_token: str, ego_instance_token: Optional[str] = None
     ) -> Scenario:
         """
-        Convert a nuScenes scene to a scenario gym scenario.
+        Convert a complete nuScenes scene to a scenario gym scenario.
 
         Where ego_instance_token is provided, the instance (agent) which corresponds
         to that token will be treated as the ego. Otherwise, a random car will be
@@ -211,6 +318,27 @@ class NuScenesImporter:
                     annotation["rotation"]
                 )
 
+        map_name = self.predict_helper.get_map_name_from_sample_token(
+            first_sample_token
+        )
+
+        (entities, road_network,) = self._convert_to_entities_road_network(
+            instance_token_to_data, map_name, ego_instance_token=ego_instance_token
+        )
+
+        scenario = Scenario(
+            entities,
+            name=scene_token,
+            road_network=road_network,
+        )
+        return scenario
+
+    def _convert_to_entities_road_network(
+        self,
+        instance_token_to_data,
+        map_name,
+        ego_instance_token: Optional[str] = None,
+    ) -> Tuple[list[Entity], RoadNetwork]:
         if ego_instance_token is not None:
             if ego_instance_token not in instance_token_to_data.keys():
                 raise KeyError("Ego instance token not found in scene.")
@@ -294,17 +422,8 @@ class NuScenesImporter:
 
         centre_coordinate = np.mean(all_trajectory_data, axis=0)[:2]
 
-        map_name = self.predict_helper.get_map_name_from_sample_token(
-            first_sample_token
-        )
-
         road_network = self._convert_nuScenes_map_to_road_network(
             map_name, centre_coordinate, radius
         )
 
-        scenario = Scenario(
-            entities,
-            name=scene_token,
-            road_network=road_network,
-        )
-        return scenario
+        return entities, road_network
