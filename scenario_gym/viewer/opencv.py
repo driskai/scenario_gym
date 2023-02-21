@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
@@ -10,7 +11,78 @@ from scenario_gym.state import State
 from .base import Viewer
 from .utils import to_ego_frame, vec2pix
 
-Color = Tuple[int, int, int]
+# Blue, Green, Red color tuple
+BGRTuple = Tuple[int, int, int]
+# Blue, Green, Red, alpha color tuple
+BGRATuple = Tuple[int, int, int, float]
+
+
+@dataclass
+class Color:
+    """Store BGR color for OpenCV viewing with optional alpha channel."""
+
+    B: int
+    G: int
+    R: int
+    alpha: float = 1.0  # alpha \in [0.0, 1.0]
+
+    @classmethod
+    def create_from_tuple(cls, color_tuple: Union[BGRTuple, BGRATuple]):
+        """
+        Create an instance of the Color class from a BGR or BGRalpha tuple.
+
+        Parameters
+        ----------
+        color_tuple : Union[BGRTuple, BGRATuple]
+            Tuple of B, G, R values (between 0 and 255 inclusive) and an optional
+            alpha (between 0.0 and 1.0 inclusive).
+
+        Returns
+        -------
+        Color
+            Instance of Color class corresponding to the color tuple passed in.
+
+        Raises
+        ------
+        ValueError
+            If the color tuple is not a valid color.
+
+        """
+        if not all(
+            (
+                isinstance(color_tuple, tuple),
+                (len(color_tuple) == 3 or len(color_tuple) == 4),
+                all(isinstance(x, int) for x in color_tuple[:3]),
+                0 <= min(color_tuple[:3]),
+                255 >= max(color_tuple[:3]),
+            )
+        ):
+            raise ValueError(
+                f"{color_tuple} is not a valid color. Must be a tuple of 3 ints "
+                + "(and optionally 1 float for the alpha channel)."
+            )
+        if len(color_tuple) == 3:
+            color = cls(*color_tuple)
+        else:
+            alpha = color_tuple[3]
+            if not isinstance(alpha, float):
+                raise ValueError(
+                    f"Provided alpha value {alpha} is not valid; "
+                    + "must be a float."
+                )
+            if alpha < 0.0 or alpha > 1.0:
+                raise ValueError(
+                    f"Provided alpha value {alpha} is not valid; "
+                    + "must be between 0.0 and 1.0."
+                )
+            color = cls(*color_tuple[:3], alpha=alpha)
+
+        return color
+
+    @property
+    def bgr(self) -> BGRTuple:
+        """Return the BGR tuple corresponding to this color."""
+        return (self.B, self.G, self.R)
 
 
 class OpenCVViewer(Viewer):
@@ -23,16 +95,16 @@ class OpenCVViewer(Viewer):
     """
 
     _renderable_layers: Dict[str, Optional[Color]] = {
-        "driveable_surface": (128, 128, 128),
-        "driveable_surface_boundary": (250, 250, 250),
-        "walkable_surface": (210, 210, 210),
-        "buildings": (128, 128, 128),
-        "roads": (128, 128, 128),
-        "intersections": (128, 128, 128),
-        "lanes": (128, 128, 128),
-        "road_centers": (180, 180, 180),
-        "lane_centers": (255, 178, 102),
-        "text": (250, 250, 250),
+        "driveable_surface": Color(128, 128, 128),
+        "driveable_surface_boundary": Color(250, 250, 250),
+        "walkable_surface": Color(210, 210, 210),
+        "buildings": Color(128, 128, 128),
+        "roads": Color(128, 128, 128),
+        "intersections": Color(128, 128, 128),
+        "lanes": Color(128, 128, 128),
+        "road_centers": Color(180, 180, 180),
+        "lane_centers": Color(255, 178, 102),
+        "text": Color(250, 250, 250),
     }
 
     def __init__(
@@ -47,7 +119,7 @@ class OpenCVViewer(Viewer):
         width: int = 100,
         height: int = 100,
         window_name: str = "frame",
-        **colors: Color,
+        **colors: Union[Color, BGRTuple, BGRATuple],
     ):
         """
         Init the viewer.
@@ -88,7 +160,7 @@ class OpenCVViewer(Viewer):
         window_name : str
             Name for the rendering window in non-headless mode.
 
-        colors : Color
+        colors : Union[Color, BGRTuple, BGRATuple]
             Color changes as keyword arguments.
 
         """
@@ -130,18 +202,8 @@ class OpenCVViewer(Viewer):
             **self._renderable_layers,
             **colors,
         }.items():
-            if not all(
-                (
-                    isinstance(v, tuple),
-                    len(v) == 3,
-                    all(isinstance(x, int) for x in v),
-                    0 <= min(v),
-                    255 >= max(v),
-                )
-            ):
-                raise ValueError(
-                    f"{v} is not a valid color for {k}. Must be a tuple of 3 ints."
-                )
+            if isinstance(v, tuple):
+                v = Color.create_from_tuple(v)
             setattr(self, f"{k}_color", v)
 
         self.base_frame = (
@@ -149,7 +211,7 @@ class OpenCVViewer(Viewer):
                 [int(self.mag * self.w), int(self.mag * self.h), 3],
                 dtype=np.uint8,
             )
-            * np.array(self.background_color, dtype=np.uint8)[None, None, :]
+            * np.array(self.background_color.bgr, dtype=np.uint8)[None, None, :]
         )
         self._frame = self.reset_frame()
         self._state = self._entity_colour_dict = None
@@ -245,13 +307,13 @@ class OpenCVViewer(Viewer):
     def get_entity_color(self, entity_idx: int, entity: Entity) -> Color:
         """Get the color to draw the given entity."""
         if entity_idx == 0:
-            c = (0, 0, 128)
+            c = Color(0, 0, 128)
         elif isinstance(entity, Vehicle):
-            c = (128, 0, 0)
+            c = Color(128, 0, 0)
         elif isinstance(entity, Pedestrian):
-            c = (0, 128, 0)
+            c = Color(0, 128, 0)
         else:
-            c = (221, 160, 221)
+            c = Color(221, 160, 221)
         return c
 
     def draw_entity(
@@ -286,8 +348,14 @@ class OpenCVViewer(Viewer):
         c = self.entity_colors[entity_idx]
         xy = vec2pix(bbox_in_ego, mag=self.mag, h=self.h, w=self.w)
         xy_front = vec2pix(front_bbox, mag=self.mag, h=self.h, w=self.w)
-        cv2.fillPoly(self._frame, [xy], c)
-        cv2.fillPoly(self._frame, [xy_front], self.entity_front_color)
+
+        entity_poly_frame = self._frame.copy()
+        cv2.fillPoly(entity_poly_frame, [xy], c.bgr)
+        cv2.fillPoly(entity_poly_frame, [xy_front], self.entity_front_color.bgr)
+
+        self._frame = cv2.addWeighted(
+            self._frame, (1.0 - c.alpha), entity_poly_frame, c.alpha, 0
+        )
 
     def render_text(self, state: State) -> None:
         """Add text to the frame."""
@@ -298,7 +366,7 @@ class OpenCVViewer(Viewer):
             (10, int(0.9 * self.mag * self.h)),  # bottom left corner of text
             cv2.FONT_HERSHEY_SIMPLEX,  # font
             1,  # font scale
-            self.text_color,  # font color
+            self.text_color.bgr,  # font color
             1,  # thickness
             2,  # line type
         )
@@ -317,14 +385,14 @@ class OpenCVViewer(Viewer):
         xy = to_ego_frame(self.get_coords(geom, use_cache=use_cache), ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
         if isinstance(geom, LineString):
-            cv2.polylines(self._frame, [xy], False, c, self.line_thickness)
+            cv2.polylines(self._frame, [xy], False, c.bgr, self.line_thickness)
         else:
-            cv2.fillPoly(self._frame, [xy], c)
+            cv2.fillPoly(self._frame, [xy], c.bgr)
             for interior in geom.interiors:
                 # cannot cache as the id is different each time
                 xy = to_ego_frame(np.array(interior.xy).T, ego_pose)
                 xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-                cv2.fillPoly(self._frame, [xy], self.background_color)
+                cv2.fillPoly(self._frame, [xy], self.background_color.bgr)
 
     def get_coords(
         self,
