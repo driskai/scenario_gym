@@ -10,6 +10,7 @@ from scenario_gym.entity import Entity, Pedestrian, Vehicle
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario import Scenario
 from scenario_gym.trajectory import Trajectory
+from scenario_gym.utils import load_properties_from_xml
 
 from .catalogs import Catalog, load_object, read_catalog
 
@@ -162,11 +163,20 @@ def import_scenario(
                 )
             entities[entity_ref].trajectory = Trajectory(traj_data)
 
+    header = osc_root.find("FileHeader")
+    if header is not None:
+        properties, files = load_properties_from_xml(header)
+        if files and "files" not in properties:
+            properties["files"] = files
+    else:
+        properties = {}
+
     scenario = Scenario(
         list(entities.values()),
         name=os.path.splitext(os.path.basename(osc_file))[0],
         path=osc_file,
         road_network=road_network,
+        properties=properties,
     )
 
     if relabel:

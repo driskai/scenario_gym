@@ -1,11 +1,10 @@
 from abc import ABC, abstractclassmethod
-from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 from lxml.etree import Element
 
-from scenario_gym.utils import ArgsKwargs
+from scenario_gym.utils import ArgsKwargs, load_properties_from_xml
 
 
 @dataclass(frozen=True)
@@ -149,7 +148,7 @@ class CatalogEntry(CatalogObject):
         category = element.attrib[cname] if cname in element.attrib else None
         bb = element.find("BoundingBox")
         bb = BoundingBox.from_xml(catalog, bb)
-        properties, files = cls.load_properties_from_xml(element)
+        properties, files = load_properties_from_xml(element)
         return (
             catalog,
             entry_name,
@@ -159,38 +158,6 @@ class CatalogEntry(CatalogObject):
             properties,
             files,
         ), {}
-
-    @staticmethod
-    def load_properties_from_xml(
-        element: Element,
-    ) -> Tuple[Dict[str, Union[str, float]], List[str]]:
-        """
-        Load properties from the xml element.
-
-        These can be either `Property` or `File` elements. `Property` elements are
-        given with `name` and `value` attributes (`name` must be unique for the
-        entry) and are returned as a dict of values indexed by `name`. The value
-        will be converted to a float if it can otherwise the string will be
-        returned. `File` elements must have a `filepath` attribute which will
-        be parsed. Multiple files can be stored with one entity.
-        """
-        files = []
-        properties = {}
-        prop = element.find("Properties")
-        if prop is not None:
-            for child in prop.findall("Property"):
-                try:
-                    v = child.attrib["value"]
-                    with suppress(ValueError):
-                        v = float(v)
-                    properties[child.attrib["name"]] = v
-                except KeyError as e:
-                    raise RuntimeError(
-                        "Property could not be loaded without `value` key."
-                    ) from e
-            for file in prop.findall("File"):
-                files.append(file.attrib["filepath"])
-        return properties, files
 
     @property
     def catalog_name(self) -> str:

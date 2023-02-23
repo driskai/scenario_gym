@@ -15,7 +15,7 @@ def write_scenario(
     filepath: str,
     base_road_network_path: str = "../Road_Networks",
     default_catalog_rel_path: str = "../Catalogs",
-    osc_minor_version: int = 0,
+    osc_minor_version: int = 2,
 ) -> None:
     """
     Write a scenario to an OpenScenario file.
@@ -92,6 +92,14 @@ def write_scenario(
     sb = xosc.StoryBoard(init)
     sb.add_story(story)
 
+    properties = xosc.Properties()
+    for k, v in scenario.properties.items():
+        if k == "files" and isinstance(v, list):
+            for f in v:
+                properties.add_file(f)
+        else:
+            properties.add_property(k, str(v))
+
     desc = (
         f"Scenario {name} recorded in the dRISK Scenario Gym subject to the dRISK "
         "License Agreement (https://drisk.ai/license/)."
@@ -105,6 +113,7 @@ def write_scenario(
         roadnetwork=rn,
         catalog=catalog,
         osc_minor_version=osc_minor_version,
+        header_properties=properties,
     )
     element = ET.Element("OpenSCENARIO")
     element.extend(
@@ -150,7 +159,7 @@ def get_follow_trajectory_event(
     traj.add_shape(polyline)
     follow_trajectory_action = xosc.FollowTrajectoryAction(
         traj,
-        following_mode=xosc.FollowMode.position,
+        following_mode=xosc.FollowingMode.position,
         reference_domain=xosc.ReferenceContext.absolute,
         scale=1,
         offset=0,
@@ -158,7 +167,7 @@ def get_follow_trajectory_event(
     follow_trajectory_action.version_minor = osc_minor_version
     follow_trajectory_event = xosc.Event(
         f"{e.ref}_follow_trajectory_event",
-        xosc.Priority.overwrite,
+        xosc.Priority.override,
     )
     follow_trajectory_event.add_action(
         "follow_trajectory_action",

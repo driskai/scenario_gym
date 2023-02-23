@@ -71,6 +71,8 @@ def test_write_scenario(all_scenarios) -> None:
 
     # output to OpenSCENARIO
     new_scenario = gym.state.to_scenario()
+    new_scenario.properties["a"] = 1
+    new_scenario.properties["files"] = ["a.txt"]
     write_scenario(new_scenario, out_path)
 
     # reload and test
@@ -79,6 +81,9 @@ def test_write_scenario(all_scenarios) -> None:
         1 for t in gym.state.scenario.trajectories.values() if len(t) == 1
     )
     gym.load_scenario(out_path)
+    print(gym.state.scenario.properties)
+    assert gym.state.scenario.properties["a"] == 1, "Properties not copied."
+    assert gym.state.scenario.properties["files"] == ["a.txt"]
     traj2 = gym.state.scenario.entities[0].trajectory
     assert (
         len(gym.state.scenario.entities) == n_entities
@@ -101,3 +106,12 @@ def test_write_scenario(all_scenarios) -> None:
             np.allclose(traj1.position_at_t(10.0), traj2.position_at_t(10.0)),
         ]
     ), "Recorded and true trajectories differ."
+
+
+def test_properties(all_scenarios):
+    """Test loading properties from xosc."""
+    s = all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"]
+    s = import_scenario(s)
+    assert s.properties["prop"] == 64, "Property not loaded correctly."
+    assert s.properties["prop2"] == "64a", "Property not loaded correctly."
+    assert s.properties["files"] == ["test.txt"], "Property not loaded correctly."
