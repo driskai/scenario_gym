@@ -24,7 +24,7 @@ def t0_scenario(all_scenarios):
 def scenario(scenario_path):
     """Get a scenario to test."""
     s = import_scenario(scenario_path)
-    action = UpdateStateVariableAction(2.0, "TestAction", "ego", {"var": 1.0})
+    action = UpdateStateVariableAction(3.0, "TestAction", "ego", {"var": 1.0})
     s.add_action(action, inplace=True)
     return s
 
