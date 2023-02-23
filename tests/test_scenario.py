@@ -8,13 +8,17 @@ import pytest as pt
 
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario import Scenario
+from scenario_gym.scenario.actions import UpdateStateVariableAction
 from scenario_gym.xosc_interface import import_scenario
 
 
 @pt.fixture
 def example_scenario(all_scenarios):
     """Get a scenario to test."""
-    return import_scenario(all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"])
+    s = import_scenario(all_scenarios["3e39a079-5653-440c-bcbe-24dc9f6bf0e6"])
+    action = UpdateStateVariableAction(2.0, "TestAction", "ego", {"var": 1.0})
+    s.add_action(action, inplace=True)
+    return s
 
 
 @pt.fixture
@@ -69,6 +73,39 @@ def test_copy_scenarios(example_entity):
         s.road_network
     ), "Road networks should be the same."
     assert s_new.properties == s.properties, "Properties should be the same."
+
+
+def test_add_entity(example_scenario, example_entity):
+    """Test adding an entity to a scenario."""
+    s = example_scenario.copy()
+    new_entity = example_entity.copy()
+    new_entity.ref = "new_entity"
+    s.add_entity(new_entity, inplace=True)
+    assert len(s.entities) == len(example_scenario.entities) + 1
+    assert new_entity in s.entities, "Entity should be in the scenario."
+    assert s.entity_by_name("new_entity") == new_entity
+
+    s2 = example_scenario.add_entity(new_entity, inplace=False)
+    assert len(s2.entities) == len(example_scenario.entities) + 1
+    assert new_entity in s2.entities, "Entity should be in the scenario."
+    assert s2.entity_by_name("new_entity") == new_entity
+    assert new_entity not in example_scenario.entities
+
+
+def test_remove_entity(example_scenario):
+    """Test removing an entity from a scenario."""
+    s = example_scenario.copy()
+    e = s.entities[-1]
+    s.remove_entity(e, inplace=True)
+    assert len(s.entities) == len(example_scenario.entities) - 1
+    assert e not in s.entities, "Entity should not be in the scenario."
+
+    s2 = example_scenario.copy()
+    e = s2.entities[-1]
+    s3 = s2.remove_entity(e, inplace=False)
+    assert len(s3.entities) == len(s2.entities) - 1
+    assert e in s2.entities, "Entity should be in the scenario."
+    assert e not in s3.entities, "Entity should not be in the new scenario."
 
 
 def test_describe(example_scenario):

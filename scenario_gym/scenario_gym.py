@@ -134,7 +134,7 @@ class ScenarioGym:
         Parameters
         ----------
         scenario_path : str
-            The OpenSCENARIO file to be loaded.
+            The scenario file to be loaded. Can be OpenSCENARIO or JSON.
 
         create_agent : Callable[[str, Entity], Optional[Agent]]
             A function that returns an agent to control a given entity.
@@ -144,11 +144,14 @@ class ScenarioGym:
             vehicle_2, ..., pedestrian_1, ..., entity_1, ...
 
         """
-        scenario = import_scenario(
-            scenario_path,
-            relabel=relabel,
-            **kwargs,
-        )
+        if scenario_path.endswith(".json"):
+            scenario = Scenario.from_json(scenario_path)
+        else:
+            scenario = import_scenario(
+                scenario_path,
+                relabel=relabel,
+                **kwargs,
+            )
         self.set_scenario(scenario, create_agent=create_agent)
 
     def set_scenario(

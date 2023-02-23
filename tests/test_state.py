@@ -1,9 +1,10 @@
 import numpy as np
 import pytest as pt
 
+from scenario_gym.scenario.actions import UpdateStateVariableAction
 from scenario_gym.scenario_gym import ScenarioGym
 from scenario_gym.state import State
-from scenario_gym.xosc_interface.read import import_scenario
+from scenario_gym.xosc_interface import import_scenario
 
 
 @pt.fixture
@@ -19,10 +20,19 @@ def t0_scenario(all_scenarios):
     return import_scenario(pth).reset_start()
 
 
-def test_poses(scenario_path):
+@pt.fixture
+def scenario(scenario_path):
+    """Get a scenario to test."""
+    s = import_scenario(scenario_path)
+    action = UpdateStateVariableAction(2.0, "TestAction", "ego", {"var": 1.0})
+    s.add_action(action, inplace=True)
+    return s
+
+
+def test_poses(scenario):
     """Test the basic pose data recoreded in the gym state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
 
     assert gym.state.t == gym.state.scenario.ego.trajectory.min_t
     assert gym.state.poses
@@ -59,10 +69,10 @@ def test_poses(scenario_path):
     ), "Wrong number of recorded poses."
 
 
-def test_state_info(scenario_path):
+def test_state_info(scenario):
     """Test running a scenario and getting data from the state."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
 
     for _ in range(50):
         gym.step()
@@ -182,21 +192,17 @@ def test_reset_persist(scenario_path):
     assert len(state.poses) == n, "Wrong number of entities."
 
 
-def test_gym_reset(scenario_path):
-    """Test the basic pose data recoreded in the gym state."""
+def test_state_actions(scenario):
+    """Test simulation a scenario with actions."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
-
-    ego = gym.state.scenario.ego
-    poses = gym.state.recorded_poses(ego).copy()
-    assert poses.shape[0] == 2
-
-    gym.step()
-    assert gym.state.t == 0.1 + ego.trajectory.min_t
-
-    gym.reset_scenario()
-    assert np.allclose(poses, gym.state.recorded_poses(ego))
-    assert gym.state.t == ego.trajectory.min_t
+    gym.set_scenario(scenario)
+    assert not gym.state.entity_state[
+        scenario.entities[0]
+    ], "No actions should be applied."
+    gym.rollout()
+    assert (
+        gym.state.entity_state[scenario.entities[0]]["var"] == 1.0
+    ), "Action not applied."
 
 
 def test_to_scenario(all_scenarios) -> None:

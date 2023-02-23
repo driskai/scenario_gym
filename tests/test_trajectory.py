@@ -33,17 +33,17 @@ def test_unordered_create():
     """Test creating a trajectory with fields in a different order."""
     data = np.array(
         [
-            [0.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 1.0, 2.0],
-            [0.0, 1.0, 2.0],
-            [1.0, 2.0, 3.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 1.0, 0.0, 2.0],
+            [1.0, 2.0, 0.0, 3.0],
         ]
     )
-    traj = Trajectory(data, fields=["y", "x", "t"])
+    traj = Trajectory(data, fields=["y", "x", "h", "t"])
     assert np.allclose(traj.t, [0.0, 1.0, 2.0, 3.0]), "t not set correctly."
     assert np.allclose(traj.x, [0.0, 0.0, 1.0, 2.0]), "x not set correctly."
     assert np.allclose(traj.y, [0.0, 0.0, 0.0, 1.0]), "y not set correctly."
+    assert np.allclose(traj.h, [0.0, 1.0, 0.0, 0.0]), "h not set correctly."
 
 
 def test_create_with_duplicate_nan():

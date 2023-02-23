@@ -80,6 +80,8 @@ class State:
         self._callbacks: Dict[Type[StateCallback], StateCallback] = {}
 
         self.unapplied_actions: List[ScenarioAction]
+        self.action_apply_times: Dict[ScenarioAction, float]
+
         self.all_entities: List[Entity]
         self.poses: Dict[Entity, np.ndarray]
         self.prev_poses: Dict[Entity, np.ndarray]
@@ -145,6 +147,9 @@ class State:
         self._t: Optional[float] = None
         self._prev_t: Optional[float] = None
         self.unapplied_actions = self.scenario.actions.copy()
+        self.action_apply_times = {
+            a: float("nan") for a in self.scenario.actions.copy()
+        }
 
         self.all_entities = self.scenario.entities.copy()
         self.poses: Dict[Entity, np.ndarray] = {}
@@ -236,8 +241,9 @@ class State:
         """Update state actions."""
         unapplied: List[ScenarioAction] = []
         for act in self.unapplied_actions:
-            if self.t >= act.t:
+            if act.trigger_condition(self):
                 self.apply_action(act)
+                self.action_apply_times[act] = self.t
             else:
                 unapplied.append(act)
         self.unapplied_actions = unapplied
