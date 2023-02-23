@@ -97,6 +97,7 @@ class NuScenesImporter:
         lane_keys_and_records = [("lane", l) for l in lane_records["lane"]] + [
             ("lane_connector", l) for l in lane_records["lane_connector"]
         ]
+        lane_ids = set([l[1] for l in lane_keys_and_records])
         for lane_key, lane_record in lane_keys_and_records:
             lane = map.get(lane_key, lane_record)
             bounding_poly = map.extract_polygon(lane["polygon_token"])
@@ -106,8 +107,16 @@ class NuScenesImporter:
                 lane_record,
                 bounding_poly,
                 lane_centre,
-                map.get_outgoing_lane_ids(lane_record),
-                map.get_incoming_lane_ids(lane_record),
+                [
+                    l_id
+                    for l_id in map.get_outgoing_lane_ids(lane_record)
+                    if l_id in lane_ids
+                ],
+                [
+                    l_id
+                    for l_id in map.get_incoming_lane_ids(lane_record)
+                    if l_id in lane_ids
+                ],
                 LaneType.driving,
                 elevation=np.array(lane_centres[lane_record]),
             )
