@@ -427,6 +427,10 @@ class RoadNetwork:
             )
         else:
             elevation_values = np.concatenate(elevs, axis=0)
+
+        if elevation_values.shape[0] > 5000:
+            n = np.ceil(elevation_values.shape[0] / 5000)
+            elevation_values = elevation_values[:: int(n)]
         self._elevation_func = interp2d(
             *elevation_values[:, :2].T,
             elevation_values[:, 2],
