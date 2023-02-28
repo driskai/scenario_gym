@@ -120,14 +120,18 @@ def test_plot(example_scenario):
 
 def test_translate(example_scenario):
     """Test the translating a scenario."""
-    shift = np.arange(7)
+    shift = np.arange(7) + 1
     new_scenario = example_scenario.translate(shift)
     ts = np.linspace(0.0, example_scenario.length, 10)
     for e, e_new in zip(example_scenario.entities, new_scenario.entities):
         ps = e.trajectory.position_at_t(ts)
-        ps_new = e_new.trajectory.position_at_t(ts)
+        ps_new = e_new.trajectory.position_at_t(ts + shift[0])
         deltas = ps_new - ps
         assert np.allclose(deltas, shift[None, 1:])
+
+    a_new = new_scenario.actions[0]
+    a_old = example_scenario.actions[0]
+    assert a_new.t == a_old.t + shift[0]
 
 
 def test_to_dict(example_scenario):

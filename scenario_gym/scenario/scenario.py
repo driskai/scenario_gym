@@ -4,7 +4,7 @@ import json
 import os
 import warnings
 from contextlib import suppress
-from copy import copy, deepcopy
+from copy import copy
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 import matplotlib.pyplot as plt
@@ -116,7 +116,7 @@ class Scenario:
             name=f"Copy of {self.name}" if self.name is not None else None,
             path=self.path,
             road_network=self.road_network,
-            actions=deepcopy(self.actions),
+            actions=[a.copy() for a in self.actions],
             entities=[e.copy() for e in self.entities],
             properties=self.properties,
         )
@@ -184,6 +184,12 @@ class Scenario:
         scenario = self.copy() if not inplace else self
         for e in scenario.entities:
             e.trajectory = e.trajectory.translate(x)
+
+        actions = []
+        for a in scenario.actions:
+            actions.append(a.translate(x, inplace=inplace))
+        scenario.actions = actions
+
         return scenario
 
     def reset_start(self, entity: Optional[Entity] = None) -> Scenario:
