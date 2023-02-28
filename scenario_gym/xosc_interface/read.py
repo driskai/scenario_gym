@@ -5,10 +5,12 @@ from typing import Dict, List, Optional, Type
 
 import numpy as np
 from lxml import etree
+from lxml.etree import Element
 
 from scenario_gym.entity import Entity, Pedestrian, Vehicle
 from scenario_gym.road_network import RoadNetwork
-from scenario_gym.scenario import Scenario
+from scenario_gym.scenario import Scenario, ScenarioAction
+from scenario_gym.scenario.actions import UserDefinedAction
 from scenario_gym.trajectory import Trajectory
 from scenario_gym.utils import load_properties_from_xml
 
@@ -132,36 +134,41 @@ def import_scenario(
                 entities[entity_ref].trajectory = Trajectory(np.stack([tp], axis=0))
 
     # Read maneuver actions:
-    for maneuver_group in osc_root.iterfind("Storyboard/Story/Act/ManeuverGroup"):
-        entity_ref = maneuver_group.find("Actors/EntityRef")
+    actions = []
+    for man_group in osc_root.iterfind("Storyboard/Story/Act/ManeuverGroup"):
+        entity_ref = man_group.find("Actors/EntityRef")
         assert (
             entity_ref is not None
         ), "Could not find entity reference in maneuver group."
         entity_ref = entity_ref.attrib["entityRef"]
-        trajectory_points = []
+        entity = entities.get(entity_ref)
 
-        vertices = maneuver_group.findall(
-            "Maneuver/Event/Action/PrivateAction/RoutingAction/"
-            + "FollowTrajectoryAction/TrajectoryRef/Trajectory/Shape/"
-            + "Polyline/Vertex"
-        )
-        vertices.extend(
-            maneuver_group.findall(
-                "Maneuver/Event/Action/PrivateAction/RoutingAction/"
-                + "FollowTrajectoryAction/Trajectory/Shape/Polyline/Vertex"
+        if entity is None:
+            continue
+
+        for event in man_group.findall("Maneuver/Event"):
+            traj_action = event.find(
+                "Action/PrivateAction/RoutingAction/FollowTrajectoryAction"
             )
-        )
-        for vertex in vertices:
-            t = float(vertex.attrib["time"])
-            wp = vertex.find("Position/WorldPosition")
-            trajectory_points.append(traj_point_from_time_and_position(t, wp))
-        if entity_ref in entities:
-            traj_data = np.stack(trajectory_points, axis=0)
-            if (np.isnan(traj_data[:, 3]).sum() > 0) and (road_network is not None):
-                traj_data[:, 3] = road_network.elevation_at_point(
-                    traj_data[:, 1], traj_data[:, 2]
+            if traj_action is not None:
+                trajectory = read_trajectory_event(
+                    traj_action,
+                    road_network=road_network,
                 )
-            entities[entity_ref].trajectory = Trajectory(traj_data)
+                if trajectory is not None:
+                    entity.trajectory = trajectory
+                    continue
+
+            user_action = event.find("Action/UserDefinedAction")
+            start_trigger = event.find("StartTrigger")
+            if user_action is not None:
+                actions.extend(
+                    load_user_defined_action(
+                        entity,
+                        user_action,
+                        start_trigger=start_trigger,
+                    )
+                )
 
     header = osc_root.find("FileHeader")
     if header is not None:
@@ -177,12 +184,65 @@ def import_scenario(
         path=osc_file,
         road_network=road_network,
         properties=properties,
+        actions=actions,
     )
 
     if relabel:
         scenario = relabel_scenario(scenario)
 
     return scenario
+
+
+def read_trajectory_event(
+    trajectory_action: Element,
+    road_network: Optional[RoadNetwork] = None,
+) -> Optional[Trajectory]:
+    """Read a trajectory event from a ManeuverGroup."""
+    # trajectory points
+    trajectory_points = []
+    vertices = trajectory_action.findall(
+        "TrajectoryRef/Trajectory/Shape/Polyline/Vertex"
+    )
+    vertices.extend(trajectory_action.findall("Trajectory/Shape/Polyline/Vertex"))
+    if not vertices:
+        return None
+
+    for vertex in vertices:
+        t = float(vertex.attrib["time"])
+        wp = vertex.find("Position/WorldPosition")
+        trajectory_points.append(traj_point_from_time_and_position(t, wp))
+
+    traj_data = np.stack(trajectory_points, axis=0)
+    if (np.isnan(traj_data[:, 3]).sum() > 0) and (road_network is not None):
+        traj_data[:, 3] = road_network.elevation_at_point(
+            traj_data[:, 1], traj_data[:, 2]
+        )
+
+    return Trajectory(traj_data)
+
+
+def load_user_defined_action(
+    entity: Entity,
+    user_action: Element,
+    start_trigger: Optional[Element] = None,
+) -> List[ScenarioAction]:
+    """Load a user-defined action from an OpenSCENARIO file."""
+    cond = start_trigger.find(
+        "ConditionGroup/Condition/ByValueCondition/SimulationTimeCondition"
+    )
+    t = float(cond.attrib.get("value"))
+
+    acts = []
+    for child in user_action.findall("CustomCommandAction"):
+        acts.append(
+            UserDefinedAction(
+                t,
+                child.tag,
+                entity.ref,
+                {k: v for k, v in child.attrib.items()},
+            )
+        )
+    return acts
 
 
 def relabel_scenario(scenario: Scenario) -> Scenario:
@@ -212,7 +272,8 @@ def relabel_scenario(scenario: Scenario) -> Scenario:
         scenario._ref_to_entity[e.ref] = e
         old_to_new[cur] = e.ref
     for action in scenario.actions:
-        action.entity_ref = old_to_new[action.entity_ref]
+        if action.entity_ref in old_to_new:
+            action.entity_ref = old_to_new[action.entity_ref]
     return scenario
 
 
