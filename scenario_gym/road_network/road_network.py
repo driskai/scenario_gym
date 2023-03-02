@@ -2,7 +2,7 @@ import json
 from contextlib import suppress
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
@@ -46,6 +46,27 @@ class RoadNetwork:
     }
 
     @classmethod
+    def create_from_file(cls, filepath: str):
+        """
+        Create the road network from a file.
+
+        Parameters
+        ----------
+        filepath : str
+            The path to the file.
+
+        """
+        path = Path(filepath).absolute()
+        if not path.exists():
+            raise FileNotFoundError(f"File not found at: {path}.")
+
+        if path.suffix in (".json", ""):
+            return cls.create_from_json(filepath)
+        elif path.suffix == ".xodr":
+            return cls.create_from_xodr(filepath)
+        raise ValueError(f"Unknown file type: {path.suffix}.")
+
+    @classmethod
     @lru_cache(maxsize=15)
     def create_from_json(cls, filepath: str):
         """
@@ -59,7 +80,7 @@ class RoadNetwork:
         """
         with open(filepath) as f:
             data = json.load(f)
-        return cls.create_from_dict(data, name=Path(filepath).stem, path=filepath)
+        return cls.create_from_dict(data, name=Path(filepath).stem)
 
     @classmethod
     @lru_cache(maxsize=15)
@@ -105,7 +126,7 @@ class RoadNetwork:
             simplify_tolerance,
         )
 
-        return cls(roads=roads, name=path.stem, path=str(path))
+        return cls(roads=roads, name=path.stem)
 
     @classmethod
     def create_from_dict(cls, data: Dict, **kwargs):
@@ -134,12 +155,14 @@ class RoadNetwork:
                 continue
             objects[obj] = [obj_cls.from_dict(obj_data) for obj_data in data[key]]
 
+        if "name" not in kwargs and "name" in data:
+            kwargs["name"] = data["name"]
+
         return cls(**kwargs, **objects)
 
     def __init__(
         self,
         name: Optional[str] = None,
-        path: Optional[str] = None,
         **road_objects: Dict[str, List[RoadObject]],
     ):
         """
@@ -157,16 +180,12 @@ class RoadNetwork:
         name: Optional[str]
             Optional name for the road network.
 
-        path: Optional[str]
-            The filepath of the road network data.
-
         road_objects : Dict[str, List[RoadObject]]
             The road objects as keywords. `roads` and `intersections` must be
             passed.
 
         """
         self.name = name
-        self.path = path
 
         self._elevation_func: Optional[Callable[[float, float], float]] = None
         self._lane_parents: Dict[Lane, Optional[Union[Road, Intersection]]] = {}
@@ -366,11 +385,16 @@ class RoadNetwork:
                 geoms.append(x)
         return names, geoms
 
-    def to_json(self, filepath: str) -> None:
-        """Save the road network to json file."""
-        data = {}
+    def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Return a dict representation of the road network."""
+        data = {"name": self.name}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
+        return data
+
+    def to_json(self, filepath: str) -> None:
+        """Save the road network to json file."""
+        data = self.to_dict()
         with open(filepath, "w") as f:
             json.dump(data, f)
 

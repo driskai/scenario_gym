@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from lxml.etree import Element
+from scenariogeneration import xosc
 
 from scenario_gym.catalog_entry import (
     ArgsKwargs,
@@ -22,9 +23,13 @@ class PedestrianCatalogEntry(CatalogEntry):
     xosc_names = ["Pedestrian"]
 
     @classmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(
+        cls,
+        element: Element,
+        catalog: Optional[Catalog] = None,
+    ) -> ArgsKwargs:
         """Load the vehicle from an xml element."""
-        base_args, _ = super().load_data_from_xml(catalog_name, element)
+        base_args, _ = super().load_data_from_xml(element, catalog=catalog)
         mass = element.attrib.get("mass")
         if mass is not None:
             mass = float(mass)
@@ -34,7 +39,7 @@ class PedestrianCatalogEntry(CatalogEntry):
     def from_dict(cls, data: Dict[str, Any]):
         """Load the pedestrian from a dictionary."""
         return cls(
-            Catalog(data["catalog"]["catalog_name"], data["catalog"]["rel_path"]),
+            Catalog.from_dict(data["catalog"]) if "catalog" in data else None,
             data["catalog_entry"],
             data["catalog_category"],
             data["catalog_type"],
@@ -49,6 +54,24 @@ class PedestrianCatalogEntry(CatalogEntry):
         data = super().to_dict()
         data["mass"] = self.mass
         return data
+
+    def to_xosc(self) -> xosc.Pedestrian:
+        """Write the pedestrian to xosc."""
+        obj = xosc.Pedestrian(
+            self.catalog_entry,
+            self.mass,
+            self.bounding_box.to_xosc(),
+            getattr(
+                xosc.PedestrianCategory,
+                self.catalog_category,
+                xosc.PedestrianCategory.pedestrian,
+            ),
+        )
+        for k, v in self.properties.items():
+            obj.add_property(k, v)
+        for f in self.files:
+            obj.add_property_file(f)
+        return obj
 
 
 class Pedestrian(Entity):

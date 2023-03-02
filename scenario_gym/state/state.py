@@ -34,6 +34,7 @@ class State:
     def __init__(
         self,
         scenario: Scenario,
+        scenario_path: Optional[str] = None,
         persist: bool = False,
         conditions: Optional[List[Union[str, Callable[[State], bool]]]] = None,
         state_callbacks: Optional[Dict[str, StateCallback]] = None,
@@ -45,6 +46,9 @@ class State:
         ----------
         scenario : Scenario
             The scenario to be simulated.
+
+        scenario_path : Optional[str]
+            The path to the scenario file if loaded from one.
 
         persist : bool
             Whether entities should persist in the simulation.
@@ -60,6 +64,7 @@ class State:
 
         """
         self._scenario = scenario
+        self.scenario_path = scenario_path
         self.persist = persist
         if conditions is None:
             self.terminal_conditions = [TERMINAL_CONDITIONS["max_length"]]
@@ -388,7 +393,6 @@ class State:
         return Scenario(
             entities,
             name=name,
-            path=self.scenario.path,
             road_network=self.scenario.road_network,
             actions=self.scenario.actions,
         )

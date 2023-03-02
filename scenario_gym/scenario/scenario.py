@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 import warnings
 from contextlib import suppress
 from copy import copy
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 import matplotlib.pyplot as plt
@@ -33,7 +33,6 @@ class Scenario:
         self,
         entities: List[Entity],
         name: Optional[str] = None,
-        path: Optional[str] = None,
         road_network: Optional[RoadNetwork] = None,
         actions: Optional[List[ScenarioAction]] = None,
         properties: Optional[Dict[Any, Any]] = None,
@@ -42,14 +41,12 @@ class Scenario:
         self._ref_to_entity: Dict[str, Entity] = {e.ref: e for e in entities}
 
         self.name = name
-        self.path = path
         self.road_network = road_network
         self.actions = actions if actions is not None else []
         self.properties = properties if properties is not None else {}
 
         self._vehicles: Optional[List[Entity]] = None
         self._pedestrians: Optional[List[Entity]] = None
-        self._catalog_locations: Optional[Dict[str, str]] = None
 
     @property
     def entities(self) -> List[Entity]:
@@ -68,16 +65,6 @@ class Scenario:
         if ego is not None:
             return ego
         return self.entities[0]
-
-    @property
-    def catalog_locations(self) -> Dict[str, str]:
-        """Get the locations of each catalog."""
-        if self._catalog_locations is None:
-            catalogs = set((e.catalog_entry.catalog for e in self.entities))
-            self._catalog_locations = {
-                catalog.catalog_name: catalog.rel_path for catalog in catalogs
-            }
-        return self._catalog_locations
 
     @property
     def vehicles(self) -> List[Entity]:
@@ -114,7 +101,6 @@ class Scenario:
         """Create a copy of a scenario without copying the road network."""
         return self.__class__(
             name=f"Copy of {self.name}" if self.name is not None else None,
-            path=self.path,
             road_network=self.road_network,
             actions=[a.copy() for a in self.actions],
             entities=[e.copy() for e in self.entities],
@@ -217,17 +203,10 @@ class Scenario:
         road_network = data.get("road_network")
         if road_network is not None:
             if road_network.get("path") is not None:
-                path = road_network["path"]
-                if path.endswith(".json"):
-                    road_network = RoadNetwork.create_from_json(path)
-                elif road_network.path.endswith(".xodr"):
-                    road_network = RoadNetwork.create_from_xodr(path)
+                path = Path(road_network["path"])
+                road_network = RoadNetwork.create_from_file(path)
             else:
-                road_network = RoadNetwork(
-                    roads=[],
-                    intersections=[],
-                    name=road_network.get("name"),
-                )
+                road_network = RoadNetwork.create_from_dict(road_network)
 
         actions = []
         for a_data in data.get("actions", ()):
@@ -241,25 +220,37 @@ class Scenario:
         return cls(
             entities,
             name=data.get("name"),
-            path=data.get("path"),
             road_network=road_network,
             actions=actions,
             properties=data.get("properties", {}),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(
+        self,
+        road_network_path: Optional[str] = "../Road_Networks",
+    ) -> Dict[str, Any]:
         """Write the scenario to a dictionary."""
+        if self.road_network is None:
+            road_network = None
+        elif road_network_path is not None:
+            if not Path(road_network_path).is_file():
+                road_network_path = str(
+                    Path(
+                        road_network_path,
+                        f"{self.road_network.name}.json",
+                    )
+                )
+            road_network = {
+                "path": road_network_path,
+                "name": self.road_network.name,
+            }
+        else:
+            road_network = self.road_network.to_dict()
         return {
             "entities": [e.to_dict() for e in self.entities],
             "name": self.name,
-            "path": self.path,
-            "road_network": {
-                "name": self.road_network.name,
-                "path": self.road_network.path,
-            }
-            if self.road_network is not None
-            else None,
             "actions": [act.to_dict() for act in self.actions],
+            "road_network": road_network,
             "properties": self.properties,
         }
 
@@ -267,37 +258,68 @@ class Scenario:
     def from_json(
         cls,
         path: str,
+        road_network_dir: Optional[str] = None,
         e_classes: Tuple[Type[Entity]] = (Vehicle, Pedestrian, Entity),
         a_classes: Tuple[Type[ScenarioAction]] = (UpdateStateVariableAction,),
     ):
-        """Load the scenario from a json file."""
+        """
+        Load the scenario from a json file.
+
+        Parameters
+        ----------
+        path : str
+            The path to the json file.
+
+        road_network_dir : str, optional
+            The directory to search for the road network file. If the road network
+            path in the json is absolute then this will be ignored. Otherwise the
+            path used will be (road_network_dir / road network path) if the
+            road_network_dir is relative otherwise it will be the `directory of
+            path / road_network_dir / road network path`.
+
+        e_classes : Tuple[Type[Entity]], optional
+            The classes to use for loading entities.
+
+        a_classes : Tuple[Type[ScenarioAction]], optional
+            The classes to use for loading actions.
+
+        """
         with open(path, "r") as f:
             data = json.load(f)
-        return cls.from_dict(data, e_classes=e_classes, a_classes=a_classes)
-
-    def to_json(self, path, export_road_network: bool = False) -> None:
-        """Write the scenario to a json file."""
-        data = self.to_dict()
-        if export_road_network and data["road_network"] is not None:
-            rn_path = data["road_network"]["path"]
-            if rn_path is None or not os.path.exists(rn_path):
-                if rn_path is None:
-                    rn_path = (
-                        "road_network.json"
-                        if self.road_network.name is None
-                        else f"{self.road_network.name}.json"
+        if data.get("road_network", {}).get("path") is not None:
+            rn_path = Path(data["road_network"]["path"])
+            if not rn_path.is_absolute():
+                if road_network_dir is None:
+                    rn_path = Path(path).parent / rn_path
+                elif Path(road_network_dir).is_absolute():
+                    rn_path = Path(road_network_dir) / rn_path
+                else:
+                    rn_path = Path(
+                        Path(path).parent,
+                        road_network_dir,
+                        rn_path,
                     )
-                self.road_network.to_json(rn_path)
+                print(rn_path)
+                data["road_network"]["path"] = str(rn_path)
+        return cls.from_dict(
+            data,
+            e_classes=e_classes,
+            a_classes=a_classes,
+        )
+
+    def to_json(
+        self, path, road_network_path: Optional[str] = "../Road_Networks"
+    ) -> None:
+        """Write the scenario to a json file."""
+        data = self.to_dict(road_network_path=road_network_path)
         with open(path, "w") as f:
             json.dump(data, f)
 
     def describe(self) -> None:
         """Generate a text overview of the scenario."""
-        rn = self.road_network.path.split("/")[-1].split(".")[0]
+        rn = self.road_network.name if self.road_network is not None else "None"
         name = (
-            self.name.replace(".xosc", "")
-            if self.name is not None
-            else self.path.split("/")[-1].split(".")[0]
+            self.name.replace(".xosc", "") if self.name is not None else "scenario"
         )
         title = f"Scenario: {name}"
         under_header = "=" * len(title)
@@ -316,7 +338,6 @@ class Scenario:
             f"""
 {title}
 {under_header}
-Filepath: {self.path}
 Road network: {rn}
 Number of entities: {len(self.entities)}
 Total duration: {self.length:.4}s
@@ -350,12 +371,13 @@ Entities
             )
         )
         plt.figure(figsize=figsize)
-        for geom in self.road_network.driveable_surface.geoms:
-            plt.fill(*geom.exterior.xy, c="gray", alpha=0.25)
-            for i in geom.interiors:
-                plt.fill(*i.xy, c="white")
-        for r in self.road_network.roads:
-            plt.plot(*r.center.xy, c="white")
+        if self.road_network is not None:
+            for geom in self.road_network.driveable_surface.geoms:
+                plt.fill(*geom.exterior.xy, c="gray", alpha=0.25)
+                for i in geom.interiors:
+                    plt.fill(*i.xy, c="white")
+            for r in self.road_network.roads:
+                plt.plot(*r.center.xy, c="white")
         for i, e in enumerate(self.entities):
             c = "r" if i == 0 else "b"
             plt.plot(*e.trajectory.data[:, [1, 2]].T, c=c, label=e.ref)

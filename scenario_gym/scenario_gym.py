@@ -145,18 +145,21 @@ class ScenarioGym:
 
         """
         if scenario_path.endswith(".json"):
-            scenario = Scenario.from_json(scenario_path)
+            scenario = Scenario.from_json(scenario_path, **kwargs)
         else:
             scenario = import_scenario(
                 scenario_path,
                 relabel=relabel,
                 **kwargs,
             )
-        self.set_scenario(scenario, create_agent=create_agent)
+        self.set_scenario(
+            scenario, scenario_path=scenario_path, create_agent=create_agent
+        )
 
     def set_scenario(
         self,
         scenario: Scenario,
+        scenario_path: Optional[str] = None,
         create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
     ) -> None:
         """
@@ -167,12 +170,16 @@ class ScenarioGym:
         scenario : Scenario
             The scenario object.
 
+        scenario_path : Optional[str]
+            The path to the scenario file if it was loaded from one.
+
         create_agent : Callable[[str, Entity], Optional[Agent]]
             A function that returns an agent to control a given entity.
 
         """
         self.state = State(
             scenario,
+            scenario_path=scenario_path,
             persist=self.persist,
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
@@ -246,11 +253,13 @@ class ScenarioGym:
         if self.viewer is not None:
             self.state.last_keystroke = self.render()
 
-    def rollout(self, render: bool = False, **kwargs) -> None:
+    def rollout(
+        self, render: bool = False, video_path: Optional[str] = None
+    ) -> None:
         """Rollout the current scenario fully."""
         self.reset_scenario()
         if render:
-            self.state.last_keystroke = self.render(**kwargs)
+            self.state.last_keystroke = self.render(video_path=video_path)
         while not self.state.is_done:
             self.step()
         for agent in self.state.agents.values():
@@ -276,7 +285,7 @@ class ScenarioGym:
         else:
             self.viewer.close()
         if video_path is None:
-            path = self.state.scenario.path
+            path = self.state.scenario_path
             video_dir = os.path.join(os.path.dirname(path), "../Recordings")
             if os.path.exists(video_dir):
                 video_path = os.path.join(
@@ -287,7 +296,7 @@ class ScenarioGym:
                     + ".mp4",
                 )
             else:
-                video_path = os.path.splitext(self.state.scenario.path)[0] + ".mp4"
+                video_path = os.path.splitext(self.state.scenario_path)[0] + ".mp4"
         self.viewer.reset(video_path)
 
     def close(self) -> None:

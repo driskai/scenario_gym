@@ -97,16 +97,25 @@ def test_persist(vanishing_scenario):
         )
 
 
-def test_render(scenario, vanishing_scenario):
+def test_render(scenario, vanishing_scenario, all_scenarios):
     """Test the rendering of the gym."""
     gym = ScenarioGym()
     gym.set_scenario(scenario)
-    gym.rollout(render=True)
+    gym.rollout(
+        render=True,
+        video_path=(
+            all_scenarios[scenario.name]
+            .replace("Scenarios", "Recordings")
+            .replace(".xosc", ".mp4")
+        ),
+    )
     gym.set_scenario(vanishing_scenario)
     gym.rollout(
         render=True,
-        video_path=scenario.path.replace("Scenarios", "Recordings").replace(
-            ".xosc", "_vanishing.mp4"
+        video_path=(
+            all_scenarios[scenario.name]
+            .replace("Scenarios", "Recordings")
+            .replace(".xosc", "_vanishing.mp4")
         ),
     )
 
@@ -133,10 +142,10 @@ def test_run_scenarios(all_scenarios):
     )
 
 
-def _render_scenario(scenario):
+def _render_scenario(scenario, path):
     """Render one scenario."""
     gym = ScenarioGym(timestep=0.075)
-    gym.set_scenario(scenario)
+    gym.set_scenario(scenario, scenario_path=path)
     gym.rollout(render=True)
 
 
@@ -148,4 +157,4 @@ def test_multi_process_scenarios(all_scenarios):
         scenarios.append(import_scenario(path))
 
     with mp.Pool(num_processes) as p:
-        p.map(_render_scenario, scenarios)
+        p.starmap(_render_scenario, zip(scenarios, all_scenarios.values()))
