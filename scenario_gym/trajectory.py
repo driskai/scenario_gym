@@ -223,6 +223,31 @@ class Trajectory:
             )
         return self._interpolated_s(s)
 
+    def velocity_at_t(
+        self, t: Union[float, ArrayLike], eps: float = 1e-4
+    ) -> NDArray:
+        """
+        Compute the velocity of the entity at time t.
+
+        Parameters
+        ----------
+        t : float
+            The time at which the velocity is returned.
+
+        eps : float
+            The epsilon used to compute the velocity.
+
+        Returns
+        -------
+        np.ndarray
+            The velocity as a numpy array.
+
+        """
+        t = np.array(t)
+        return (
+            self.position_at_t(t + eps / 2) - self.position_at_t(t - eps / 2)
+        ) / eps
+
     def is_stationary(self) -> bool:
         """Return True if the trajectory is stationary."""
         return is_stationary(self.data)
