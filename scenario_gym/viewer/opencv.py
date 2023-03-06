@@ -103,7 +103,7 @@ class OpenCVViewer(Viewer):
         "intersections": Color(128, 128, 128),
         "lanes": Color(128, 128, 128),
         "road_centers": Color(180, 180, 180),
-        "lane_centers": Color(255, 178, 102),
+        "lane_centers": Color(255, 128, 128),
         "text": Color(250, 250, 250),
     }
 

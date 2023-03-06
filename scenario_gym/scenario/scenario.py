@@ -10,9 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scenario_gym.entity import Entity
-from scenario_gym.entity.pedestrian import Pedestrian
-from scenario_gym.entity.vehicle import Vehicle
+from scenario_gym.entity import Entity, MiscObject, Pedestrian, Vehicle
 from scenario_gym.road_network import RoadNetwork
 from scenario_gym.scenario.actions import ScenarioAction, UpdateStateVariableAction
 from scenario_gym.trajectory import Trajectory
@@ -379,7 +377,14 @@ Entities
             for r in self.road_network.roads:
                 plt.plot(*r.center.xy, c="white")
         for i, e in enumerate(self.entities):
-            c = "r" if i == 0 else "b"
+            if i == 0:
+                c = "r"
+            elif isinstance(e, Pedestrian):
+                c = "g"
+            elif isinstance(e, MiscObject):
+                c = "gray"
+            else:
+                c = "b"
             plt.plot(*e.trajectory.data[:, [1, 2]].T, c=c, label=e.ref)
             plt.plot(*e.trajectory.data[0, [1, 2]].T, c=c, marker="o")
         data = np.vstack([e.trajectory.data[:, [1, 2]] for e in self.entities])
