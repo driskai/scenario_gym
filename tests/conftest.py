@@ -91,6 +91,7 @@ def all_catalogs():
         "Scenario_Gym/PedestrianCatalogs/ScenarioGymPedestrianCatalog",
         "Scenario_Gym/VehicleCatalogs/ScenarioGymVehicleCatalog",
         "Custom_Catalog/MiscCatalogs/CustomCatalog",
+        "Custom_Catalog/MiscObjectCatalogs/CustomMiscObjectCatalog",
     ]
     return {r: os.path.join(base, r + ".xosc") for r in catalogs}
 

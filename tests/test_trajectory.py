@@ -207,6 +207,18 @@ def test_position_at_t():
     ), "Incorrect extrapolation."
 
 
+def test_velocity_at_t():
+    """Test the position at t method."""
+    data = np.array([[0, 0, 0], [1, 0, 1], [2, 0, 2]])
+    traj = Trajectory(data, fields=["t", "x", "y"])
+
+    # test basic interpolation
+    assert np.allclose(traj.velocity_at_t(0.5)[:2], [0, 1]), "Should be 0, 1."
+    assert np.allclose(
+        traj.velocity_at_t([0.5, 2.5])[:, :2], [[0, 1], [0, 0]]
+    ), "Incorrect broadcasting.."
+
+
 def test_subsample():
     """Test subsampling a trajectory."""
     traj = Trajectory(

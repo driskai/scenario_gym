@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from lxml.etree import Element
+from scenariogeneration import xosc
 
 from scenario_gym.catalog_entry import (
     ArgsKwargs,
@@ -25,7 +26,11 @@ class Axle(CatalogObject):
     position_z: float
 
     @classmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(
+        cls,
+        element: Element,
+        catalog: Optional[Catalog] = None,
+    ) -> ArgsKwargs:
         """Load the bounding box data form an xml element."""
         return (
             float(element.attrib["maxSteering"]),
@@ -56,6 +61,16 @@ class Axle(CatalogObject):
             data.get("position_z"),
         )
 
+    def to_xosc(self) -> xosc.Axle:
+        """Write the vehicle catalog entry to an xosc element."""
+        return xosc.Axle(
+            self.max_steering,
+            self.wheel_diameter,
+            self.track_width,
+            self.position_x,
+            self.position_z,
+        )
+
 
 @dataclass
 class VehicleCatalogEntry(CatalogEntry):
@@ -71,9 +86,13 @@ class VehicleCatalogEntry(CatalogEntry):
     xosc_names = ["Vehicle"]
 
     @classmethod
-    def load_data_from_xml(cls, catalog_name: str, element: Element) -> ArgsKwargs:
+    def load_data_from_xml(
+        cls,
+        element: Element,
+        catalog: Optional[Catalog] = None,
+    ) -> ArgsKwargs:
         """Load the vehicle from an xml element."""
-        base_args, _ = super().load_data_from_xml(catalog_name, element)
+        base_args, _ = super().load_data_from_xml(element, catalog=catalog)
         performance = element.find("Performance")
         front_axle = element.find("Axles/FrontAxle")
         rear_axle = element.find("Axles/RearAxle")
@@ -85,12 +104,12 @@ class VehicleCatalogEntry(CatalogEntry):
         else:
             max_speed = max_dec = max_acc = None
         front_axle = (
-            Axle.from_xml(catalog_name, front_axle)
+            Axle.from_xml(front_axle, catalog=catalog)
             if front_axle is not None
             else None
         )
         rear_axle = (
-            Axle.from_xml(catalog_name, rear_axle)
+            Axle.from_xml(rear_axle, catalog=catalog)
             if rear_axle is not None
             else None
         )
@@ -108,7 +127,7 @@ class VehicleCatalogEntry(CatalogEntry):
     def from_dict(cls, data: Dict[str, Any]):
         """Load the vehicle from a dictionary."""
         return cls(
-            Catalog(data["catalog"]["catalog_name"], data["catalog"]["rel_path"]),
+            Catalog.from_dict(data["catalog"]) if "catalog" in data else None,
             data["catalog_entry"],
             data["catalog_category"],
             data["catalog_type"],
@@ -145,6 +164,29 @@ class VehicleCatalogEntry(CatalogEntry):
             }
         )
         return data
+
+    def to_xosc(self) -> xosc.Vehicle:
+        """Create an xosc entity object from the catalog entry."""
+        obj = xosc.Vehicle(
+            self.catalog_entry,
+            getattr(
+                xosc.VehicleCategory,
+                self.catalog_category,
+                xosc.VehicleCategory.car,
+            ),
+            self.bounding_box.to_xosc(),
+            self.front_axle.to_xosc(),
+            self.rear_axle.to_xosc(),
+            self.max_speed,
+            self.max_acceleration,
+            self.max_deceleration,
+            mass=self.mass,
+        )
+        for k, v in self.properties.items():
+            obj.add_property(k, v)
+        for f in self.files:
+            obj.add_property_file(f)
+        return obj
 
 
 class Vehicle(Entity):

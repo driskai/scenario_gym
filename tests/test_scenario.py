@@ -134,9 +134,13 @@ def test_translate(example_scenario):
     assert a_new.t == a_old.t + shift[0]
 
 
-def test_to_dict(example_scenario):
+def test_to_dict(example_scenario, all_scenarios):
     """Test writing and reading the scenario from a dictionary."""
-    data = example_scenario.to_dict()
+    base_dir = os.path.join(
+        os.path.dirname(all_scenarios[example_scenario.name]),
+        "../Road_Networks",
+    )
+    data = example_scenario.to_dict(road_network_path=base_dir)
     s2 = Scenario.from_dict(data)
     assert (
         example_scenario.road_network.name == s2.road_network.name
@@ -155,8 +159,9 @@ def test_jsonable(example_scenario):
     """Test reading and writing scenarios from json."""
     with TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "example.json")
-        example_scenario.to_json(path)
+        example_scenario.to_json(path, road_network_path=None)
         s2 = Scenario.from_json(path)
+
     assert (
         example_scenario.road_network.name == s2.road_network.name
     ), "Road networks should have same name."
@@ -182,7 +187,7 @@ def test_jsonable_with_none(scenario_with_none_values):
     """Test reading and writing scenarios from json."""
     with TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "example.json")
-        scenario_with_none_values.to_json(path)
+        scenario_with_none_values.to_json(path, road_network_path=None)
         s2 = Scenario.from_json(path)
     assert (
         s2.entities[0].catalog_entry.front_axle.max_steering is None

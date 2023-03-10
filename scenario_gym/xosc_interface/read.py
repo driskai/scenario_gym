@@ -14,7 +14,7 @@ from scenario_gym.scenario.actions import UserDefinedAction
 from scenario_gym.trajectory import Trajectory
 from scenario_gym.utils import load_properties_from_xml
 
-from .catalogs import Catalog, load_object, read_catalog
+from .catalogs import load_object, read_catalog
 
 
 def import_scenario(
@@ -50,18 +50,17 @@ def import_scenario(
     catalogs: Dict[str, Dict[str, Entity]] = {}
     for catalog_location in osc_root.iterfind("CatalogLocations/"):
         rel_catalog_path = catalog_location.find("Directory").attrib["path"]
-        catalog_path = os.path.join(cwd, rel_catalog_path)
+        if not os.path.isabs(rel_catalog_path):
+            catalog_path = os.path.join(cwd, rel_catalog_path)
+        else:
+            catalog_path = rel_catalog_path
         for catalog_file in os.listdir(catalog_path):
             if catalog_file.endswith(".xosc"):
                 catalog, entries = read_catalog(
                     os.path.join(catalog_path, catalog_file),
-                    relative_catalog_path=rel_catalog_path,
                     entity_types=entity_types,
                 )
-                catalogs[catalog.catalog_name] = entries
-    # create a temporary catalog for entities that are not specified with a
-    # catalog reference
-    tmp_catalog = Catalog("tmp_catalog", osc_file)
+                catalogs[catalog.name] = entries
 
     # Import road network:
     rn_path = None
@@ -75,17 +74,15 @@ def import_scenario(
 
     road_network = None
     if rn_path is not None:
-        filepath = os.path.join(cwd, rn_path)
+        if not os.path.isabs(rn_path):
+            filepath = os.path.join(cwd, rn_path)
+        else:
+            filepath = rn_path
         extension = os.path.splitext(filepath)[1]
         if extension == "":
             filepath = f"{filepath}.json"
-        if not os.path.exists(filepath):
-            # warnings.warn(f"Could not find road network file: {filepath}.")
-            road_network = None
-        elif extension in (".json", ""):
-            road_network = RoadNetwork.create_from_json(filepath)
-        elif extension == ".xodr":
-            road_network = RoadNetwork.create_from_xodr(filepath)
+        with suppress(FileNotFoundError):
+            road_network = RoadNetwork.create_from_file(filepath)
 
     # add the entities to the scenario
     for scenario_object in osc_root.iterfind("Entities/ScenarioObject"):
@@ -94,7 +91,7 @@ def import_scenario(
         if cat_ref is None:
             ent = None
             for element in scenario_object.getchildren():
-                ent = load_object(tmp_catalog, element)
+                ent = load_object(element)
             if ent is None:
                 warnings.warn(
                     "Could not find a catalog reference or entry for entity "
@@ -181,7 +178,6 @@ def import_scenario(
     scenario = Scenario(
         list(entities.values()),
         name=os.path.splitext(os.path.basename(osc_file))[0],
-        path=osc_file,
         road_network=road_network,
         properties=properties,
         actions=actions,

@@ -14,7 +14,9 @@ def write_scenario(
     scenario: Scenario,
     filepath: str,
     base_road_network_path: str = "../Road_Networks",
-    default_catalog_rel_path: str = "../Catalogs",
+    road_network_extenstion: str = "json",
+    base_catalog_path: str = "../Catalogs",
+    use_catalog_references: bool = True,
     osc_minor_version: int = 2,
 ) -> None:
     """
@@ -31,9 +33,14 @@ def write_scenario(
     base_road_network_path : str
         Base path to the road networks.
 
-    default_catalog_rel_path : str
-        Default relative path to the catalogs. This is used if the catalog location
-        is not specified in the scenario.
+    road_network_extenstion : str
+        The extension of the road network file.
+
+    base_catalog_path : str
+        Base relative path to the catalogs.
+
+    use_catalog_references : bool
+        Whether to use catalog references for entities that have catalogs.
 
     osc_minor_version : int
         The OpenScenario minor version.
@@ -45,21 +52,33 @@ def write_scenario(
         else (os.path.splitext(os.path.basename(filepath)[-1])[0])
     )
 
-    rn_name = scenario.road_network.path.split("/")[-1].split(".")[0]
-    scenegraph = os.path.join(base_road_network_path, f"{rn_name}.json")
+    rn_name = (
+        scenario.road_network.name
+        if scenario.road_network.name is not None
+        else None
+    )
+    scenegraph = os.path.join(
+        base_road_network_path,
+        f"{rn_name}.{road_network_extenstion}",
+    )
     rn = xosc.RoadNetwork("", scenegraph)
 
     entities = xosc.Entities()
     catalog = xosc.Catalog()
     for e in scenario.entities:
         ce = e.catalog_entry
-        if ce.catalog_type not in catalog.catalogs:
-            catalog_dir = scenario.catalog_locations.get(ce.catalog_name)
-            if catalog_dir is None:
-                catalog_dir = default_catalog_rel_path
-            catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
-        catalog_ref = xosc.CatalogReference(ce.catalog_name, ce.catalog_entry)
-        entities.add_scenario_object(e.ref, catalog_ref)
+        if use_catalog_references and ce.catalog is not None:
+            if ce.catalog_type not in catalog.catalogs:
+                catalog_dir = os.path.join(
+                    base_catalog_path,
+                    ce.catalog.group_name,
+                    f"{ce.catalog_type}Catalogs",
+                )
+                catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
+            obj = xosc.CatalogReference(ce.catalog.name, ce.catalog_entry)
+        else:
+            obj = ce.to_xosc()
+        entities.add_scenario_object(e.ref, obj)
 
     init = xosc.Init()
     for e in scenario.entities:
