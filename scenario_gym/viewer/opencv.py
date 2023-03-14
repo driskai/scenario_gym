@@ -285,7 +285,8 @@ class OpenCVViewer(Viewer):
             if layer != "entity" and layer != "text":
                 getattr(self, f"render_{layer}")(state, ego_pose)
 
-        for entity_idx, (entity, pose) in enumerate(state.poses.items()):
+        for entity, pose in state.poses.items():
+            entity_idx = state.scenario.entities.index(entity)
             self.draw_entity(state, entity_idx, entity, pose, ego_pose)
 
         if "text" in self.render_layers:

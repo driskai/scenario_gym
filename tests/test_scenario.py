@@ -114,7 +114,7 @@ def test_describe(example_scenario):
 
 
 def test_plot(example_scenario):
-    """Test the `describe` method."""
+    """Test the `plot` method."""
     example_scenario.plot(show=False)
 
 

@@ -159,6 +159,7 @@ class Trajectory:
             range of the trajectory and extrapolate is False then None is returned.
 
         """
+        t = np.array(t)
         if self._interpolated is None:
             data = self.data
             if data.shape[0] == 1:
@@ -176,7 +177,7 @@ class Trajectory:
             extrapolate = True
         else:
             ext_bck = ext_fwd = extrapolate
-        if isinstance(t, float):
+        if t.ndim == 0:
             if not extrapolate and (t < self.min_t or t > self.max_t):
                 return None
             elif t < self.min_t and not ext_bck:

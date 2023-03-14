@@ -158,6 +158,9 @@ def test_position_at_t():
         traj.position_at_t(1.5, extrapolate=True)[:2], [1.5, 1.5]
     ), "Should be 1.5."
 
+    # test position with int
+    traj.position_at_t(1)
+
     # test simple extrapolation
     assert np.allclose(
         traj.position_at_t(2.5, extrapolate=True)[:2], [2.5, 2.5]
