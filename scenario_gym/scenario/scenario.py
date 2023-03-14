@@ -202,7 +202,12 @@ class Scenario:
         if road_network is not None:
             if road_network.get("path") is not None:
                 path = Path(road_network["path"])
-                road_network = RoadNetwork.create_from_file(path)
+                if path.exists():
+                    road_network = RoadNetwork.create_from_file(path)
+                elif road_network.get("name") is not None:
+                    road_network = RoadNetwork(name=road_network["name"])
+                else:
+                    road_network = None
             else:
                 road_network = RoadNetwork.create_from_dict(road_network)
 
