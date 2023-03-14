@@ -126,8 +126,13 @@ class VehicleCatalogEntry(CatalogEntry):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """Load the vehicle from a dictionary."""
+        catalog = (
+            Catalog.from_dict(data["catalog"])
+            if data.get("catalog") is not None
+            else None
+        )
         return cls(
-            Catalog.from_dict(data["catalog"]) if "catalog" in data else None,
+            catalog,
             data["catalog_entry"],
             data["catalog_category"],
             data["catalog_type"],
