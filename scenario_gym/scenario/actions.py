@@ -144,3 +144,26 @@ class UpdateStateVariableAction(FixedTAction):
                 state.entity_state[entity] = {}
             for k, v in self.action_variables.items():
                 state.entity_state[entity][k] = v
+
+    def trigger_condition(self, state: State) -> bool:
+        """Update when the state time is greater than action time."""
+        return state.t > self.t
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Write the action to a dictionary."""
+        return {
+            "t": self.t,
+            "action_class": self.action_class,
+            "entity_ref": self.entity_ref,
+            "action_variables": self.action_variables,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Load the action from a dictionary."""
+        return cls(
+            data["t"],
+            data["action_class"],
+            data["entity_ref"],
+            data["action_variables"],
+        )
