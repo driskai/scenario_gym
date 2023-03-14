@@ -361,13 +361,7 @@ Entities
             or saved.
 
         """
-        name = (
-            self.name.replace(".xosc", "")
-            if self.name
-            else (
-                self.path.split("/")[-1].split(".")[0] if self.path else "Scenario"
-            )
-        )
+        name = self.name if self.name is not None else "Scenario"
         plt.figure(figsize=figsize)
         if self.road_network is not None:
             for geom in self.road_network.driveable_surface.geoms:
