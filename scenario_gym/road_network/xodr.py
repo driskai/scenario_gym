@@ -1,5 +1,4 @@
 from typing import Dict, List, Optional, Tuple
-from uuid import uuid4
 
 import numpy as np
 from pyxodr.road_objects.lane import Lane as xodrLane
@@ -38,7 +37,7 @@ def xodr_lane_to_sg(
         ) from e
 
     return Lane(
-        str(uuid4()),
+        repr(lane),
         lane_boundary,
         lane_traffic_flow_line,
         [],
@@ -79,7 +78,7 @@ def road_to_sg(
                 old_to_new_lanes[lane] = sg_lane
 
         road = Road(
-            str(uuid4()),
+            repr(xodr_road),
             road_boundary,
             road_center,
             lanes=lanes,
