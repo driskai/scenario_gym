@@ -255,6 +255,22 @@ def test_subsample():
     ), "Incorrect trajectory produced."
 
 
+def test_subsample_stationary():
+    """Test subsampling a stationary trajectory."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+            ]
+        ),
+        fields=["t", "x", "y"],
+    )
+    t = traj.subsample(points_per_t=0.5)
+    assert np.allclose(t.data[0], np.zeros(7))
+    t = traj.subsample(points_per_s=0.5)
+    assert np.allclose(t.data[0], np.zeros(7))
+
+
 def test_curvature_subsample():
     """Test subsampling a trajectory."""
     base_traj = np.array(

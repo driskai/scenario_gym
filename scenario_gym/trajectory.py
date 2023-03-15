@@ -212,11 +212,13 @@ class Trajectory:
         """
         if self._interpolated_s is None:
             data = self.data
+            s = self.s
             if data.shape[0] == 1:
                 data = np.repeat(data, 2, axis=0)
                 data[-1, 0] += 1e-3
+                s = np.hstack([s[0] - 1e-3, s[0]])
             self._interpolated_s = interp1d(
-                self.s,
+                s,
                 data,
                 bounds_error=False,
                 fill_value=(data[0, :], data[-1, :]),
@@ -371,13 +373,14 @@ class Trajectory:
                 **kwargs,
             )
         if points_per_t:
-            n = int(np.ceil((self.max_t - self.min_t) * points_per_t))
+            n = int(max(1, np.ceil((self.max_t - self.min_t) * points_per_t)))
             ts = np.linspace(self.min_t, self.max_t, n)
             data = self.position_at_t(ts)
             return self.__class__(np.concatenate([ts[:, None], data], axis=1))
 
-        n = int(np.ceil(self.arclength * points_per_s))
+        n = int(max(1, np.ceil(self.arclength * points_per_s)))
         ss = np.linspace(0, self.arclength, n)
+        print(ss)
         data = self.position_at_s(ss)
         return self.__class__(data)
 
