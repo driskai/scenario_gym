@@ -2,11 +2,12 @@ import json
 from contextlib import suppress
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
-from scipy.interpolate import interp2d
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from scipy.spatial import Delaunay
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
 
@@ -187,7 +188,11 @@ class RoadNetwork:
         """
         self.name = name
 
-        self._elevation_func: Optional[Callable[[float, float], float]] = None
+        # cached elevation interpolation functions
+        self._hull = None
+        self._inside_fn = None
+        self._outisde_fn = None
+
         self._lane_parents: Dict[Lane, Optional[Union[Road, Intersection]]] = {}
 
         self.object_names = self._default_object_names.copy()
@@ -401,7 +406,9 @@ class RoadNetwork:
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""
         self._lane_parents.clear()
-        self._elevation_func = None
+        self._hull = None
+        self._inside_fn = None
+        self._outisde_fn = None
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
             if isinstance(obj, _lru_cache_wrapper):
@@ -424,12 +431,37 @@ class RoadNetwork:
         """Estimate the elevation at (x, y) by interpolating."""
         x = np.array(x)
         y = np.array(y)
-        if self._elevation_func is None:
+        if self._hull is None:
             self._interpolate_elevation()
-        z = self._elevation_func(x, y)
-        if x.ndim == 0 or y.ndim == 0 or x.shape[0] == 1 or y.shape[0] == 1:
-            return np.squeeze(z)
-        return np.diagonal(z)
+
+        x_ndim, y_ndim = x.ndim, y.ndim
+        if x_ndim not in (0, 1) or y_ndim not in (0, 1):
+            raise ValueError("x and y must be 0 or 1 dimensional.")
+
+        if x_ndim == 0:
+            x = np.array([x])
+        if y_ndim == 0:
+            y = np.array([y])
+
+        if x.shape[0] == 1 and y.shape[0] > 1:
+            x = np.repeat(x, y.shape[0])
+        elif y.shape[0] == 1 and x.shape[0] > 1:
+            y = np.repeat(y, x.shape[0])
+
+        xy = np.column_stack((x, y))
+
+        inside = self._hull.find_simplex(xy) >= 0
+        res = np.empty(xy.shape[0])
+        if np.any(inside):
+            zs_in = self._inside_fn(xy[inside])
+            res[inside] = zs_in
+        if np.any(~inside):
+            zs_out = self._outside_fn(xy[~inside])
+            res[~inside] = zs_out
+
+        if x_ndim == y_ndim == 1:
+            res = res.squeeze()
+        return res
 
     def _interpolate_elevation(self) -> None:
         """Interpolate the elevation values of the geometries."""
@@ -455,9 +487,13 @@ class RoadNetwork:
         if elevation_values.shape[0] > 5000:
             n = np.ceil(elevation_values.shape[0] / 5000)
             elevation_values = elevation_values[:: int(n)]
-        self._elevation_func = interp2d(
-            *elevation_values[:, :2].T,
+
+        self._hull = Delaunay(elevation_values[:, :2])
+        self._inside_fn = LinearNDInterpolator(
+            elevation_values[:, :2],
             elevation_values[:, 2],
-            kind="linear",
-            bounds_error=False,
+        )
+        self._outside_fn = NearestNDInterpolator(
+            elevation_values[:, :2],
+            elevation_values[:, 2],
         )
