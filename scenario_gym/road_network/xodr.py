@@ -78,7 +78,7 @@ def road_to_sg(
                 old_to_new_lanes[lane] = sg_lane
 
         road = Road(
-            repr(xodr_road),
+            repr(xodr_lane_section),
             road_boundary,
             road_center,
             lanes=lanes,
