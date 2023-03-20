@@ -40,6 +40,22 @@
                         <EntityRef entityRef="ego"/>
                     </Actors>
                     <Maneuver name="ego_maneuver">
+                        <Event name="ego_Action_event" priority="overwrite" maximumExecutionCount="1">
+                            <Action name="ego_user_defined_action">
+                                <UserDefinedAction>
+                                    <CustomCommandAction type="turn_right"/>
+                                </UserDefinedAction>
+                            </Action>
+                            <StartTrigger>
+                                <ConditionGroup>
+                                    <Condition name="startSimTrigger" delay="0" conditionEdge="rising">
+                                        <ByValueCondition>
+                                            <SimulationTimeCondition value="5.0" rule="greaterThan"/>
+                                        </ByValueCondition>
+                                    </Condition>
+                                </ConditionGroup>
+                            </StartTrigger>
+                        </Event>
                         <Event name="ego_follow_trajectory_event" priority="overwrite" maximumExecutionCount="1">
                             <Action name="follow_trajectory_action">
                                 <PrivateAction>

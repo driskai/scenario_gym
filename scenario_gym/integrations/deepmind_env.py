@@ -53,7 +53,7 @@ class ScenarioGym(ScenarioGym, Environment):
         self.reset_scenario()
 
         try:
-            self.ego_agent = self.state.agents["ego"]
+            self.ego_agent = self.state.agents[self.state.scenario.ego]
         except KeyError:
             raise KeyError("No agent named ego.")
 
@@ -79,8 +79,8 @@ class ScenarioGym(ScenarioGym, Environment):
     def _step(self, action) -> Tuple[Any, float]:
         """Process the given action."""
         new_poses = {}
-        for ref, agent in self.state.agents.items():
-            if ref == "ego":
+        for agent in self.state.agents.values():
+            if agent is self.ego_agent:
                 agent.last_action = action
                 new_poses[agent.entity] = agent.controller.step(self.state, action)
             else:

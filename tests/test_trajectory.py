@@ -33,17 +33,17 @@ def test_unordered_create():
     """Test creating a trajectory with fields in a different order."""
     data = np.array(
         [
-            [0.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 1.0, 2.0],
-            [0.0, 1.0, 2.0],
-            [1.0, 2.0, 3.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 1.0, 0.0, 2.0],
+            [1.0, 2.0, 0.0, 3.0],
         ]
     )
-    traj = Trajectory(data, fields=["y", "x", "t"])
+    traj = Trajectory(data, fields=["y", "x", "h", "t"])
     assert np.allclose(traj.t, [0.0, 1.0, 2.0, 3.0]), "t not set correctly."
     assert np.allclose(traj.x, [0.0, 0.0, 1.0, 2.0]), "x not set correctly."
     assert np.allclose(traj.y, [0.0, 0.0, 0.0, 1.0]), "y not set correctly."
+    assert np.allclose(traj.h, [0.0, 1.0, 0.0, 0.0]), "h not set correctly."
 
 
 def test_create_with_duplicate_nan():
@@ -145,6 +145,83 @@ def test_copy_traj():
     assert np.allclose(traj.data, traj_new.data), "Should have equal data."
 
 
+def test_position_at_t():
+    """Test the position at t method."""
+    data = np.array([[0, 0, 0], [1, 1, 1], [2, 2, 2]])
+    traj = Trajectory(data, fields=["t", "x", "y"])
+
+    # test basic interpolation
+    assert np.allclose(
+        traj.position_at_t(0.5, extrapolate=True)[:2], [0.5, 0.5]
+    ), "Should be 0.5."
+    assert np.allclose(
+        traj.position_at_t(1.5, extrapolate=True)[:2], [1.5, 1.5]
+    ), "Should be 1.5."
+
+    # test position with int
+    traj.position_at_t(1)
+
+    # test simple extrapolation
+    assert np.allclose(
+        traj.position_at_t(2.5, extrapolate=True)[:2], [2.5, 2.5]
+    ), "Should be 2.5."
+    assert np.allclose(
+        traj.position_at_t(-1.0, extrapolate=True)[:2], [-1.0, -1.0]
+    ), "Should be -1."
+    assert traj.position_at_t(-1.0, extrapolate=False) is None, "Should be None."
+    assert traj.position_at_t(3.0, extrapolate=False) is None, "Should be None."
+    assert np.allclose(
+        traj.position_at_t(-1.0, extrapolate=(False, True))[:2], [0.0, 0.0]
+    ), "Should not extrapolate backward."
+    assert np.allclose(
+        traj.position_at_t(-1.0, extrapolate=(True, True))[:2], [-1.0, -1.0]
+    ), "Should extrapolate backward."
+    assert np.allclose(
+        traj.position_at_t(3.0, extrapolate=(True, False))[:2], [2.0, 2.0]
+    ), "Should not extrapolate forward."
+    assert np.allclose(
+        traj.position_at_t(3.0, extrapolate=(True, True))[:2], [3.0, 3.0]
+    ), "Should extrapolate forward."
+
+    # test broadcasting
+    assert np.allclose(
+        traj.position_at_t(data[:, 0], extrapolate=True)[:, :2], data[:, 1:]
+    ), "Incorrect broadcasting."
+    x = np.array([-1.0, 3.0])
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=True)[:, :2],
+        np.array([[-1.0, -1.0], [3.0, 3.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=False)[:, :2],
+        np.array([[0.0, 0.0], [2.0, 2.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(False, True))[:, :2],
+        np.array([[0, 0], [3.0, 3.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(True, False))[:, :2],
+        np.array([[-1.0, -1.0], [2.0, 2.0]]),
+    ), "Incorrect extrapolation."
+    assert np.allclose(
+        traj.position_at_t(x, extrapolate=(True, True))[:, :2],
+        np.array([[-1.0, -1.0], [3.0, 3.0]]),
+    ), "Incorrect extrapolation."
+
+
+def test_velocity_at_t():
+    """Test the position at t method."""
+    data = np.array([[0, 0, 0], [1, 0, 1], [2, 0, 2]])
+    traj = Trajectory(data, fields=["t", "x", "y"])
+
+    # test basic interpolation
+    assert np.allclose(traj.velocity_at_t(0.5)[:2], [0, 1]), "Should be 0, 1."
+    assert np.allclose(
+        traj.velocity_at_t([0.5, 2.5])[:, :2], [[0, 1], [0, 0]]
+    ), "Incorrect broadcasting.."
+
+
 def test_subsample():
     """Test subsampling a trajectory."""
     traj = Trajectory(
@@ -176,6 +253,22 @@ def test_subsample():
             subsample_s.arclength == 4.0,
         )
     ), "Incorrect trajectory produced."
+
+
+def test_subsample_stationary():
+    """Test subsampling a stationary trajectory."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+            ]
+        ),
+        fields=["t", "x", "y"],
+    )
+    t = traj.subsample(points_per_t=0.5)
+    assert np.allclose(t.data[0], np.zeros(7))
+    t = traj.subsample(points_per_s=0.5)
+    assert np.allclose(t.data[0], np.zeros(7))
 
 
 def test_curvature_subsample():

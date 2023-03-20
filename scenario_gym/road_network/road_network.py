@@ -2,11 +2,12 @@ import json
 from contextlib import suppress
 from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from pyxodr.road_objects.network import RoadNetwork as xodrRoadNetwork
-from scipy.interpolate import interp2d
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from scipy.spatial import Delaunay
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
 
@@ -46,6 +47,27 @@ class RoadNetwork:
     }
 
     @classmethod
+    def create_from_file(cls, filepath: str):
+        """
+        Create the road network from a file.
+
+        Parameters
+        ----------
+        filepath : str
+            The path to the file.
+
+        """
+        path = Path(filepath).absolute()
+        if not path.exists():
+            raise FileNotFoundError(f"File not found at: {path}.")
+
+        if path.suffix in (".json", ""):
+            return cls.create_from_json(filepath)
+        elif path.suffix == ".xodr":
+            return cls.create_from_xodr(filepath)
+        raise ValueError(f"Unknown file type: {path.suffix}.")
+
+    @classmethod
     @lru_cache(maxsize=15)
     def create_from_json(cls, filepath: str):
         """
@@ -59,7 +81,7 @@ class RoadNetwork:
         """
         with open(filepath) as f:
             data = json.load(f)
-        return cls.create_from_dict(data, name=Path(filepath).stem, path=filepath)
+        return cls.create_from_dict(data, name=Path(filepath).stem)
 
     @classmethod
     @lru_cache(maxsize=15)
@@ -105,7 +127,7 @@ class RoadNetwork:
             simplify_tolerance,
         )
 
-        return cls(roads=roads, name=path.stem, path=str(path))
+        return cls(roads=roads, name=path.stem)
 
     @classmethod
     def create_from_dict(cls, data: Dict, **kwargs):
@@ -134,12 +156,14 @@ class RoadNetwork:
                 continue
             objects[obj] = [obj_cls.from_dict(obj_data) for obj_data in data[key]]
 
+        if "name" not in kwargs and "name" in data:
+            kwargs["name"] = data["name"]
+
         return cls(**kwargs, **objects)
 
     def __init__(
         self,
         name: Optional[str] = None,
-        path: Optional[str] = None,
         **road_objects: Dict[str, List[RoadObject]],
     ):
         """
@@ -157,18 +181,18 @@ class RoadNetwork:
         name: Optional[str]
             Optional name for the road network.
 
-        path: Optional[str]
-            The filepath of the road network data.
-
         road_objects : Dict[str, List[RoadObject]]
             The road objects as keywords. `roads` and `intersections` must be
             passed.
 
         """
         self.name = name
-        self.path = path
 
-        self._elevation_func: Optional[Callable[[float, float], float]] = None
+        # cached elevation interpolation functions
+        self._hull = None
+        self._inside_fn = None
+        self._outisde_fn = None
+
         self._lane_parents: Dict[Lane, Optional[Union[Road, Intersection]]] = {}
 
         self.object_names = self._default_object_names.copy()
@@ -366,18 +390,25 @@ class RoadNetwork:
                 geoms.append(x)
         return names, geoms
 
-    def to_json(self, filepath: str) -> None:
-        """Save the road network to json file."""
-        data = {}
+    def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Return a dict representation of the road network."""
+        data = {"name": self.name}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
+        return data
+
+    def to_json(self, filepath: str) -> None:
+        """Save the road network to json file."""
+        data = self.to_dict()
         with open(filepath, "w") as f:
             json.dump(data, f)
 
     def clear_cache(self) -> None:
         """Clear the cached properties and lru cache methods."""
         self._lane_parents.clear()
-        self._elevation_func = None
+        self._hull = None
+        self._inside_fn = None
+        self._outisde_fn = None
         for method in dir(self.__class__):
             obj = getattr(self.__class__, method)
             if isinstance(obj, _lru_cache_wrapper):
@@ -400,12 +431,37 @@ class RoadNetwork:
         """Estimate the elevation at (x, y) by interpolating."""
         x = np.array(x)
         y = np.array(y)
-        if self._elevation_func is None:
+        if self._hull is None:
             self._interpolate_elevation()
-        z = self._elevation_func(x, y)
-        if x.ndim == 0 or y.ndim == 0 or x.shape[0] == 1 or y.shape[0] == 1:
-            return np.squeeze(z)
-        return np.diagonal(z)
+
+        x_ndim, y_ndim = x.ndim, y.ndim
+        if x_ndim not in (0, 1) or y_ndim not in (0, 1):
+            raise ValueError("x and y must be 0 or 1 dimensional.")
+
+        if x_ndim == 0:
+            x = np.array([x])
+        if y_ndim == 0:
+            y = np.array([y])
+
+        if x.shape[0] == 1 and y.shape[0] > 1:
+            x = np.repeat(x, y.shape[0])
+        elif y.shape[0] == 1 and x.shape[0] > 1:
+            y = np.repeat(y, x.shape[0])
+
+        xy = np.column_stack((x, y))
+
+        inside = self._hull.find_simplex(xy) >= 0
+        res = np.empty(xy.shape[0])
+        if np.any(inside):
+            zs_in = self._inside_fn(xy[inside])
+            res[inside] = zs_in
+        if np.any(~inside):
+            zs_out = self._outside_fn(xy[~inside])
+            res[~inside] = zs_out
+
+        if x_ndim == y_ndim == 1:
+            res = res.squeeze()
+        return res
 
     def _interpolate_elevation(self) -> None:
         """Interpolate the elevation values of the geometries."""
@@ -427,9 +483,17 @@ class RoadNetwork:
             )
         else:
             elevation_values = np.concatenate(elevs, axis=0)
-        self._elevation_func = interp2d(
-            *elevation_values[:, :2].T,
+
+        if elevation_values.shape[0] > 5000:
+            n = np.ceil(elevation_values.shape[0] / 5000)
+            elevation_values = elevation_values[:: int(n)]
+
+        self._hull = Delaunay(elevation_values[:, :2])
+        self._inside_fn = LinearNDInterpolator(
+            elevation_values[:, :2],
             elevation_values[:, 2],
-            kind="linear",
-            bounds_error=False,
+        )
+        self._outside_fn = NearestNDInterpolator(
+            elevation_values[:, :2],
+            elevation_values[:, 2],
         )

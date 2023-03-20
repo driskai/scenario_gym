@@ -54,7 +54,7 @@ dependencies = [
     "pyxodr>=0.1.2",
     "PyYAML>=6.0",
     "setuptools>=61.0.0",
-    "scenariogeneration>=0.7.4,<0.11",
+    "scenariogeneration>=0.11.0",
     "scipy>=1.7.0",
     "Shapely>=2.0.0",
 ]

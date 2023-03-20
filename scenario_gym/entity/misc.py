@@ -15,12 +15,12 @@ from scenario_gym.trajectory import Trajectory
 
 
 @dataclass
-class PedestrianCatalogEntry(CatalogEntry):
+class MiscObjectCatalogEntry(CatalogEntry):
     """Catalog entry for a pedestrian."""
 
     mass: Optional[float]
 
-    xosc_names = ["Pedestrian"]
+    xosc_names = ["MiscObject"]
 
     @classmethod
     def load_data_from_xml(
@@ -60,17 +60,17 @@ class PedestrianCatalogEntry(CatalogEntry):
         data["mass"] = self.mass
         return data
 
-    def to_xosc(self) -> xosc.Pedestrian:
+    def to_xosc(self) -> xosc.MiscObject:
         """Write the pedestrian to xosc."""
-        obj = xosc.Pedestrian(
+        obj = xosc.MiscObject(
             self.catalog_entry,
             self.mass,
-            self.bounding_box.to_xosc(),
             getattr(
-                xosc.PedestrianCategory,
+                xosc.MiscObjectCategory,
                 self.catalog_category,
-                xosc.PedestrianCategory.pedestrian,
+                xosc.MiscObjectCategory.none,
             ),
+            self.bounding_box.to_xosc(),
         )
         for k, v in self.properties.items():
             obj.add_property(k, v)
@@ -79,12 +79,12 @@ class PedestrianCatalogEntry(CatalogEntry):
         return obj
 
 
-class Pedestrian(Entity):
+class MiscObject(Entity):
     """Entity class for pedestrians."""
 
     def __init__(
         self,
-        catalog_entry: PedestrianCatalogEntry,
+        catalog_entry: MiscObjectCatalogEntry,
         trajectory: Optional[Trajectory] = None,
         ref: Optional[str] = None,
     ):
