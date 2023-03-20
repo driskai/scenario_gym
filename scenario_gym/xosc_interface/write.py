@@ -14,8 +14,10 @@ def write_scenario(
     scenario: Scenario,
     filepath: str,
     base_road_network_path: str = "../Road_Networks",
-    default_catalog_rel_path: str = "../Catalogs",
-    osc_minor_version: int = 0,
+    road_network_extenstion: str = "json",
+    base_catalog_path: str = "../Catalogs",
+    use_catalog_references: bool = True,
+    osc_minor_version: int = 2,
 ) -> None:
     """
     Write a scenario to an OpenScenario file.
@@ -31,9 +33,14 @@ def write_scenario(
     base_road_network_path : str
         Base path to the road networks.
 
-    default_catalog_rel_path : str
-        Default relative path to the catalogs. This is used if the catalog location
-        is not specified in the scenario.
+    road_network_extenstion : str
+        The extension of the road network file.
+
+    base_catalog_path : str
+        Base relative path to the catalogs.
+
+    use_catalog_references : bool
+        Whether to use catalog references for entities that have catalogs.
 
     osc_minor_version : int
         The OpenScenario minor version.
@@ -45,21 +52,33 @@ def write_scenario(
         else (os.path.splitext(os.path.basename(filepath)[-1])[0])
     )
 
-    rn_name = scenario.road_network.path.split("/")[-1].split(".")[0]
-    scenegraph = os.path.join(base_road_network_path, f"{rn_name}.json")
+    rn_name = (
+        scenario.road_network.name
+        if scenario.road_network.name is not None
+        else None
+    )
+    scenegraph = os.path.join(
+        base_road_network_path,
+        f"{rn_name}.{road_network_extenstion}",
+    )
     rn = xosc.RoadNetwork("", scenegraph)
 
     entities = xosc.Entities()
     catalog = xosc.Catalog()
     for e in scenario.entities:
         ce = e.catalog_entry
-        if ce.catalog_type not in catalog.catalogs:
-            catalog_dir = scenario.catalog_locations.get(ce.catalog_name)
-            if catalog_dir is None:
-                catalog_dir = default_catalog_rel_path
-            catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
-        catalog_ref = xosc.CatalogReference(ce.catalog_name, ce.catalog_entry)
-        entities.add_scenario_object(e.ref, catalog_ref)
+        if use_catalog_references and ce.catalog is not None:
+            if ce.catalog_type not in catalog.catalogs:
+                catalog_dir = os.path.join(
+                    base_catalog_path,
+                    ce.catalog.group_name,
+                    f"{ce.catalog_type}Catalogs",
+                )
+                catalog.add_catalog(f"{ce.catalog_type}Catalog", catalog_dir)
+            obj = xosc.CatalogReference(ce.catalog.name, ce.catalog_entry)
+        else:
+            obj = ce.to_xosc()
+        entities.add_scenario_object(e.ref, obj)
 
     init = xosc.Init()
     for e in scenario.entities:
@@ -92,6 +111,14 @@ def write_scenario(
     sb = xosc.StoryBoard(init)
     sb.add_story(story)
 
+    properties = xosc.Properties()
+    for k, v in scenario.properties.items():
+        if k == "files" and isinstance(v, list):
+            for f in v:
+                properties.add_file(f)
+        else:
+            properties.add_property(k, str(v))
+
     desc = (
         f"Scenario {name} recorded in the dRISK Scenario Gym subject to the dRISK "
         "License Agreement (https://drisk.ai/license/)."
@@ -105,6 +132,7 @@ def write_scenario(
         roadnetwork=rn,
         catalog=catalog,
         osc_minor_version=osc_minor_version,
+        header_properties=properties,
     )
     element = ET.Element("OpenSCENARIO")
     element.extend(
@@ -150,7 +178,7 @@ def get_follow_trajectory_event(
     traj.add_shape(polyline)
     follow_trajectory_action = xosc.FollowTrajectoryAction(
         traj,
-        following_mode=xosc.FollowMode.position,
+        following_mode=xosc.FollowingMode.position,
         reference_domain=xosc.ReferenceContext.absolute,
         scale=1,
         offset=0,
@@ -158,7 +186,7 @@ def get_follow_trajectory_event(
     follow_trajectory_action.version_minor = osc_minor_version
     follow_trajectory_event = xosc.Event(
         f"{e.ref}_follow_trajectory_event",
-        xosc.Priority.overwrite,
+        xosc.Priority.override,
     )
     follow_trajectory_event.add_action(
         "follow_trajectory_action",

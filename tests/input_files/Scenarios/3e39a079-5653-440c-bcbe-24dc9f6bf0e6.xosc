@@ -1,5 +1,11 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario 3e39a079-5653-440c-bcbe-24dc9f6bf0e6 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-11T12:35:38.952326"/>
+    <FileHeader description="dRISK scenario 3e39a079-5653-440c-bcbe-24dc9f6bf0e6 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-11T12:35:38.952326">
+        <Properties>
+            <Property name="prop" value="64"/>
+            <Property name="prop2" value="64a"/>
+            <File filepath="test.txt"/>
+        </Properties>
+    </FileHeader>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

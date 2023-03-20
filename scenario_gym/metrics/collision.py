@@ -63,10 +63,7 @@ class CollisionMetric(Metric):
 
     def _reset(self, state: State) -> None:
         """Reset the ego and recorded collisions."""
-        ego = state.scenario.entity_by_name("ego")
-        if ego is None:
-            ego = state.scenario.entities[0]
-        self.ego = ego
+        self.ego = state.scenario.ego
         self.collisions: List[Tuple[float, str, CollisionTypes]] = []
         self.last_timestep: List[Entity] = []
 
@@ -225,10 +222,7 @@ class CollisionPointMetric(Metric):
 
     def _reset(self, state: State) -> None:
         """Reset the ego and recorded collisions."""
-        ego = state.scenario.entity_by_name("ego")
-        if ego is None:
-            ego = state.scenario.entities[0]
-        self.ego = ego
+        self.ego = state.scenario.ego
         self.collisions: List[Tuple[str, np.ndarray, float]] = []
         self.last_timestep: List[Entity] = []
 

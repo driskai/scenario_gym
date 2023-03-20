@@ -8,8 +8,6 @@
 #   4)  Additional caution in areas of occlusion
 #   5)  Avoid a collision by any means without jeopardising safety of other
 #       road users
-
-import string
 from enum import Enum
 from typing import Dict, List
 
@@ -48,7 +46,7 @@ class RSSBehaviourDetection:
         safe_distances: List[List[float]],
         road_network: road_network,
         dt: float,
-        intersect: string,
+        intersect: List[List[str]],
         collisions,
     ):
         self.metrics = metrics
@@ -82,7 +80,7 @@ class RSSBehaviourDetection:
             # Already found
             return True
         # Check if any entities have been flagged as being unsafe longitudinally.
-        for entity_record in self.intersect:
+        for entity_record in self.intersect.values():
             if "unsafe_longitudinal" in entity_record:
                 return False
         return True
@@ -99,7 +97,7 @@ class RSSBehaviourDetection:
             # Already found
             return True
         # Check if any entities have been flagged as being unsafe laterally.
-        for entity_record in self.intersect:
+        for entity_record in self.intersect.values():
             if "unsafe_lateral" in entity_record:
                 return False
         return True
@@ -128,7 +126,7 @@ class RSS(Metric):
         """Reset behaviour."""
         self.rss_callback = self.callbacks[0]
         self.behaviour = None
-        self.ego = state.scenario.entities[0]
+        self.ego = state.scenario.ego
         self.metrics_ = {rule.name: True for rule in Rules}
 
     def _step(self, state: State) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -129,9 +129,15 @@ class Trajectory:
         """Total distance travelled."""
         return self.s[-1]
 
-    def position_at_t(self, t: float) -> NDArray:
+    def position_at_t(
+        self,
+        t: Union[float, ArrayLike],
+        extrapolate: Union[bool, Tuple[bool, bool]] = (False, False),
+    ) -> Optional[NDArray]:
         """
         Compute the position of the entity at time t.
+
+        Can vectorise over t.
 
         Parameters
         ----------
@@ -139,12 +145,21 @@ class Trajectory:
             The time at which the position is returned. Linearly interpolates
             the trajectory control points to find the position.
 
+        extrapolate : Union[bool, Tuple[bool, bool]]
+            Whether to extrapolate the trajectory if the time given is outside
+            of the range of the trajectory. If False then None will be returned
+            for such times. If a Tuple is given then first and second elements
+            correspond to whether to extrapolate before and after the trajectory
+            respectively or to fix them.
+
         Returns
         -------
-        np.ndarray
-            The position as a numpy array.
+        Optional[np.ndarray]
+            The position as a numpy array. If the time given is outside of the
+            range of the trajectory and extrapolate is False then None is returned.
 
         """
+        t = np.array(t)
         if self._interpolated is None:
             data = self.data
             if data.shape[0] == 1:
@@ -154,10 +169,30 @@ class Trajectory:
                 data[:, 0],
                 data[:, 1:],
                 bounds_error=False,
-                fill_value=(data[0, 1:], data[-1, 1:]),
+                fill_value="extrapolate",
                 axis=0,
             )
-        return self._interpolated(t)
+        if isinstance(extrapolate, tuple):
+            ext_bck, ext_fwd = extrapolate
+            extrapolate = True
+        else:
+            ext_bck = ext_fwd = extrapolate
+        if t.ndim == 0:
+            if not extrapolate and (t < self.min_t or t > self.max_t):
+                return None
+            elif t < self.min_t and not ext_bck:
+                return self.data[0, 1:]
+            elif t > self.max_t and not ext_fwd:
+                return self.data[-1, 1:]
+            return self._interpolated(t)
+        poses = self._interpolated(t)
+        if not ext_bck:
+            poses = np.where(t[:, None] < self.min_t, self.data[0, None, 1:], poses)
+        if not ext_fwd:
+            poses = np.where(
+                t[:, None] > self.max_t, self.data[-1, None, 1:], poses
+            )
+        return poses
 
     def position_at_s(self, s: float) -> NDArray:
         """
@@ -177,17 +212,44 @@ class Trajectory:
         """
         if self._interpolated_s is None:
             data = self.data
+            s = self.s
             if data.shape[0] == 1:
                 data = np.repeat(data, 2, axis=0)
                 data[-1, 0] += 1e-3
+                s = np.hstack([s[0] - 1e-3, s[0]])
             self._interpolated_s = interp1d(
-                self.s,
+                s,
                 data,
                 bounds_error=False,
                 fill_value=(data[0, :], data[-1, :]),
                 axis=0,
             )
         return self._interpolated_s(s)
+
+    def velocity_at_t(
+        self, t: Union[float, ArrayLike], eps: float = 1e-4
+    ) -> NDArray:
+        """
+        Compute the velocity of the entity at time t.
+
+        Parameters
+        ----------
+        t : float
+            The time at which the velocity is returned.
+
+        eps : float
+            The epsilon used to compute the velocity.
+
+        Returns
+        -------
+        np.ndarray
+            The velocity as a numpy array.
+
+        """
+        t = np.array(t)
+        return (
+            self.position_at_t(t + eps / 2) - self.position_at_t(t - eps / 2)
+        ) / eps
 
     def is_stationary(self) -> bool:
         """Return True if the trajectory is stationary."""
@@ -311,13 +373,14 @@ class Trajectory:
                 **kwargs,
             )
         if points_per_t:
-            n = int(np.ceil((self.max_t - self.min_t) * points_per_t))
+            n = int(max(1, np.ceil((self.max_t - self.min_t) * points_per_t)))
             ts = np.linspace(self.min_t, self.max_t, n)
             data = self.position_at_t(ts)
             return self.__class__(np.concatenate([ts[:, None], data], axis=1))
 
-        n = int(np.ceil(self.arclength * points_per_s))
+        n = int(max(1, np.ceil(self.arclength * points_per_s)))
         ss = np.linspace(0, self.arclength, n)
+        print(ss)
         data = self.position_at_s(ss)
         return self.__class__(data)
 

@@ -27,6 +27,25 @@ def example_entity(example_scenario):
     return deepcopy(example_scenario.entities[0])
 
 
+def test_ego(example_scenario):
+    """Test getting the ego entity."""
+    assert example_scenario.ego is not None, "Ego entity should not be None."
+    ego = example_scenario.entity_by_name("ego")
+    first = example_scenario.entities[0]
+    assert (
+        ego == first == example_scenario.ego
+    ), "Here the ego entity should be first and named 'ego'."
+
+    other = [e.copy() for e in example_scenario.entities]
+    other[0].ref = "not_ego"
+    s = Scenario(other)
+    assert s.ego == s.entities[0], "Ego should still be the first entity."
+
+    other[1].ref = "ego"
+    s2 = Scenario(other)
+    assert s2.ego == s.entities[1], "Ego should now be the second entity."
+
+
 def test_length(example_scenario):
     """Test the length of the scenario is computed correctly."""
     l = max((e.trajectory.max_t for e in example_scenario.entities))
@@ -95,25 +114,33 @@ def test_describe(example_scenario):
 
 
 def test_plot(example_scenario):
-    """Test the `describe` method."""
+    """Test the `plot` method."""
     example_scenario.plot(show=False)
 
 
 def test_translate(example_scenario):
     """Test the translating a scenario."""
-    shift = np.arange(7)
+    shift = np.arange(7) + 1
     new_scenario = example_scenario.translate(shift)
     ts = np.linspace(0.0, example_scenario.length, 10)
     for e, e_new in zip(example_scenario.entities, new_scenario.entities):
         ps = e.trajectory.position_at_t(ts)
-        ps_new = e_new.trajectory.position_at_t(ts)
+        ps_new = e_new.trajectory.position_at_t(ts + shift[0])
         deltas = ps_new - ps
         assert np.allclose(deltas, shift[None, 1:])
 
+    a_new = new_scenario.actions[0]
+    a_old = example_scenario.actions[0]
+    assert a_new.t == a_old.t + shift[0]
 
-def test_to_dict(example_scenario):
+
+def test_to_dict(example_scenario, all_scenarios):
     """Test writing and reading the scenario from a dictionary."""
-    data = example_scenario.to_dict()
+    base_dir = os.path.join(
+        os.path.dirname(all_scenarios[example_scenario.name]),
+        "../Road_Networks",
+    )
+    data = example_scenario.to_dict(road_network_path=base_dir)
     s2 = Scenario.from_dict(data)
     assert (
         example_scenario.road_network.name == s2.road_network.name
@@ -132,8 +159,9 @@ def test_jsonable(example_scenario):
     """Test reading and writing scenarios from json."""
     with TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "example.json")
-        example_scenario.to_json(path)
+        example_scenario.to_json(path, road_network_path=None)
         s2 = Scenario.from_json(path)
+
     assert (
         example_scenario.road_network.name == s2.road_network.name
     ), "Road networks should have same name."
@@ -159,7 +187,7 @@ def test_jsonable_with_none(scenario_with_none_values):
     """Test reading and writing scenarios from json."""
     with TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "example.json")
-        scenario_with_none_values.to_json(path)
+        scenario_with_none_values.to_json(path, road_network_path=None)
         s2 = Scenario.from_json(path)
     assert (
         s2.entities[0].catalog_entry.front_axle.max_steering is None

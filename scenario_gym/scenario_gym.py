@@ -31,6 +31,7 @@ class ScenarioGym:
     def __init__(
         self,
         timestep: float = 1.0 / 30.0,
+        persist: bool = False,
         viewer_class: Optional[Type[Viewer]] = None,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
@@ -50,6 +51,9 @@ class ScenarioGym:
         timestep: float
             Time between steps in the gym.
 
+        persist: bool
+            If True then entities will persist for the entire scenario.
+
         viewer_class: Type[Viewer]
             Class type of the viewer that will be inisitalised.
 
@@ -67,6 +71,7 @@ class ScenarioGym:
 
         """
         self.timestep = timestep
+        self.persist = persist
         if viewer_class is None and "fps" not in viewer_parameters:
             viewer_parameters["fps"] = int(1.0 / self.timestep)
         self.viewer_parameters = viewer_parameters.copy()
@@ -140,18 +145,21 @@ class ScenarioGym:
 
         """
         if scenario_path.endswith(".json"):
-            scenario = Scenario.from_json(scenario_path)
+            scenario = Scenario.from_json(scenario_path, **kwargs)
         else:
             scenario = import_scenario(
                 scenario_path,
                 relabel=relabel,
                 **kwargs,
             )
-        self.set_scenario(scenario, create_agent=create_agent)
+        self.set_scenario(
+            scenario, scenario_path=scenario_path, create_agent=create_agent
+        )
 
     def set_scenario(
         self,
         scenario: Scenario,
+        scenario_path: Optional[str] = None,
         create_agent: Callable[[Scenario, Entity], Optional[Agent]] = _create_agent,
     ) -> None:
         """
@@ -162,14 +170,19 @@ class ScenarioGym:
         scenario : Scenario
             The scenario object.
 
+        scenario_path : Optional[str]
+            The path to the scenario file if it was loaded from one.
+
         create_agent : Callable[[str, Entity], Optional[Agent]]
             A function that returns an agent to control a given entity.
 
         """
         self.state = State(
+            scenario,
+            scenario_path=scenario_path,
+            persist=self.persist,
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
-            scenario=scenario,
         )
         self.create_agents(create_agent=create_agent)
         self.reset_scenario()
@@ -193,16 +206,21 @@ class ScenarioGym:
         for entity in self.state.scenario.entities:
             agent = create_agent(self.state.scenario, entity)
             if agent is not None:
-                self.state.agents[entity.ref] = agent
+                self.state.agents[entity] = agent
             else:
                 non_agents.append(entity)
                 non_agent_trajs.append(entity.trajectory)
         self.state.non_agents.add_entities(non_agents, non_agent_trajs)
 
+    def get_start_time(self, scenario: Scenario) -> float:
+        """Get the start time of the scenario."""
+        return max((0.0, scenario.ego.trajectory.min_t))
+
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        self.state.reset(self.INIT_PREV_T, 0.0)
+        t0 = self.get_start_time(self.state.scenario)
+        self.state.reset(t0 + self.INIT_PREV_T, t0)
         for m in self.metrics:
             m.reset(self.state)
 
@@ -212,8 +230,18 @@ class ScenarioGym:
 
         # get the new poses
         new_poses = {}
-        for agent in self.state.agents.values():
-            new_poses[agent.entity] = agent.step(self.state)
+        for entity, agent in self.state.agents.items():
+            if entity in self.state.poses:
+                pose = agent.step(self.state)
+                if pose is not None:
+                    new_poses[entity] = pose
+                elif self.persist:
+                    new_poses[entity] = self.state.poses[entity]
+            elif entity.trajectory.min_t >= self.state.t:
+                # the agent is initialised at its start position
+                new_poses[entity] = entity.trajectory.position_at_t(
+                    self.state.next_t
+                )
         new_poses.update(self.state.non_agents.step(self.state))
 
         # update the poses and current time
@@ -225,11 +253,13 @@ class ScenarioGym:
         if self.viewer is not None:
             self.state.last_keystroke = self.render()
 
-    def rollout(self, render: bool = False, **kwargs) -> None:
+    def rollout(
+        self, render: bool = False, video_path: Optional[str] = None
+    ) -> None:
         """Rollout the current scenario fully."""
         self.reset_scenario()
         if render:
-            self.state.last_keystroke = self.render(**kwargs)
+            self.state.last_keystroke = self.render(video_path=video_path)
         while not self.state.is_done:
             self.step()
         for agent in self.state.agents.values():
@@ -255,7 +285,7 @@ class ScenarioGym:
         else:
             self.viewer.close()
         if video_path is None:
-            path = self.state.scenario.path
+            path = self.state.scenario_path
             video_dir = os.path.join(os.path.dirname(path), "../Recordings")
             if os.path.exists(video_dir):
                 video_path = os.path.join(
@@ -266,7 +296,7 @@ class ScenarioGym:
                     + ".mp4",
                 )
             else:
-                video_path = os.path.splitext(self.state.scenario.path)[0] + ".mp4"
+                video_path = os.path.splitext(self.state.scenario_path)[0] + ".mp4"
         self.viewer.reset(video_path)
 
     def close(self) -> None:

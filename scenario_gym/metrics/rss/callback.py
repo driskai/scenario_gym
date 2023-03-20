@@ -1,4 +1,5 @@
 import warnings
+from collections import OrderedDict
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -42,13 +43,13 @@ class RSSDistances(StateCallback):
 
     def _reset(self, state: State) -> None:
         """Reset callback and declares variables."""
-        self.ego = state.scenario.entities[0]
+        self.ego = state.scenario.ego
         self.entities = state.scenario.entities
         # Initialise default callback parameters
         self.ego_params = {}
-        self.entity_params = [{} for _ in self.entities[1:]]
-        self.safe_distances = [[0.0, 0.0] for _ in self.entities[1:]]
-        self.intersect = [["safe"] for _ in self.entities[1:]]
+        self.entity_params = {e: {} for e in self.entities[1:]}
+        self.safe_distances = {e: [0.0, 0.0] for e in self.entities[1:]}
+        self.intersect = {e: ["safe"] for e in self.entities[1:]}
         self.entity_safe_ratios = {
             entity: [float("inf"), float("inf")] for entity in self.entities
         }
@@ -73,17 +74,15 @@ class RSSDistances(StateCallback):
             return
 
         # Establish Ego parameters
-        ego = self.ego
-        entities = self.entities
-        ego_heading = direction(state.poses[ego][3])
+        ego_heading = direction(state.poses[self.ego][3])
         ego_inverse_heading = inverse_direction(list(ego_heading))
-        entity_params = []
-        ego_position = state.poses[ego][0:2]
+        entity_params = OrderedDict()
+        ego_position = state.poses[self.ego][0:2]
         # Create a dictionary for each entity of form:
         # {position, heading, velocity, acceleration, box_points, length, width}
         # With directional and positional parameters defined with respect to ego
         # frame.
-        for entity in entities:
+        for entity in state.poses:
             entity_dictionary = self.get_entity_parameters(
                 state,
                 entity,
@@ -92,83 +91,58 @@ class RSSDistances(StateCallback):
                 ego_position,
                 state.dt,
             )
-            if entity_dictionary is None:
-                warnings.warn(
-                    "RSSDistances _step: Error in handling of entity {0} at time "
-                    "{1}. Invalid pose: {2}. RSS metric skips entity at this "
-                    "timestep.".format(entity, state.t, state.poses[entity])
-                )
-                continue
-            else:
-                entity_params.append(entity_dictionary)
-        if not entity_params:
-            warnings.warn(
-                "Zero entity parameters generated at timestep: {0}".format(state.t)
-            )
-            return
+            if entity_dictionary is not None:
+                entity_params[entity] = entity_dictionary
 
         # Calculate safe distances between ego and all other entities
-        ego_params = entity_params.pop(0)
-        safe_distances = []
-        for entity in entity_params:
-            safe_long = abs(self.safe_longitudinal_distance(ego_params, entity))
-            safe_lat = abs(self.safe_lateral_distance(ego_params, entity))
-            safe_distances.append([safe_lat, safe_long])
+        ego_params = entity_params.pop(self.ego)
+        safe_distances = OrderedDict()
+        for entity, params in entity_params.items():
+            safe_long = abs(self.safe_longitudinal_distance(ego_params, params))
+            safe_lat = abs(self.safe_lateral_distance(ego_params, params))
+            safe_distances[entity] = [safe_lat, safe_long]
 
-        # Assign evaluated parameters to the state
-        assert len(entity_params) == len(safe_distances)
         self.ego_params = ego_params
         self.entity_params = entity_params
         self.safe_distances = safe_distances
 
         # Check for each entity if there is an intersection of safe distance buffer
         # and assign safe distance ratios to entity as an attribute
-        for i in range(len(entity_params)):
-            self.entity_safe_ratios[entities[i + 1]] = self.safe_ratios(
-                ego_params, entity_params[i], safe_distances[i]
+        for e in entity_params:
+            self.entity_safe_ratios[e] = self.safe_ratios(
+                self.ego, ego_params, entity_params[e], safe_distances[e]
             )
-            self.intersect[i].append(
+            self.intersect[e].append(
                 self.unsafe_distance(
                     ego_params,
-                    entity_params[i],
-                    self.intersect[i],
-                    safe_distances[i],
+                    entity_params[e],
+                    self.intersect[e],
+                    safe_distances[e],
                 )
             )
-            if self.intersect[i] is None:
-                # Entity trimmed poses results in IndexError, go to next entity
-                warnings.warn(
-                    "safe_longitudinal: IndexError in handling of entity number: "
-                    "{0} at timestep: {1} seconds. Continue to next "
-                    "entity.".format(i, state.t)
-                )
 
     @staticmethod
     def safe_ratios(
+        ego_entity: Entity,
         ego: Dict,
         haz: Dict,
-        safe_distances: List[float],
+        safe_distances: Dict[Entity, float],
     ) -> List[float]:
         """
         Attach safe_distance ratios to entity.
 
         safe ratio defined as actual_distance / safe_distance -> larger ratio safer
         """
-        try:
-            safe_lat = safe_distances[0] + 0.5 * abs(
+        if ego_entity in safe_distances:
+            safe_lat = safe_distances[ego_entity] + 0.5 * abs(
                 np.dot(
                     [haz["width"], haz["length"]], inverse_direction(haz["heading"])
                 )
             )
-            safe_long = safe_distances[1] + 0.5 * abs(
+            safe_long = safe_distances[ego_entity] + 0.5 * abs(
                 np.dot([haz["width"], haz["length"]], haz["heading"])
             )
-        except IndexError:
-            # safe_distances not calculated
-            warnings.warn(
-                "RSSDistances safe_ratios: Safe distances not calculated. Default "
-                "safe distances as ego dimensions"
-            )
+        else:
             safe_lat = 0.5 * ego["width"]
             safe_long = 0.5 * ego["length"]
 

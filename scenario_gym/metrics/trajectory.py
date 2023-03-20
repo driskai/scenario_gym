@@ -12,7 +12,7 @@ class EgoAvgSpeed(Metric):
 
     def _reset(self, state: State) -> None:
         """Reset the average speed."""
-        self.ego = state.scenario.entities[0]
+        self.ego = state.scenario.ego
         self.ego_avg_speed = np.linalg.norm(state.velocities[self.ego][:3])
         self.t = 0.0
 
@@ -35,7 +35,7 @@ class EgoMaxSpeed(Metric):
 
     def _reset(self, state: State) -> None:
         """Reset the maximum speed."""
-        self.ego = state.scenario.entities[0]
+        self.ego = state.scenario.ego
         self.ego_max_speed = np.linalg.norm(state.velocities[self.ego][:3])
 
     def _step(self, state: State) -> None:
@@ -55,7 +55,7 @@ class EgoDistanceTravelled(Metric):
 
     def _reset(self, state: State) -> None:
         """Find the ego."""
-        self.ego = state.scenario.entities[0]
+        self.ego = state.scenario.ego
 
     def _step(self, state: State) -> None:
         """Pass as entity will update its distance."""

@@ -53,6 +53,7 @@ def test_detect_collisions(collision_scenario):
     assert not collisions[ego], "No collision at start of scenario"
 
     gym.rollout()
+
     collisions = detect_collisions(
         {ego: gym.state.poses[ego]},
         others={hazard: gym.state.poses[hazard]},

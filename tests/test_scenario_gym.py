@@ -1,17 +1,34 @@
 import multiprocessing as mp
 
 import numpy as np
+import pytest as pt
 
 from scenario_gym.scenario_gym import ScenarioGym
+from scenario_gym.trajectory import Trajectory
 from scenario_gym.xosc_interface import import_scenario
 
 
-def test_gym(all_scenarios):
-    """Rollout a single scenario."""
-    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
+@pt.fixture(scope="module")
+def scenario(all_scenarios):
+    """Load a single scenario."""
+    return import_scenario(all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"])
 
+
+@pt.fixture(scope="module")
+def vanishing_scenario(scenario):
+    """Create a scenario that vanishes."""
+    scenario = scenario.copy()
+    new_data = scenario.entities[1].trajectory.data.copy()
+    subset = new_data[np.logical_and(new_data[:, 0] < 16.5, new_data[:, 0] > 2.0)]
+    traj = Trajectory(subset)
+    scenario.entities[1].trajectory = traj
+    return scenario
+
+
+def test_gym(scenario):
+    """Rollout a single scenario."""
     gym = ScenarioGym(timestep=0.5, terminal_conditions=["max_length", "collision"])
-    gym.load_scenario(scenario_path)
+    gym.set_scenario(scenario)
     gym.rollout()
 
     gym.reset_scenario()
@@ -20,38 +37,85 @@ def test_gym(all_scenarios):
 
     gym.timestep = 0.2
     gym.step()
-    assert np.allclose(gym.state.t, 0.7)
+    assert np.allclose(gym.state.t, gym.state.prev_t + 0.2)
 
     gym.rollout()
     v = gym.state.velocities[gym.state.scenario.entities[0]]
     assert (v[:2] == np.zeros(2)).all()
 
 
-def test_reset_scenario(all_scenarios):
+def test_reset_scenario(scenario):
     """Test loading and reseting a scenario."""
-    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
-
     gym = ScenarioGym()
-    gym.load_scenario(scenario_path)
-    assert [gym.state.poses[e] is not None for e in gym.state.scenario.entities]
+    gym.set_scenario(scenario)
+    assert [gym.state.poses[e] is not None for e in gym.state.poses]
 
-    gym.load_scenario(scenario_path, relabel=True)
+    gym.set_scenario(scenario)
     assert (gym.state.scenario.entities[0].ref == "ego") and (
         gym.state.scenario.entities[1].ref == "vehicle_0"
     ), "Should be relabeled"
 
 
-def test_render(all_scenarios):
-    """Test the rendering of the gym."""
-    scenario_path = all_scenarios["a5e43fe4-646a-49ba-82ce-5f0063776566"]
+def test_reset_scenario_with_vanishing(vanishing_scenario):
+    """Test loading and reseting a scenario."""
+    gym = ScenarioGym()
+    gym.set_scenario(vanishing_scenario)
+    for e in vanishing_scenario.entities:
+        if e.trajectory.min_t <= gym.state.t:
+            assert e in gym.state.poses, f"{e.ref} should be in poses"
 
+
+def test_rollout(vanishing_scenario):
+    """Test rollout."""
     gym = ScenarioGym(timestep=0.1)
-    gym.load_scenario(scenario_path)
-    gym.rollout(render=True)
+    gym.set_scenario(vanishing_scenario)
+    gym.rollout()
+    assert gym.state.scenario.entities[1] not in gym.state.poses
+
+
+def test_persist(vanishing_scenario):
+    """Test rollout."""
+    gym = ScenarioGym(timestep=0.1, persist=True)
+    gym.set_scenario(vanishing_scenario)
+    assert len(gym.state.poses) == len(vanishing_scenario.entities), (
+        "Entities not found in poses: ",
+        str(
+            [e.ref for e in vanishing_scenario.entities if e not in gym.state.poses]
+        ),
+    )
+    while not gym.state.is_done:
+        gym.step()
+        assert len(gym.state.poses) == len(vanishing_scenario.entities), (
+            "Entities not found in poses: ",
+            str(
+                [
+                    e.ref
+                    for e in vanishing_scenario.entities
+                    if e not in gym.state.poses
+                ]
+            ),
+        )
+
+
+def test_render(scenario, vanishing_scenario, all_scenarios):
+    """Test the rendering of the gym."""
+    gym = ScenarioGym()
+    gym.set_scenario(scenario)
     gym.rollout(
         render=True,
-        video_path=scenario_path.replace("Scenarios", "Recordings").replace(
-            ".xosc", ".mp4"
+        video_path=(
+            all_scenarios[scenario.name]
+            .replace("Scenarios", "Recordings")
+            .replace(".xosc", ".mp4")
+        ),
+    )
+    gym.set_scenario(vanishing_scenario)
+    gym.rollout(
+        render=True,
+        video_path=(
+            all_scenarios[scenario.name]
+            .replace("Scenarios", "Recordings")
+            .replace(".xosc", "_vanishing.mp4")
         ),
     )
 
@@ -78,10 +142,10 @@ def test_run_scenarios(all_scenarios):
     )
 
 
-def _render_scenario(scenario):
+def _render_scenario(scenario, path):
     """Render one scenario."""
     gym = ScenarioGym(timestep=0.075)
-    gym.set_scenario(scenario)
+    gym.set_scenario(scenario, scenario_path=path)
     gym.rollout(render=True)
 
 
@@ -93,4 +157,4 @@ def test_multi_process_scenarios(all_scenarios):
         scenarios.append(import_scenario(path))
 
     with mp.Pool(num_processes) as p:
-        p.map(_render_scenario, scenarios)
+        p.starmap(_render_scenario, zip(scenarios, all_scenarios.values()))
