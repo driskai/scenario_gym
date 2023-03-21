@@ -57,19 +57,12 @@ class Trajectory:
             )
         perm = [fields.index(f) for f in self._fields if f in fields]
         data = data[:, perm]
-        data = np.unique(np.where(np.isfinite(data), data, np.inf), axis=0)
+        data = data[np.unique(data[:, 0], return_index=True)[1]]
         n = data.shape[0]
 
         _data: List[NDArray] = []
         for f in self._fields:
             d = data[:, perm.index(fields.index(f))] if f in fields else np.zeros(n)
-            if f == "t":
-                if np.unique(d).size != n:
-                    raise ValueError(
-                        "Duplicate timestamps found. All timestamps must be unique."
-                    )
-            elif f == "h":
-                d = _resolve_heading(d)
             if f not in fields or (f in fields and np.isfinite(d).sum() != n):
                 if f == "h" and n == 1:
                     d = np.zeros(1)
@@ -89,6 +82,8 @@ class Trajectory:
                     raise ValueError(
                         f"Invalid values found for {f}. Values required for xyt."
                     )
+            elif f == "h":
+                d = _resolve_heading(d)
             _data.append(d)
             setattr(self, f, d)
 
@@ -213,6 +208,8 @@ class Trajectory:
         if self._interpolated_s is None:
             data = self.data
             s = self.s
+            s, idx = np.unique(s, return_index=True)
+            data = data[idx]
             if data.shape[0] == 1:
                 data = np.repeat(data, 2, axis=0)
                 data[-1, 0] += 1e-3
