@@ -45,7 +45,6 @@ class ScenarioAction(ABC):
     def apply(self, state: State, entity: Optional[Entity]) -> None:
         """Apply the action to the environment state."""
         self._apply(state, entity)
-        self._applied = True
 
     @abstractmethod
     def _apply(self, state: State, entity: Optional[Entity]) -> None:
