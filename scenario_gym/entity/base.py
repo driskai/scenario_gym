@@ -34,7 +34,9 @@ class Entity:
             raise NotImplementedError(
                 f"Subclass {cls.__name__} has no type annotation for catalog entry."
             ) from e
-        if not issubclass(ce_type, CatalogEntry):
+        if isinstance(ce_type, str) and ce_type == "CatalogEntry":
+            ce_type = CatalogEntry
+        elif isinstance(ce_type, str) or not issubclass(ce_type, CatalogEntry):
             raise TypeError("Catalog entry type must be a catalog entry subclass.")
         return ce_type
 
