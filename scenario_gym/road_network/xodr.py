@@ -66,11 +66,9 @@ def road_to_sg(
 
         xyz_centre = xodr_lane_section.get_offset_line()
         road_center = LineString(xyz_centre[:, :2])
-        assert xyz_centre[:, -1].min() > -100
         if simplify_tolerance is not None:
             road_center = road_center.simplify(simplify_tolerance)
         road_elevation = xyz_centre
-        assert road_elevation[:, -1].min() > -100
 
         lanes = []
         for lane in xodr_lane_section.lanes:
