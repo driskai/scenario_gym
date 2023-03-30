@@ -229,7 +229,7 @@ def load_user_defined_action(
     t = float(cond.attrib.get("value"))
 
     acts = []
-    for child in user_action.findall("CustomCommandAction"):
+    for child in user_action.getchildren():
         acts.append(
             UserDefinedAction(
                 t,

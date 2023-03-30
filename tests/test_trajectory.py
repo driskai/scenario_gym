@@ -62,6 +62,24 @@ def test_create_with_duplicate_nan():
     assert traj.data.shape[0] == 3, "Duplicate rows should be removed."
 
 
+def test_create_with_duplicate():
+    """Test creating with duplicate rows containing nan values."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [2.0, 0.0, 0.0, 0.0],
+                [3.0, 0.0, 0.0, 0.5],
+            ]
+        ),
+        fields=["t", "x", "y", "h"],
+    )
+    assert traj.data.shape[0] == 4, "Duplicate rows should be removed."
+    traj.position_at_s([0.0, 3.0])
+
+
 def test_filled_headings():
     """Test that headings are estimated when not provided."""
     data = np.array(

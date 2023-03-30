@@ -302,7 +302,6 @@ class Scenario:
                         road_network_dir,
                         rn_path,
                     )
-                print(rn_path)
                 data["road_network"]["path"] = str(rn_path)
         return cls.from_dict(
             data,
