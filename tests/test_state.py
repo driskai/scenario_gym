@@ -36,6 +36,8 @@ def test_poses(scenario):
 
     assert gym.state.t == gym.state.scenario.ego.trajectory.min_t
     assert gym.state.poses
+
+    gym.step()
     assert all(
         (
             np.allclose(
@@ -44,7 +46,7 @@ def test_poses(scenario):
             for e, v in gym.state.velocities.items()
         )
     ), "Velocities not correct."
-    print(gym.state.recorded_poses())
+
     assert all(
         len(poses) == 2
         for e, poses in gym.state.recorded_poses().items()
@@ -167,14 +169,14 @@ def test_reset(scenario_path):
     state = State(scenario)
 
     n = sum(1 for e in scenario.entities if e.trajectory.min_t <= 0.0)
-    state.reset(-1.0, 0.0)
+    state.reset(0.0)
     assert len(state.poses) == n, "Wrong number of entities."
-    assert len(state.prev_poses) == n, "Wrong number of entities."
+    assert len(state.velocities) == n, "Wrong number of entities."
 
     n = sum(1 for e in scenario.entities if e.trajectory.max_t >= 100.0)
-    state.reset(-1.0, 100.0)
+    state.reset(100.0)
     assert len(state.poses) == n, "Wrong number of entities."
-    assert len(state.poses) == n, "Wrong number of entities."
+    assert len(state.velocities) == n, "Wrong number of entities."
 
 
 def test_reset_persist(scenario_path):
@@ -183,13 +185,13 @@ def test_reset_persist(scenario_path):
     state = State(scenario, persist=True)
 
     n = len(scenario.entities)
-    state.reset(-1.0, 0.0)
+    state.reset(0.0)
     assert len(state.poses) == n, "Wrong number of entities."
-    assert len(state.prev_poses) == n, "Wrong number of entities."
+    assert len(state.velocities) == n, "Wrong number of entities."
 
-    state.reset(-1.0, 100.0)
+    state.reset(100.0)
     assert len(state.poses) == n, "Wrong number of entities."
-    assert len(state.poses) == n, "Wrong number of entities."
+    assert len(state.velocities) == n, "Wrong number of entities."
 
 
 def test_state_actions(scenario):

@@ -289,7 +289,8 @@ class Scenario:
         """
         with open(path, "r") as f:
             data = json.load(f)
-        if data.get("road_network", {}).get("path") is not None:
+        rn = data.get("road_network")
+        if rn is not None and rn.get("path") is not None:
             rn_path = Path(data["road_network"]["path"])
             if not rn_path.is_absolute():
                 if road_network_dir is None:
