@@ -22,23 +22,13 @@ class StateCallback(ABC):
     def reset(self, state: State) -> None:
         """Reset the callback check dependents are there."""
         self.callbacks.clear()
-        pre_callbacks = []
-        for cb in state.state_callbacks:
-            if cb is self:
-                break
-            if cb.__class__ in self.required_callbacks:
-                pre_callbacks.append(cb)
-
-        missing = set(self.required_callbacks).difference(
-            (cb.__class__ for cb in pre_callbacks)
-        )
-        if missing:
-            raise ValueError(
-                f"Cannot run callback {self.__class__.__name__} without callbacks"
-                f" {missing}."
-            )
-
-        self.callbacks.extend(pre_callbacks)
+        for req in self.required_callbacks:
+            cb = state.get_callback(req)
+            if cb is None:
+                raise ValueError(
+                    f"Callback {req.__name__} is required for {self.__class__}."
+                )
+            self.callbacks.append(cb)
         self._reset(state)
 
     def _reset(self, state: State) -> None:

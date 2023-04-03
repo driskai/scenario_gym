@@ -22,9 +22,21 @@ class ExampleCallback(StateCallback):
 
     my_feature: bool
 
+    def _reset(self, state):
+        """Reset the feature to True."""
+        self.my_feature = True
+
     def __call__(self, state):
         """Set the feature to whether the time is <= 1."""
         self.my_feature = state.t <= 1
+
+
+class ExampleSubclassCallback(ExampleCallback):
+    """A simple callback to add a feature to the state."""
+
+    def __call__(self, state):
+        """Set the feature to whether the time is <= 1."""
+        self.my_feature = state.t <= 1000
 
 
 class ExampleDependentCallback(StateCallback):
@@ -33,6 +45,10 @@ class ExampleDependentCallback(StateCallback):
     required_callbacks = [ExampleCallback]
 
     dependent_feature: bool
+
+    def _reset(self, state):
+        """Reset the feature to True."""
+        self.dependent_feature = True
 
     def __call__(self, state):
         """Set the feature to the opposite of the existing features."""
@@ -56,6 +72,19 @@ def test_callback(scenario):
     gym.rollout()
     assert (
         gym.state.t > 1 and not gym.state_callbacks[0].my_feature
+    ), "Feature should be False."
+
+
+def test_subclass_callback(scenario):
+    """Test that we can add a callback to the state."""
+    cb1, cb2 = ExampleSubclassCallback(), ExampleDependentCallback()
+    gym = ScenarioGym(state_callbacks=[cb1, cb2])
+    gym.set_scenario(scenario)
+    assert gym.state_callbacks[0].my_feature, "Feature should be added at reset."
+    gym.rollout()
+    assert gym.state.get_callback(ExampleCallback) is cb1
+    assert (
+        gym.state.t > 1 and gym.state_callbacks[0].my_feature
     ), "Feature should be False."
 
 
@@ -98,11 +127,5 @@ def test_callback_requires(scenario):
         raise "Should not raise any value error:" from e
 
     gym = ScenarioGym(state_callbacks=[ExampleDependentCallback()])
-    with pt.raises(ValueError):
-        gym.set_scenario(scenario)
-
-    gym = ScenarioGym(
-        state_callbacks=[ExampleDependentCallback(), ExampleCallback()]
-    )
     with pt.raises(ValueError):
         gym.set_scenario(scenario)
