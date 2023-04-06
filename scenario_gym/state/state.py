@@ -254,7 +254,7 @@ class State:
         entity = self.scenario.entity_by_name(action.entity_ref)
         if entity is None:
             warnings.warn(
-                f"No entity with name {entity.ref} was found for action "
+                f"No entity with name {action.entity_ref} was found for action "
                 f"{action.__class__.__name__}."
             )
         else:
