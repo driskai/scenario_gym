@@ -13,8 +13,6 @@ from scenario_gym.xosc_interface import import_scenario
 class ScenarioGym:
     """The main class that loads and runs scenarios."""
 
-    INIT_PREV_T = -0.1
-
     @classmethod
     def run_scenarios(
         cls,
@@ -219,10 +217,12 @@ class ScenarioGym:
     def reset_scenario(self) -> None:
         """Reset the state to the beginning of the current scenario."""
         self.close()
-        t0 = self.get_start_time(self.state.scenario)
-        self.state.reset(t0 + self.INIT_PREV_T, t0)
-        for m in self.metrics:
-            m.reset(self.state)
+        if not (self.state is None or self.state.scenario is None):
+            t0 = self.get_start_time(self.state.scenario)
+            if self.state.t != t0:
+                self.state.reset(t0)
+                for m in self.metrics:
+                    m.reset(self.state)
 
     def step(self) -> None:
         """Process a single step in the environment."""

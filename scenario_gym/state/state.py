@@ -103,15 +103,12 @@ class State:
         """Get the current scenario."""
         return self._scenario
 
-    def reset(self, t_minus1: float, t_0: float) -> None:
+    def reset(self, t_0: float) -> None:
         """
         Reset the state to the initial timestep.
 
         Parameters
         ----------
-        t_minus1 : float
-            Time before the initial timestep to use for initial velocities.
-
         t_0 : float
             Initial timestep.
 
@@ -121,7 +118,7 @@ class State:
 
         # set initial poses
         # always use extrapolation for previous poses to get the initial velocity
-        prev_poses, poses = {}, {}
+        velocities, poses = {}, {}
         for entity in self.all_entities:
             pose = entity.trajectory.position_at_t(
                 t_0,
@@ -132,11 +129,10 @@ class State:
             )
             if pose is not None:
                 poses[entity] = pose
-                prev_poses[entity] = entity.trajectory.position_at_t(
-                    t_minus1, extrapolate=((False, False) if self.persist else True)
-                )
-        self.update_poses(t_minus1, prev_poses)
+                velocities[entity] = entity.trajectory.velocity_at_t(t_0)
         self.update_poses(t_0, poses)
+        self.velocities.update(velocities)
+        self.prev_t = t_0 - 0.1
         self.update_actions()
 
         for cb in self.state_callbacks:
@@ -258,7 +254,7 @@ class State:
         entity = self.scenario.entity_by_name(action.entity_ref)
         if entity is None:
             warnings.warn(
-                f"No entity with name {entity.ref} was found for action "
+                f"No entity with name {action.entity_ref} was found for action "
                 f"{action.__class__.__name__}."
             )
         else:
