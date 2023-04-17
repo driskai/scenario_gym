@@ -238,6 +238,11 @@ def test_velocity_at_t():
     assert np.allclose(
         traj.velocity_at_t([0.5, 2.5])[:, :2], [[0, 1], [0, 0]]
     ), "Incorrect broadcasting.."
+    assert np.allclose(traj.velocity_at_t([0.5])[0, :2], [0, 1]), "Should be 0, 1."
+
+    # test left and right derivatives
+    assert np.allclose(traj.velocity_at_t(0.0)[:2], [0, 1]), "Should be 0, 1."
+    assert np.allclose(traj.velocity_at_t(2.0)[:2], [0, 1]), "Should be 0, 1."
 
 
 def test_subsample():

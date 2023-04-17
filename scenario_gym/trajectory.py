@@ -244,9 +244,16 @@ class Trajectory:
 
         """
         t = np.array(t)
-        return (
-            self.position_at_t(t + eps / 2) - self.position_at_t(t - eps / 2)
+        inside = np.logical_and(self.min_t <= t, t <= self.max_t)
+        v_in = (
+            self.position_at_t(t + eps / 2, extrapolate=True)
+            - self.position_at_t(t - eps / 2, extrapolate=True)
         ) / eps
+        v_out = np.zeros(t.shape + (6,))
+
+        if t.ndim >= 1:
+            inside = inside.reshape(-1, 1)
+        return np.where(inside, v_in, v_out)
 
     def is_stationary(self) -> bool:
         """Return True if the trajectory is stationary."""
