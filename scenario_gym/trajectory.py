@@ -207,21 +207,23 @@ class Trajectory:
         """
         if self._interpolated_s is None:
             data = self.data
-            s = self.s
-            s, idx = np.unique(s, return_index=True)
+            s_ = self.s
+            s_, idx = np.unique(s_, return_index=True)
             data = data[idx]
             if data.shape[0] == 1:
                 data = np.repeat(data, 2, axis=0)
                 data[-1, 0] += 1e-3
-                s = np.hstack([s[0] - 1e-3, s[0]])
+                s_ = np.hstack([s_[0] - 1e-3, s[0]])
             self._interpolated_s = interp1d(
-                s,
+                s_,
                 data,
                 bounds_error=False,
                 fill_value=(data[0, :], data[-1, :]),
                 axis=0,
             )
-        return self._interpolated_s(s)
+        out = self._interpolated_s(s)
+        out[..., 0] = np.where(s == 0, 0, out[..., 0])
+        return out
 
     def velocity_at_t(
         self, t: Union[float, ArrayLike], eps: float = 1e-4

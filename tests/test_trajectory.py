@@ -228,6 +228,30 @@ def test_position_at_t():
     ), "Incorrect extrapolation."
 
 
+def test_position_at_s():
+    """Test the position at s method."""
+    traj = Trajectory(
+        np.array(
+            [
+                [0, -210, -70],
+                [1, -150, -110],
+                [2, -100, -90],
+            ]
+        ),
+        fields=["t", "x", "y"],
+    )
+    assert traj.position_at_s(92.0).ndim == 1
+
+    data = np.array([[0, 0, 0], [1, 0, 1], [2, 0, 2]])
+    traj = Trajectory(data, fields=["t", "x", "y"])
+
+    assert np.allclose(traj.position_at_s(1.0)[:3], [1, 0, 1])
+    assert np.allclose(traj.position_at_s(2.0)[:3], [2, 0, 2])
+
+    traj.position_at_s([92.0, 92.0])
+    traj.position_at_s([92.0, 92.0, 0])
+
+
 def test_velocity_at_t():
     """Test the position at t method."""
     data = np.array([[0, 0, 0], [1, 0, 1], [2, 0, 2]])
