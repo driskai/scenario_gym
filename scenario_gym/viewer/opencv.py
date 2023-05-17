@@ -3,9 +3,18 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
-from shapely.geometry import LinearRing, LineString, Polygon
+from shapely.geometry import (
+    LinearRing,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+    Polygon,
+)
+from shapely.geometry.base import BaseGeometry
+from shapely.strtree import STRtree
 
 from scenario_gym.entity import Entity, Pedestrian, Vehicle
+from scenario_gym.road_network import RoadNetwork
 from scenario_gym.state import State
 
 from .base import Viewer
@@ -92,6 +101,10 @@ class OpenCVViewer(Viewer):
     Rendering behaviour can be customised by changing the layers that are rendered.
     The available layers and default colors are given by
     `OpenCVViewer._renderable_layers`.
+
+    Custom layers can be added by implementing a `get_{layer_name}` method that
+    will return the geometries for that layer that should be rendered. A default
+    colour should also be added to the `_renderable_layers` class attribute.
     """
 
     _renderable_layers: Dict[str, Optional[Color]] = {
@@ -201,10 +214,10 @@ class OpenCVViewer(Viewer):
         for layer in render_layers:
             if layer != "entity" and layer != "text":
                 try:
-                    getattr(self, f"render_{layer}")
+                    getattr(self, f"get_{layer}")
                 except AttributeError as e:
                     raise NotImplementedError(
-                        f"Rendering method `render_{layer}` is not implemented."
+                        f"Rendering method `get_{layer}` is not implemented."
                     ) from e
         self.render_layers = render_layers
 
@@ -241,6 +254,9 @@ class OpenCVViewer(Viewer):
         ego agent.
         """
         self._state = state
+        if self.kd_tree is None:
+            self.build_kd_tree(state)
+
         key = None
         self.draw_frame(state, e_ref=self.entity_ref)
 
@@ -260,6 +276,8 @@ class OpenCVViewer(Viewer):
         super().reset(output_path)
         self._frame = self.reset_frame()
         self._state = self._entity_colour_dict = None
+        self.kd_tree = None
+        self.geom_types = None
         self.video_writer = None
         self._coords_cache = {}
         if self.headless_rendering:
@@ -277,13 +295,46 @@ class OpenCVViewer(Viewer):
         if self.video_writer:
             self.video_writer.release()
 
+    def build_kd_tree(self, state: State) -> None:
+        """Build the KD tree for layers needed from the road network."""
+        road_network = state.scenario.road_network
+        self.geoms, self.geom_types = [], {}
+        if road_network is None:
+            self.kd_tree = STRtree(self.geoms)
+            return
+        for layer in self.render_layers:
+            l_geoms = getattr(self, f"get_{layer}")(road_network)
+            self.geoms.extend(l_geoms)
+            self.geom_types.update({g: layer for g in l_geoms})
+        self.kd_tree = STRtree(self.geoms)
+
     def draw_frame(self, state: State, e_ref: Optional[str] = "ego") -> None:
         """Render the given state around a given entity (by reference)."""
         ego_pose = self.get_center_pose(state, e_ref)
+        rect = ego_pose[None, :2] + 0.5 * np.array(
+            [
+                [self.h, self.w],
+                [self.h, -self.w],
+                [-self.h, -self.w],
+                [-self.h, self.w],
+            ]
+        ) @ np.array(
+            [
+                [np.cos(ego_pose[3]), np.sin(ego_pose[3])],
+                [-np.sin(ego_pose[3]), np.cos(ego_pose[3])],
+            ]
+        )
+        rect = Polygon(rect)
 
-        for layer in self.render_layers:
-            if layer != "entity" and layer != "text":
-                getattr(self, f"render_{layer}")(state, ego_pose)
+        to_render = self.kd_tree.query(rect, predicate="intersects")
+        for g_idx in to_render:
+            g = self.geoms[g_idx]
+            self.draw_geom(
+                g,
+                ego_pose,
+                getattr(self, f"{self.geom_types[g]}_color"),
+                use_cache=True,
+            )
 
         for entity, pose in state.poses.items():
             entity_idx = state.scenario.entities.index(entity)
@@ -376,20 +427,26 @@ class OpenCVViewer(Viewer):
         xy = vec2pix(bbox_in_ego, mag=self.mag, h=self.h, w=self.w)
         xy_front = vec2pix(front_bbox, mag=self.mag, h=self.h, w=self.w)
 
-        entity_poly_frame = self._frame.copy()
-        cv2.fillPoly(entity_poly_frame, [xy], c.bgr)
-        cv2.fillPoly(entity_poly_frame, [xy_front], self.entity_front_color.bgr)
+        if c.alpha < 1:
+            entity_poly_frame = self._frame.copy()
+            cv2.fillPoly(entity_poly_frame, [xy], c.bgr)
+            cv2.fillPoly(entity_poly_frame, [xy_front], self.entity_front_color.bgr)
 
-        self._frame = cv2.addWeighted(
-            self._frame, (1.0 - c.alpha), entity_poly_frame, c.alpha, 0
-        )
+            self._frame = cv2.addWeighted(
+                self._frame, (1.0 - c.alpha), entity_poly_frame, c.alpha, 0
+            )
+        else:
+            self._frame = cv2.fillPoly(self._frame, [xy], c.bgr)
+            self._frame = cv2.fillPoly(
+                self._frame, [xy_front], self.entity_front_color.bgr
+            )
 
     def render_text(self, state: State) -> None:
         """Add text to the frame."""
         v = np.linalg.norm(state.velocities[state.scenario.ego][:3])
         cv2.putText(
             self._frame,
-            "Ego speed: {:.2f}".format(v),
+            f"Ego speed: {v:.2f}",
             (10, int(0.9 * self.mag * self.h)),  # bottom left corner of text
             cv2.FONT_HERSHEY_SIMPLEX,  # font
             1,  # font scale
@@ -400,14 +457,16 @@ class OpenCVViewer(Viewer):
 
     def draw_geom(
         self,
-        geom: Union[Polygon, LineString, LinearRing],
+        geom: BaseGeometry,
         ego_pose: np.ndarray,
         c: Color,
         use_cache: bool = False,
     ) -> None:
         """Render a polygon or linestring to the frame."""
-        if not isinstance(geom, (Polygon, LineString, LinearRing)):
-            raise TypeError(f"{type(geom)} not supported.")
+        if isinstance(geom, (MultiPolygon, MultiLineString)):
+            for g in geom.geoms:
+                self.draw_geom(g, ego_pose, c, use_cache=use_cache)
+            return
 
         xy = to_ego_frame(self.get_coords(geom, use_cache=use_cache), ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
@@ -436,134 +495,51 @@ class OpenCVViewer(Viewer):
             self._coords_cache[geom] = coords
         return coords
 
-    def render_driveable_surface(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the driveable surface."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for geom in road_network.driveable_surface.geoms:
-            self.draw_geom(
-                geom, ego_pose, self.driveable_surface_color, use_cache=True
-            )
+    def get_driveable_surface(
+        self, road_network: RoadNetwork
+    ) -> List[BaseGeometry]:
+        """Get the driveable surface."""
+        return [road_network.driveable_surface]
 
-    def render_driveable_surface_boundary(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the boundary of the driveable surface."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
+    def get_driveable_surface_boundary(
+        self, road_network: RoadNetwork
+    ) -> List[BaseGeometry]:
+        """Get the boundary of the driveable surface."""
+        geoms = []
         for geom in road_network.driveable_surface.geoms:
-            self.draw_geom(
-                geom.exterior,
-                ego_pose,
-                self.driveable_surface_boundary_color,
-                use_cache=True,
-            )
+            geoms.append(geom.exterior)
             for interior in geom.interiors:
-                self.draw_geom(
-                    interior,
-                    ego_pose,
-                    self.driveable_surface_boundary_color,
-                    use_cache=True,
-                )
+                geoms.append(interior)
+        return geoms
 
-    def render_walkable_surface(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the walkable surface."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for g in road_network.pavements + road_network.crossings:
-            self.draw_geom(
-                g.boundary, ego_pose, self.walkable_surface_color, use_cache=True
-            )
+    def get_walkable_surface(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the walkable surface."""
+        return [g.boundary for g in road_network.pavements + road_network.crossings]
 
-    def render_buildings(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render any buildings."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for b in road_network.buildings:
-            self.draw_geom(
-                b.boundary, ego_pose, self.buildings_color, use_cache=True
-            )
+    def get_buildings(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the buildings."""
+        return [g.boundary for g in road_network.buildings]
 
-    def render_roads(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the road boundary polygons."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for r in road_network.roads:
-            self.draw_geom(r.boundary, ego_pose, self.roads_color, use_cache=True)
+    def get_roads(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the roads."""
+        return [g.boundary for g in road_network.roads]
 
-    def render_road_centers(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the road centers."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for r in road_network.roads:
-            self.draw_geom(
-                r.center, ego_pose, self.road_centers_color, use_cache=True
-            )
+    def get_road_centers(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the road centers."""
+        return [g.center for g in road_network.roads]
 
-    def render_lanes(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the lane boudnary polygons."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for l in road_network.lanes:
-            self.draw_geom(l.boundary, ego_pose, self.lanes_color, use_cache=True)
+    def get_lanes(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the lanes."""
+        return [g.boundary for g in road_network.lanes]
 
-    def render_lane_centers(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the lane centers."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for l in road_network.lanes:
-            self.draw_geom(
-                l.center, ego_pose, self.lane_centers_color, use_cache=True
-            )
+    def get_lane_centers(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the lane centers."""
+        return [g.center for g in road_network.lanes]
 
-    def render_intersections(
-        self,
-        state: State,
-        ego_pose: np.ndarray,
-    ) -> None:
-        """Render the road boundary polygons."""
-        road_network = state.scenario.road_network
-        if road_network is None:
-            return
-        for i in road_network.intersections:
-            self.draw_geom(
-                i.boundary, ego_pose, self.intersections_color, use_cache=True
-            )
+    def get_intersections(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Get the intersections."""
+        return [g.boundary for g in road_network.intersections]
+
+    def get_text(self, road_network: RoadNetwork) -> List[BaseGeometry]:
+        """Return empty list."""
+        return []
