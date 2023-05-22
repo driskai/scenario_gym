@@ -103,30 +103,16 @@ class Catalogs:
         "Vehicle",
         motorbike_box,
         {},
-        []
+        [],
     )
 
     cyclist_box = BoundingBox(0.7, 2.0, 0.0, 0.0)
     cyclist = CatalogEntry(
-        "ArgoverseCatalog",
-        "cyclist",
-        "bicycle",
-        "Vehicle",
-        cyclist_box,
-        {},
-        []
+        "ArgoverseCatalog", "cyclist", "bicycle", "Vehicle", cyclist_box, {}, []
     )
 
     bus_box = BoundingBox(2.8, 11.0, 0.0, 0.0)
-    bus = CatalogEntry(
-        argoverse_catalog,
-        "bus",
-        "bus",
-        "Vehicle",
-        bus_box,
-        {},
-        []
-    )
+    bus = CatalogEntry(argoverse_catalog, "bus", "bus", "Vehicle", bus_box, {}, [])
 
     riderless_bicycle_box = BoundingBox(0.3, 1.5, 0.0, 0.0)
     riderless_bicycle = CatalogEntry(
@@ -136,7 +122,7 @@ class Catalogs:
         "Vehicle",
         riderless_bicycle_box,
         {},
-        []
+        [],
     )
 
 
