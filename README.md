@@ -1,4 +1,4 @@
-# Scenario Gym - a scenario-centric lightweight simulation
+# Scenario Gym - a scenario-centric lightweight simulator
 
 ![Tests](https://github.com/driskai/scenario_gym/actions/workflows/test.yml/badge.svg)
 ![Python 3.7+](https://img.shields.io/badge/python-3.7+-brightgreen)
