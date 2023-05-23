@@ -399,7 +399,7 @@ class RoadNetwork:
 
     def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
         """Return a dict representation of the road network."""
-        data = {"name": self.name}
+        data = {"name": self.name, "properties": self.properties}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
         return data
