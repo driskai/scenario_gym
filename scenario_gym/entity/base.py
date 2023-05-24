@@ -167,9 +167,14 @@ class Entity:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
         """Create the entity from the json dictionary."""
+        traj = data["trajectory"]
+        if isinstance(traj, tuple):
+            trajectory = Trajectory(np.array(traj))
+        else:
+            trajectory = Trajectory(np.array(traj["data"]), fields=traj["fields"])
         return cls(
             cls._catalog_entry_type().from_dict(data["catalog_entry"]),
-            trajectory=Trajectory(np.array(data["trajectory"])),
+            trajectory,
             ref=data.get("ref"),
         )
 
