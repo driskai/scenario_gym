@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections import OrderedDict
+from contextlib import suppress
 from copy import copy
-from typing import Callable, List, Optional, Tuple, Union
+from itertools import chain
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -35,6 +38,18 @@ class Trajectory:
         """
         Trajectory constructor.
 
+        Pass trajectory data as a 2D numpy array with rows corresponding to data
+        at each timestamp and columns corresponding to each field. The `fields`
+        keyword argument should be used to specify the name of each column. Data for
+        t, x and y is required. By default the columns should be t, x, y, z, h, p, r
+        where h, p and r are heading, pitch and roll respectively. Custom fields may
+        also be passed in this way.
+
+        Columns can be accessed as attributes of the trajectory object. For example
+        `trajectory.x` will return the x values of the trajectory. Note that if the
+        trajectory already has an attribute for a field name then the column can
+        not be accessed in this way.
+
         Parameters
         ----------
         data : np.ndarray
@@ -43,8 +58,9 @@ class Trajectory:
             fields argument should be passed.
 
         fields : List[str]
-            The field names for each column of data. Must contain t, x and y and
-            must be a subset of _fields.
+            The field names for each column of data. Must contain t, x and y. Any
+            fields from `_fields` will be filled if not passed. Other values may
+            be passed also but the columns will be reordered to match `_fields`.
 
         """
         if not all(f in fields for f in ("t", "x", "y")):
@@ -55,15 +71,24 @@ class Trajectory:
                 " pass `fields` to specify the columns given or ensure that columns"
                 f" for all of {self._fields} are provided."
             )
-        perm = [fields.index(f) for f in self._fields if f in fields]
+
+        perm = [fields.index(f) for f in self._fields if f in fields] + [
+            fields.index(f) for f in fields if f not in self._fields
+        ]
         data = data[:, perm]
         data = data[np.unique(data[:, 0], return_index=True)[1]]
         n = data.shape[0]
 
         _data: List[NDArray] = []
-        for f in self._fields:
+        _field_mapping: Dict[str, int] = OrderedDict()
+
+        for idx, f in enumerate(
+            chain(self._fields, (f_ for f_ in fields if f_ not in self._fields))
+        ):
             d = data[:, perm.index(fields.index(f))] if f in fields else np.zeros(n)
-            if f not in fields or (f in fields and np.isfinite(d).sum() != n):
+            if (f not in fields and f in self._fields) or (
+                f in fields and np.isfinite(d).sum() != n
+            ):
                 if f == "h" and n == 1:
                     d = np.zeros(1)
                 elif f == "h" and n > 1:
@@ -84,12 +109,19 @@ class Trajectory:
                     )
             elif f == "h":
                 d = _resolve_heading(d)
+            elif f not in fields and np.isfinite(d).sum() != n:
+                raise ValueError(f"Invalid values found for custom field {f}.")
             _data.append(d)
-            setattr(self, f, d)
+            _field_mapping[f] = idx
+            with suppress(AttributeError):
+                getattr(self, f)
+                setattr(self, f, d)
 
         # we will make the data readonly
         self.data = np.array(_data).T.copy()
         self.data.flags.writeable = False
+        self.fields = list(_field_mapping)
+        self._field_mapping = _field_mapping
 
         self._interpolated: Optional[Callable[[ArrayLike], NDArray]] = None
         self._interpolated_s: Optional[Callable[[ArrayLike], NDArray]] = None
@@ -99,8 +131,13 @@ class Trajectory:
         """Return the number of points in the trajectory."""
         return len(self.data)
 
-    def __getitem__(self, idx: int) -> NDArray:
-        """Get the idx'th point in the trajectory."""
+    def __getitem__(self, idx: Union[str, int]) -> NDArray:
+        """Get the idx'th point in the trajectory or a field by name."""
+        if isinstance(idx, str):
+            try:
+                return self.data[:, self._field_mapping[idx]]
+            except KeyError as e:
+                raise KeyError(f"Field {idx} not found in trajectory.") from e
         return self.data[idx]
 
     @cached_property
@@ -263,7 +300,7 @@ class Trajectory:
 
     def __copy__(self) -> Trajectory:
         """Create a copy of the trajectory."""
-        return self.__class__(self.data.copy())
+        return self.__class__(self.data.copy(), fields=self.fields)
 
     def copy(self) -> Trajectory:
         """Create a copy of the trajectory."""
@@ -285,9 +322,10 @@ class Trajectory:
             The translated trajectory.
 
         """
+        x = np.array(x)
         if x.ndim == 1:
             x = x[None, :]
-        return self.__class__(self.data + x)
+        return self.__class__(self.data + x, fields=self.fields)
 
     def rotate(self, h: float) -> Trajectory:
         """
@@ -315,7 +353,7 @@ class Trajectory:
             )
         ) + xy
         new_data[:, 4] = (new_data[:, 4] + h) % (2.0 * np.pi)
-        return self.__class__(new_data)
+        return self.__class__(new_data, fields=self.fields)
 
     def smooth_headings(self) -> Trajectory:
         """
@@ -340,7 +378,7 @@ class Trajectory:
 
         new_data = self.data.copy()
         new_data[:, 4] = d
-        return self.__class__(new_data)
+        return self.__class__(new_data, fields=self.fields)
 
     def subsample(
         self,
@@ -382,13 +420,16 @@ class Trajectory:
             n = int(max(1, np.ceil((self.max_t - self.min_t) * points_per_t)))
             ts = np.linspace(self.min_t, self.max_t, n)
             data = self.position_at_t(ts)
-            return self.__class__(np.concatenate([ts[:, None], data], axis=1))
+            return self.__class__(
+                np.concatenate([ts[:, None], data], axis=1),
+                fields=self.fields,
+            )
 
         n = int(max(1, np.ceil(self.arclength * points_per_s)))
         ss = np.linspace(0, self.arclength, n)
-        print(ss)
+
         data = self.position_at_s(ss)
-        return self.__class__(data)
+        return self.__class__(data, fields=self.fields)
 
     def curvature_subsample(
         self,
@@ -441,11 +482,11 @@ class Trajectory:
             p=dist,
         )
         s_vals = s[np.hstack([[0], 1 + np.sort(idxs), [s.shape[0] - 1]])]
-        return self.__class__(fn(s_vals))
+        return self.__class__(fn(s_vals), fields=self.fields)
 
-    def to_json(self) -> List[List[float]]:
+    def to_json(self) -> Dict:
         """Write the trajectory to a jsonable list."""
-        return self.data.tolist()
+        return {"data": self.data.tolist(), "fields": self.fields}
 
 
 def _resolve_heading(h: NDArray) -> NDArray:

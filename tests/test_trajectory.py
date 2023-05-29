@@ -340,3 +340,30 @@ def test_curvature_subsample():
     assert (subsampled.x >= 2).sum() > 0.5 * subsampled.x.shape[
         0
     ], "More points should be in the final part of the trajectory."
+
+
+def test_create_with_custom_data():
+    """Create a trajectory with a custom data."""
+    data = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.1, 0.0, 0.3],
+            [0.0, 0.0, 1.0, 0.2, 1.0, 0.0],
+            [0.0, 1.0, 0.0, 0.1, 2.0, 0.5],
+            [1.0, 2.0, 0.0, 0.2, 3.0, 0.0],
+        ]
+    )
+    traj = Trajectory(
+        data,
+        fields=["y", "x", "h", "acc", "t", "steer"],
+    )
+    assert np.allclose(traj["x"], data[:, 1])
+    assert np.allclose(traj["acc"], data[:, 3])
+    assert np.allclose(traj["steer"], data[:, -1])
+    assert np.allclose(traj.data[:, -2], data[:, 3])
+    assert traj.position_at_t(0).shape == (8,)
+    assert traj.position_at_s(1).shape == (9,)
+
+    traj.subsample(points_per_t=10)
+    traj.translate(1)
+    traj.translate(np.arange(9))
+    traj.rotate(1)
