@@ -34,7 +34,7 @@ class Catalogs:
     Using the dimensions defined "at runtime" from the bounding box data.
     """
 
-    nuScenes_catalog = Catalog("nuScenesCatalog", None)
+    nuScenes_catalog = Catalog("nuScenesCatalog", "nuScenesCatalogs")
 
 
 class NuScenesImporter:

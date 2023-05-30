@@ -156,14 +156,16 @@ class RoadNetwork:
                 continue
             objects[obj] = [obj_cls.from_dict(obj_data) for obj_data in data[key]]
 
+        properties = data.get("properties")
         if "name" not in kwargs and "name" in data:
             kwargs["name"] = data["name"]
 
-        return cls(**kwargs, **objects)
+        return cls(**kwargs, properties=properties, **objects)
 
     def __init__(
         self,
         name: Optional[str] = None,
+        properties: Optional[Dict[str, Any]] = None,
         **road_objects: Dict[str, List[RoadObject]],
     ):
         """
@@ -181,12 +183,16 @@ class RoadNetwork:
         name: Optional[str]
             Optional name for the road network.
 
+        properties: Optional[Dict[str, Any]]
+            Optional properties for the road network.
+
         road_objects : Dict[str, List[RoadObject]]
             The road objects as keywords. `roads` and `intersections` must be
             passed.
 
         """
         self.name = name
+        self.properties = properties if properties is not None else {}
 
         # cached elevation interpolation functions
         self._hull = None
@@ -206,9 +212,10 @@ class RoadNetwork:
             objects = (
                 road_objects[object_name] if object_name in road_objects else []
             )
-            assert all(
-                (isinstance(obj, RoadObject) for obj in objects)
-            ), "Only lists of RoadObject subclasses should be provided"
+            assert all((isinstance(obj, RoadObject) for obj in objects)), (
+                "Only lists of RoadObject subclasses should be provided not:"
+                f"{object_name}."
+            )
 
             if object_name not in self.object_names:
                 self.object_names[object_name] = (
@@ -392,7 +399,7 @@ class RoadNetwork:
 
     def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
         """Return a dict representation of the road network."""
-        data = {"name": self.name}
+        data = {"name": self.name, "properties": self.properties}
         for obj_name in self.object_names:
             data[obj_name] = [obj.to_dict() for obj in getattr(self, obj_name)]
         return data

@@ -1,4 +1,4 @@
-# Scenario Gym - a lightweight framework for learning from scenario data
+# Scenario Gym - a scenario-centric lightweight simulator
 
 ![Tests](https://github.com/driskai/scenario_gym/actions/workflows/test.yml/badge.svg)
 ![Python 3.7+](https://img.shields.io/badge/python-3.7+-brightgreen)
@@ -15,7 +15,7 @@ Scenario Gym is a universal autonomous driving simulation tool that allows fast 
 
 ## Overview
 
-Scenario Gym defines a flexible scenario representation that is compatible with the OpenSCENARIO description language and OpenDRIVE road network representation. Entities can adopt predefined trajectories, or control themselves intelligently with a high-level goal (e.g. reach a target position) or via a complex trained policy. Scenarios are simulated synchronously in discrete time steps within which each agent selects an action and the pose of each entity is updated before moving to the next step.
+Scenario Gym defines a flexible in-memory scenario representation that is compatible with the OpenSCENARIO description language and OpenDRIVE road network representation. Entities can adopt predefined trajectories, or control themselves intelligently with a high-level goal (e.g. reach a target position) or via a complex trained policy. Scenarios are simulated synchronously in discrete time steps within which each agent selects an action and the pose of each entity is updated before moving to the next step.
 
 Intelligent agents interact with the environment through a simple sensor-agent-controller architecture. This streamlines the agent design by splitting it into three components that emulate the design of autonomous agent systems. The sensor component produces a logical observation for the agent from the current global state of the environment. The agent then selects an action and passes it to the controller. The controller manages the physical model of the agent e.g. converting steering and acceleration commands into a new pose. This modular architecture provides reusability and quick iteration of agent designs, not only for vehicular agents but also pedestrians, bicycles and other entity types.
 
@@ -45,6 +45,14 @@ gym = ScenarioGym()
 gym.load_scenario("path_to_xosc")
 gym.rollout()
 ```
+Or load a scenario directly into memory:
+```python
+from scenario_gym.xosc_interface import import_scenario
+
+scenario = import_scenario("path_to_xosc")
+scenario.plot()
+```
+
 Several example scenarios are given in the `tests/input_files/Scenarios` directory.
 
 ## Intelligent Agents

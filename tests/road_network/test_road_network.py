@@ -78,6 +78,12 @@ def test_empty(empty_road_network):
     ), "Should all be empty."
 
 
+def test_properties():
+    """Test creating a road network with properties."""
+    rn = RoadNetwork(name="test1", properties={"test": 1})
+    assert rn.properties["test"] == 1, "Incorrect properties."
+
+
 def test_roads(road_network):
     """Check that roads have been loaded."""
     assert len(road_network.roads) > 0, "No roads."

@@ -73,13 +73,15 @@ class Catalogs:
     """
 
     vehicle_box = BoundingBox(1.8, 3.8, 0.0, 0.0)
-    argoverse_catalog = Catalog("ArgoverseCatalog", None)
+    argoverse_catalog = Catalog("ArgoverseCatalog", "ArgoverseCatalogs")
     vehicle = CatalogEntry(
         argoverse_catalog,
         "vehicle",
         "car",
         "Vehicle",
         vehicle_box,
+        {},
+        [],
     )
 
     pedestrian_box = BoundingBox(0.4, 0.4, 0.0, 0.0)
@@ -89,6 +91,8 @@ class Catalogs:
         "pedestrian",
         "Pedestrian",
         pedestrian_box,
+        {},
+        [],
     )
 
     motorbike_box = BoundingBox(0.2, 0.8, 0.0, 0.0)
@@ -98,25 +102,17 @@ class Catalogs:
         "motorbike",
         "Vehicle",
         motorbike_box,
+        {},
+        [],
     )
 
     cyclist_box = BoundingBox(0.7, 2.0, 0.0, 0.0)
     cyclist = CatalogEntry(
-        "ArgoverseCatalog",
-        "cyclist",
-        "bicycle",
-        "Vehicle",
-        cyclist_box,
+        "ArgoverseCatalog", "cyclist", "bicycle", "Vehicle", cyclist_box, {}, []
     )
 
     bus_box = BoundingBox(2.8, 11.0, 0.0, 0.0)
-    bus = CatalogEntry(
-        argoverse_catalog,
-        "bus",
-        "bus",
-        "Vehicle",
-        bus_box,
-    )
+    bus = CatalogEntry(argoverse_catalog, "bus", "bus", "Vehicle", bus_box, {}, [])
 
     riderless_bicycle_box = BoundingBox(0.3, 1.5, 0.0, 0.0)
     riderless_bicycle = CatalogEntry(
@@ -125,6 +121,8 @@ class Catalogs:
         "obstacle",
         "Vehicle",
         riderless_bicycle_box,
+        {},
+        [],
     )
 
 
@@ -216,7 +214,6 @@ def import_argoverse_scenario(path: str) -> Scenario:
     scenario = Scenario(
         entities,
         name=scenario_id,
-        path=str(path.absolute()),
         road_network=road_network,
     )
     return scenario
@@ -235,6 +232,7 @@ def create_argoverse_road_network(data: Dict) -> RoadNetwork:
         )
 
     roads = []
+    all_lanes = set([l["id"] for l in data["lane_segments"].values()])
     for l_data in data["lane_segments"].values():
         center = LineString([[d["x"], d["y"]] for d in l_data["centerline"]])
         boundary = center.buffer(1.75, cap_style=2)
@@ -245,8 +243,8 @@ def create_argoverse_road_network(data: Dict) -> RoadNetwork:
             l_data["id"],
             boundary,
             center,
-            l_data["successors"],
-            l_data["predecessors"],
+            list(set(l_data["successors"]).intersection(all_lanes)),
+            list(set(l_data["predecessors"]).intersection(all_lanes)),
             LaneType.driving,  # data["lane_type"],
         )
         roads.append(
