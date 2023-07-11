@@ -61,7 +61,7 @@ class Color:
             (
                 isinstance(color_tuple, tuple),
                 (len(color_tuple) == 3 or len(color_tuple) == 4),
-                all(isinstance(x, int) for x in color_tuple[:3]),
+                all(isinstance(x, (float, int)) for x in color_tuple[:3]),
                 0 <= min(color_tuple[:3]),
                 255 >= max(color_tuple[:3]),
             )
