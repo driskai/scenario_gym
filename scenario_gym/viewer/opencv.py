@@ -471,9 +471,11 @@ class OpenCVViewer(Viewer):
         xy = to_ego_frame(self.get_coords(geom, use_cache=use_cache), ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
         if isinstance(geom, LineString):
-            cv2.polylines(self._frame, [xy], False, c.bgr, self.line_thickness)
+            cv2.polylines(
+                self._frame, [xy], False, c.bgr, self.line_thickness, cv2.LINE_AA
+            )
         else:
-            cv2.fillPoly(self._frame, [xy], c.bgr)
+            cv2.fillPoly(self._frame, [xy], c.bgr, cv2.LINE_AA)
             for interior in geom.interiors:
                 # cannot cache as the id is different each time
                 xy = to_ego_frame(np.array(interior.xy).T, ego_pose)
