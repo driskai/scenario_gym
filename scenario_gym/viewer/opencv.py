@@ -466,28 +466,33 @@ class OpenCVViewer(Viewer):
         ego_pose: np.ndarray,
         c: Color,
         use_cache: bool = False,
+        antialiasing: bool = True,
     ) -> None:
         """Render a polygon or linestring to the frame."""
         if isinstance(geom, (MultiPolygon, MultiLineString)):
             for g in geom.geoms:
-                self.draw_geom(g, ego_pose, c, use_cache=use_cache)
+                self.draw_geom(
+                    g, ego_pose, c, use_cache=use_cache, antialiasing=antialiasing
+                )
             return
+
+        kwargs = {}
+        if antialiasing:
+            kwargs["lineType"] = cv2.LINE_AA
 
         xy = to_ego_frame(self.get_coords(geom, use_cache=use_cache), ego_pose)
         xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
         if isinstance(geom, LineString):
             cv2.polylines(
-                self._frame, [xy], False, c.bgr, self.line_thickness, cv2.LINE_AA
+                self._frame, [xy], False, c.bgr, self.line_thickness, **kwargs
             )
         else:
-            cv2.fillPoly(self._frame, [xy], c.bgr, cv2.LINE_AA)
+            cv2.fillPoly(self._frame, [xy], c.bgr, **kwargs)
             for interior in geom.interiors:
                 # cannot cache as the id is different each time
                 xy = to_ego_frame(np.array(interior.xy).T, ego_pose)
                 xy = vec2pix(xy, mag=self.mag, h=self.h, w=self.w)
-                cv2.fillPoly(
-                    self._frame, [xy], self.background_color.bgr, cv2.LINE_AA
-                )
+                cv2.fillPoly(self._frame, [xy], self.background_color.bgr, **kwargs)
 
     def get_coords(
         self,
