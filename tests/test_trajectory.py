@@ -340,3 +340,10 @@ def test_curvature_subsample():
     assert (subsampled.x >= 2).sum() > 0.5 * subsampled.x.shape[
         0
     ], "More points should be in the final part of the trajectory."
+
+
+def test_invalid_set():
+    """Test that we cannot explitly set the data attribute."""
+    traj = Trajectory(np.zeros((10, 3)), fields=["t", "x", "y"])
+    with pt.raises(AttributeError):
+        traj.data = np.ones((10, 3))
