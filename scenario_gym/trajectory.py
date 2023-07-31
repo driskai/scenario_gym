@@ -88,12 +88,27 @@ class Trajectory:
             setattr(self, f, d)
 
         # we will make the data readonly
-        self.data = np.array(_data).T.copy()
-        self.data.flags.writeable = False
+        self._data = np.array(_data).T.copy()
+        self._data.flags.writeable = False
 
         self._interpolated: Optional[Callable[[ArrayLike], NDArray]] = None
         self._interpolated_s: Optional[Callable[[ArrayLike], NDArray]] = None
         self._grad_fn = None
+
+    @property
+    def data(self) -> NDArray:
+        """
+        Get the underlying trajectory data.
+
+        Note this property has no setter. To modify the trajectory data one must
+        copy the data and init a new trajectory:
+        ```
+        new_data = trajectory.data.copy()
+        # apply changes
+        new_t = Trajectory(new_data)
+        ```
+        """
+        return self._data
 
     def __len__(self) -> int:
         """Return the number of points in the trajectory."""
