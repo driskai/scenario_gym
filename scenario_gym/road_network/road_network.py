@@ -90,6 +90,7 @@ class RoadNetwork:
         filepath: str,
         resolution: float = 0.1,
         simplify_tolerance: float = 0.2,
+        ignored_lane_types: Optional[Tuple[str]] = None,
     ):
         """
         Import a road network from an OpenDRIVE file.
@@ -111,15 +112,23 @@ class RoadNetwork:
         simplify_tolerance : float
             Points per m for simplifying center and boundary lines.
 
+        ignored_lane_types : Tuple[str], optional
+            A tuple of lane types that should be ignored from the
+            OpenDRIVE file. If unspecified, no types are ignored.
+
         """
         path = Path(filepath).absolute()
         if not path.exists():
             raise FileNotFoundError(f"File not found at: {path}.")
 
+        if ignored_lane_types is not None:
+            ignored_lane_types = set(ignored_lane_types)
+
         # parse OpenDRIVE file
         xodr_network = xodrRoadNetwork(
             str(path),
             resolution=resolution,
+            ignored_lane_types=ignored_lane_types,
         )
 
         roads = xodr_to_sg_roads(
