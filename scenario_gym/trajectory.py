@@ -401,7 +401,6 @@ class Trajectory:
 
         n = int(max(1, np.ceil(self.arclength * points_per_s)))
         ss = np.linspace(0, self.arclength, n)
-        print(ss)
         data = self.position_at_s(ss)
         return self.__class__(data)
 
