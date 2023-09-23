@@ -1,6 +1,6 @@
 import json
 from contextlib import suppress
-from functools import _lru_cache_wrapper, partial
+from functools import _lru_cache_wrapper, lru_cache, partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -46,7 +46,10 @@ class RoadNetwork:
         "buildings": Building,
     }
 
+    CACHE_MAXSIZE = 15
+
     @classmethod
+    @lru_cache(maxsize=CACHE_MAXSIZE)
     def create_from_file(cls, filepath: str):
         """
         Create the road network from a file.
@@ -83,6 +86,7 @@ class RoadNetwork:
         return cls.create_from_dict(data, name=Path(filepath).stem)
 
     @classmethod
+    @lru_cache(maxsize=CACHE_MAXSIZE)
     def create_from_xodr(
         cls,
         filepath: str,
