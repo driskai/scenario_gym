@@ -241,9 +241,6 @@ def test_clear_cache(road_network):
             "roads" not in road_network.__dict__,
         )
     ), "Cached objects found."
-    assert (
-        RoadNetwork.create_from_json.__func__.cache_info().currsize != 0
-    ), "Class method caches cleared."
 
 
 def test_elevation(road_network, z_road_network):

@@ -16,7 +16,7 @@ docs = ["Sphinx~=4.4.0"]
 integrations = ["pandas>=1.1.5"]
 testing = ["pytest~=6.2.4"]
 dev = [
-    "gym>=0.21.0",
+    "gymnasium>=0.29.0",
     "black~=22.3.0",
     "dm-env>=1.5.0",
     "flake8~=3.9.2",

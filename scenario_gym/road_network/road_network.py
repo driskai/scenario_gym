@@ -1,6 +1,6 @@
 import json
 from contextlib import suppress
-from functools import _lru_cache_wrapper, lru_cache, partial
+from functools import _lru_cache_wrapper, partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -68,7 +68,6 @@ class RoadNetwork:
         raise ValueError(f"Unknown file type: {path.suffix}.")
 
     @classmethod
-    @lru_cache(maxsize=15)
     def create_from_json(cls, filepath: str):
         """
         Create the road network from a json file.
@@ -84,7 +83,6 @@ class RoadNetwork:
         return cls.create_from_dict(data, name=Path(filepath).stem)
 
     @classmethod
-    @lru_cache(maxsize=15)
     def create_from_xodr(
         cls,
         filepath: str,

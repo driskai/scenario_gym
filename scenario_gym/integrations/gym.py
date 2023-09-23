@@ -5,7 +5,6 @@ from types import MethodType
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from packaging import version
 
 from scenario_gym.action import Action
 from scenario_gym.agent import Agent
@@ -18,18 +17,18 @@ from scenario_gym.sensor.map import RasterizedMapSensor
 from scenario_gym.state import TERMINAL_CONDITIONS, State
 
 try:
-    import gym
-    from gym import Env
-    from gym.spaces import Box, Space
+    from gymnasium import Env
+    from gymnasium.spaces import Box, Space
 except ImportError as e:
     raise ImportError(
-        "gym is required for this module. Install it with `pip install gym`."
+        "gymnasium is required for this module."
+        " Install it with `pip install gymnasium`."
     ) from e
 
 
 class ScenarioGym(ScenarioGym, Env):
     """
-    An OpenAI gym compatible version of the Scenario Gym.
+    A gymnasium compatible version of the Scenario Gym.
 
     Provides an explicit interface to the observations of the
     ego agent. The agent must implement the reward method of the
@@ -37,7 +36,6 @@ class ScenarioGym(ScenarioGym, Env):
     """
 
     metadata = {"render_modes": []}
-    _new_reset = version.parse(gym.__version__) >= version.parse("0.22.0")
 
     def __init__(
         self,
@@ -144,10 +142,7 @@ class ScenarioGym(ScenarioGym, Env):
         """
         self.on_reset()
 
-        if self._new_reset:
-            super().reset(seed=seed)
-        else:
-            super().seed(seed)
+        super().reset(seed=seed)
         if (options is not None) and ("scenario" in options):
             s = options["scenario"]
         else:
