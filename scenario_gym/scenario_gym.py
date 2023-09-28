@@ -30,6 +30,7 @@ class ScenarioGym:
         self,
         timestep: float = 1.0 / 30.0,
         persist: bool = False,
+        extrapolate: bool = False,
         viewer_class: Optional[Type[Viewer]] = None,
         terminal_conditions: Optional[
             List[Union[str, Callable[[State], bool]]]
@@ -52,6 +53,10 @@ class ScenarioGym:
         persist: bool
             If True then entities will persist for the entire scenario.
 
+        extrapolate: bool
+            If True then entities are extrapolated beyond their final control
+            point.
+
         viewer_class: Type[Viewer]
             Class type of the viewer that will be inisitalised.
 
@@ -70,6 +75,7 @@ class ScenarioGym:
         """
         self.timestep = timestep
         self.persist = persist
+        self.extrapolate = extrapolate
         if viewer_class is None and "fps" not in viewer_parameters:
             viewer_parameters["fps"] = int(1.0 / self.timestep)
         self.viewer_parameters = viewer_parameters.copy()
@@ -179,6 +185,7 @@ class ScenarioGym:
             scenario,
             scenario_path=scenario_path,
             persist=self.persist,
+            extrapolate=self.extrapolate,
             conditions=self.terminal_conditions,
             state_callbacks=self.state_callbacks,
         )

@@ -23,13 +23,15 @@ class BatchReplayEntity:
         self,
         timestep: Optional[float] = None,
         persist: bool = False,
+        extrapolate: bool = False,
     ):
         """Init the batch entity with no assigned entities."""
         self.entities: List[Entity] = []
         self.trajectories: List[Trajectory] = []
         self.persist = persist
+        self.extrapolate = extrapolate
         self.timestep = timestep
-        self.max_t = 0.0
+        self.X_min, self.X_max, self.min_t, self.max_t = None, None, None, 0.
 
     def step(self, state: State) -> Dict[Entity, ArrayLike]:
         """
@@ -43,6 +45,8 @@ class BatchReplayEntity:
         new_poses = {}
         if len(self.entities) > 0:
             pos = self.fn(t)  # (m, num_ents)
+            if self.extrapolate and t <= self.min_t:
+                return self.X_min
             for e, p in zip(self.entities, pos):
                 if (
                     self.persist
@@ -100,29 +104,34 @@ class BatchReplayEntity:
                     d[:, 0],
                     d[:, 1:].T,
                     bounds_error=False,
-                    fill_value=(d[0, 1:], d[-1, 1:]),
+                    fill_value="extrapolate" if self.extrapolate else (d[0, 1:], d[-1, 1:]),
                 )(
                     ts
                 ).T  # (N, m)
+                if self.extrapolate:
+                    x[ts < d[0, 0]] = d[0, 1:]
                 interpd.append(x)
 
             X = np.concatenate(interpd, axis=1)  # (N, num_ents * m)
+            self.X_min, self.X_max = X[0].copy(), X[-1].copy()
             if self.timestep:
+                self.min_t = 0.
                 all_ts = np.arange(0.0, self.max_t, self.timestep)
                 all_Xs = interp1d(
                     ts,
                     X.T,
                     bounds_error=False,
-                    fill_value=(X[0], X[-1]),
+                    fill_value="extrapolate" if self.extrapolate else (self.X_min, self.X_max),
                 )(all_ts).T
                 self.fn = lambda t: all_Xs[np.abs(all_ts - t).argmin()].reshape(
                     num_ents, m
                 )
             else:
+                self.min_t = ts.min()
                 interp = interp1d(
                     ts,
                     X.T,
                     bounds_error=False,
-                    fill_value=(X[0], X[-1]),
+                    fill_value="extrapolate" if self.extrapolate else (self.X_min, self.X_max),
                 )
                 self.fn = lambda t: interp(t).reshape(num_ents, m)

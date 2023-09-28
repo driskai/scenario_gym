@@ -73,9 +73,9 @@ def test_rollout(vanishing_scenario):
     assert gym.state.scenario.entities[1] not in gym.state.poses
 
 
-def test_persist(vanishing_scenario):
+def test_persist_and_extrapolate(vanishing_scenario):
     """Test rollout."""
-    gym = ScenarioGym(timestep=0.1, persist=True)
+    gym = ScenarioGym(timestep=0.1, persist=True, extrapolate=True)
     gym.set_scenario(vanishing_scenario)
     assert len(gym.state.poses) == len(vanishing_scenario.entities), (
         "Entities not found in poses: ",

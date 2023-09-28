@@ -36,6 +36,7 @@ class State:
         scenario: Scenario,
         scenario_path: Optional[str] = None,
         persist: bool = False,
+        extrapolate: bool = False,
         conditions: Optional[List[Union[str, Callable[[State], bool]]]] = None,
         state_callbacks: Optional[Dict[str, StateCallback]] = None,
     ):
@@ -53,6 +54,9 @@ class State:
         persist : bool
             Whether entities should persist in the simulation.
 
+        extrapolate: bool
+            Whether to extrapolate trajectories after their maximum time.
+
         conditions : Optional[List[Union[str, Callable[[State], bool]]]]
             Terminal conditions that will end the scenario if any is met. May be a
             string referencing an entry of the TERMINAL_CONDITIONS dictionary.
@@ -65,6 +69,7 @@ class State:
         """
         self._scenario = scenario
         self.scenario_path = scenario_path
+        self.extrapolate = extrapolate
         self.persist = persist
         if conditions is None:
             self.terminal_conditions = [TERMINAL_CONDITIONS["max_length"]]
@@ -96,7 +101,7 @@ class State:
         self._recorded_poses: Dict[Entity, List[Tuple[float, np.ndarray]]]
 
         self.agents: Dict[Entity, Agent] = {}
-        self.non_agents = BatchReplayEntity(persist=persist)
+        self.non_agents = BatchReplayEntity(persist=persist, extrapolate=extrapolate)
 
     @property
     def scenario(self) -> Scenario:
