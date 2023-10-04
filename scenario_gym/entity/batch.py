@@ -46,7 +46,7 @@ class BatchReplayEntity:
         if len(self.entities) > 0:
             pos = self.fn(t)  # (m, num_ents)
             if self.extrapolate and t <= self.min_t:
-                return self.X_min
+                return {e: p for e, p in zip(self.entities, self.X_min.reshape(len(self.entities), -1))}
             for e, p in zip(self.entities, pos):
                 if (
                     self.persist
