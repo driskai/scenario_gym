@@ -3,8 +3,24 @@
 ![Tests](https://github.com/driskai/scenario_gym/actions/workflows/test.yml/badge.svg)
 ![Python 3.7+](https://img.shields.io/badge/python-3.7+-brightgreen)
 
-### Accepted to [International Conference on Intelligent Transport Systems 2023](https://2023.ieee-itsc.org/)
-Scenario Gym will be presented at the special session Simulation Verification of Autonomous Driving Technologies at ITSC 2023.
+### Presented at [International Conference on Intelligent Transport Systems 2023](https://2023.ieee-itsc.org/)
+Scenario Gym was presented at the special session Simulation Verification of Autonomous Driving Technologies at ITSC 2023.
+
+### Citation
+To cite Scenario Gym please use:
+```
+@INPROCEEDINGS{SCENARIOGYM,
+  author={Scott, Hamish and Niccolini, Lorenzo and Stetson, Chess and Goldbeck, Nils and Souflas, Ioannis and Songur, Noyan and Abrabian, Alireza and Candela, Eduardo and Angeloudis, Panagiotis},
+  booktitle={2023 IEEE 26th International Conference on Intelligent Transportation Systems (ITSC)},
+  title={Scenario Gym: a scenario-centric lightweight simulator},
+  year={2023},
+  volume={},
+  number={},
+  pages={},
+  keywords={},
+  doi={}
+}
+```
 
 ## Overview
 Scenario Gym is a universal autonomous driving simulation tool that allows fast execution of unconfined, complex scenarios containing a range of road users. It allows rich insight via customised metrics and includes a framework for designing intelligent agents for reactive simulation. It can be used for a variety of tasks relevant for AV development, such agent modelling, controller parameter tuning and deep reinforcement learning.
@@ -16,8 +32,6 @@ Scenario Gym is a universal autonomous driving simulation tool that allows fast 
 &nbsp; &nbsp;
 <img src="https://raw.githubusercontent.com/driskai/scenario_gym/main/docs/source/_static/gym-ex3.gif" width="20%" />
 </p>
-
-## Overview
 
 Scenario Gym defines a flexible in-memory scenario representation that is compatible with the OpenSCENARIO description language and OpenDRIVE road network representation. Entities can adopt predefined trajectories, or control themselves intelligently with a high-level goal (e.g. reach a target position) or via a complex trained policy. Scenarios are simulated synchronously in discrete time steps within which each agent selects an action and the pose of each entity is updated before moving to the next step.
 
