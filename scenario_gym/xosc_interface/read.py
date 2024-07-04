@@ -280,9 +280,9 @@ def traj_point_from_time_and_position(t, world_position) -> np.ndarray:
             t,
             float(world_position.attrib["x"]),
             float(world_position.attrib["y"]),
-            float(world_position.attrib.get("z", np.NaN)),
-            float(world_position.attrib.get("h", np.NaN)),
-            float(world_position.attrib.get("p", np.NaN)),
-            float(world_position.attrib.get("r", np.NaN)),
+            float(world_position.attrib.get("z", np.nan)),
+            float(world_position.attrib.get("h", np.nan)),
+            float(world_position.attrib.get("p", np.nan)),
+            float(world_position.attrib.get("r", np.nan)),
         ],
     )
