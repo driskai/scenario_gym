@@ -95,7 +95,7 @@ class RoadGeometry(RoadObject):
         self,
         boundary: Polygon,
         maxiter: int = 2000,
-        tol: float = 1e-3,
+        tol: float = 1e-2,
     ) -> Polygon:
         """
         Fix the boundary if it is invalid.
