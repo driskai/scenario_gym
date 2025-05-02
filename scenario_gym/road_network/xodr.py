@@ -1,3 +1,4 @@
+import warnings
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -54,42 +55,46 @@ def road_to_sg(
     """Convert an OpenDRIVE road into a list of roads."""
     roads, old_to_new_lanes = [], {}
     for _, xodr_lane_section in enumerate(xodr_road.lane_sections):
-        try:
-            if simplify_tolerance is not None:
-                (
-                    x_boundary,
-                    y_boundary,
-                ) = xodr_lane_section.boundary.exterior.simplify(
-                    simplify_tolerance
-                ).xy
-            else:
-                x_boundary, y_boundary = xodr_lane_section.boundary.exterior.xy
 
-            road_boundary = Polygon(list(zip(x_boundary, y_boundary)))
+        xyz_centre = xodr_lane_section.get_offset_line()
 
-            xyz_centre = xodr_lane_section.get_offset_line()
-            road_center = LineString(xyz_centre[:, :2])
-            if simplify_tolerance is not None:
-                road_center = road_center.simplify(simplify_tolerance)
-            road_elevation = xyz_centre
-
-            lanes = []
-            for lane in xodr_lane_section.lanes:
-                sg_lane = xodr_lane_to_sg(lane, simplify_tolerance)
-                if sg_lane is not None:
-                    lanes.append(sg_lane)
-                    old_to_new_lanes[lane] = sg_lane
-
-            road = Road(
-                repr(xodr_lane_section),
-                road_boundary,
-                road_center,
-                lanes=lanes,
-                elevation=road_elevation,
+        if len(xyz_centre) < 2:
+            warnings.warn(
+                f"Skipping {xodr_lane_section} because the centre line contains "
+                + "fewer than two points."
             )
-            roads.append(road)
-        except:
-            print(f"WARNING: Skipping lane section")
+            continue
+
+        road_center = LineString(xyz_centre[:, :2])
+        if simplify_tolerance is not None:
+            road_center = road_center.simplify(simplify_tolerance)
+        road_elevation = xyz_centre
+
+        if simplify_tolerance is not None:
+            (
+                x_boundary,
+                y_boundary,
+            ) = xodr_lane_section.boundary.exterior.simplify(simplify_tolerance).xy
+        else:
+            x_boundary, y_boundary = xodr_lane_section.boundary.exterior.xy
+
+        road_boundary = Polygon(list(zip(x_boundary, y_boundary)))
+
+        lanes = []
+        for lane in xodr_lane_section.lanes:
+            sg_lane = xodr_lane_to_sg(lane, simplify_tolerance)
+            if sg_lane is not None:
+                lanes.append(sg_lane)
+                old_to_new_lanes[lane] = sg_lane
+
+        road = Road(
+            repr(xodr_lane_section),
+            road_boundary,
+            road_center,
+            lanes=lanes,
+            elevation=road_elevation,
+        )
+        roads.append(road)
 
     return roads, old_to_new_lanes
 
