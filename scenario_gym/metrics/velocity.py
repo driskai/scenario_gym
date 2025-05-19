@@ -5,6 +5,7 @@ from scenario_gym.state import State
 from .base import Metric
 
 
+# ---------- Speed/Velocity Metrics ----------#
 class EgoAvgSpeed(Metric):
     """Measure the average speed of the ego."""
 
@@ -46,21 +47,3 @@ class EgoMaxSpeed(Metric):
     def get_state(self) -> float:
         """Return the current max speed."""
         return self.ego_max_speed
-
-
-class EgoDistanceTravelled(Metric):
-    """Measure the distance travelled by the ego."""
-
-    name = "ego_distance_travelled"
-
-    def _reset(self, state: State) -> None:
-        """Find the ego."""
-        self.ego = state.scenario.ego
-
-    def _step(self, state: State) -> None:
-        """Pass as entity will update its distance."""
-        self.dist = state.distances[self.ego]
-
-    def get_state(self) -> float:
-        """Return the current distance travelled."""
-        return self.dist
