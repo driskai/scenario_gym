@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
+from shapely import contains_xy as contains
+from shapely import prepare
 from shapely.geometry import MultiPolygon
 from shapely.ops import unary_union
-from shapely.prepared import prep
-from shapely.vectorized import contains
 
 from scenario_gym.entity import Entity
 from scenario_gym.observation import SingleEntityObservation
@@ -184,16 +184,19 @@ class RasterizedMapSensor(Sensor):
 
         Note: this includes the sensor's own entity.
         """
-        entities = prep(
-            MultiPolygon(
-                [e.get_bounding_box_geom(pose) for e, pose in state.poses.items()]
-            )
+        entities = MultiPolygon(
+            [e.get_bounding_box_geom(pose) for e, pose in state.poses.items()]
         )
+        prepare(entities)
         return contains(entities, coords[:, 0], coords[:, 1])
 
     def _prepare_driveable_surface_layer(self, state: State) -> None:
         """Prepare the driveable surface layer."""
-        self._driveable_surface = prep(self._road_network.driveable_surface)
+        assert (
+            self._road_network.driveable_surface is not None
+        ), "Road network not set."
+        self._driveable_surface = self._road_network.driveable_surface
+        prepare(self._driveable_surface)
 
     def _driveable_surface_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which of the given points lie in the driveable surface."""
@@ -201,11 +204,10 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_road_layer(self, state: State) -> None:
         """Prepare the road layer."""
-        self._roads = prep(
-            unary_union(
-                [r.boundary for r in self._road_network.roads],
-            )
+        self._roads = unary_union(
+            [r.boundary for r in self._road_network.roads],
         )
+        prepare(self._roads)
 
     def _road_layer(self, state: State, coords: ArrayLike) -> ArrayLike:
         """Check which points lie in a road."""
@@ -213,11 +215,10 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_intersection_layer(self, state: State) -> None:
         """Prepare the intersection layer."""
-        self._intersections = prep(
-            unary_union(
-                [i.boundary for i in self._road_network.intersections],
-            )
+        self._intersections = unary_union(
+            [i.boundary for i in self._road_network.intersections],
         )
+        prepare(self._intersections)
 
     def _intersection_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which points lie in an intersection."""
@@ -225,11 +226,10 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_lane_layer(self, state: State) -> None:
         """Prepare the lane layer."""
-        self._lanes = prep(
-            unary_union(
-                [l.boundary for r in self._road_network.roads for l in r.lanes],
-            )
+        self._lanes = unary_union(
+            [l.boundary for r in self._road_network.roads for l in r.lanes],
         )
+        prepare(self._lanes)
 
     def _lane_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which points lie in a lane."""
@@ -237,7 +237,8 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_walkable_surface_layer(self, state: State) -> None:
         """Prepare the walkable surface layer."""
-        self._walkable_surface = prep(self._road_network.walkable_surface)
+        self._walkable_surface = self._road_network.walkable_surface
+        prepare(self._walkable_surface)
 
     def _walkable_surface_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which points lie in a walkable surface."""
@@ -245,9 +246,10 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_pavement_layer(self, state: State) -> None:
         """Prepare the pavement layer."""
-        self._pavements = prep(
-            unary_union([p.boundary for p in self._road_network.pavements])
+        self._pavements = unary_union(
+            [p.boundary for p in self._road_network.pavements]
         )
+        prepare(self._pavements)
 
     def _pavement_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which points lie in a pavement."""
@@ -255,9 +257,10 @@ class RasterizedMapSensor(Sensor):
 
     def _prepare_crossing_layer(self, state: State) -> None:
         """Prepare the crossing layer."""
-        self._crossings = prep(
-            unary_union([c.boundary for c in self._road_network.crossings])
+        self._crossings = unary_union(
+            [c.boundary for c in self._road_network.crossings]
         )
+        prepare(self._crossings)
 
     def _crossing_layer(self, state: State, coords: ArrayLike) -> NDArray:
         """Check which points lie in a pedestrian crossing."""

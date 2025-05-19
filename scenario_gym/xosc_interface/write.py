@@ -135,16 +135,15 @@ def write_scenario(
         header_properties=properties,
     )
     element = ET.Element("OpenSCENARIO")
-    element.extend(
-        (
-            s.header.get_element(),
-            s.parameters.get_element(),
-            s.catalog.get_element(),
-            s.roadnetwork.get_element(),
-            s.entities.get_element(),
-            s.storyboard.get_element(),
-        )
+    elems = (
+        s.header.get_element(),
+        s.parameters.get_element(),
+        s.catalog.get_element(),
+        s.roadnetwork.get_element(),
+        s.entities.get_element(),
+        s.storyboard.get_element(),
     )
+    element.extend(tuple(e for e in elems if e is not None))
     s.write_xml(filepath)
 
 
