@@ -5,8 +5,8 @@ from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
+from shapely import contains_xy as contains
 from shapely.geometry import MultiPolygon, Point, Polygon
-from shapely.vectorized import contains
 
 from scenario_gym.callback import StateCallback
 from scenario_gym.entity import BatchReplayEntity, Entity
