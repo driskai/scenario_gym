@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="&#8706;RISK scenario d9726503-e04a-4e8b-b487-8805ef790c92 subject to the &#8706;RISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-02-23T11:34:33.735591"/>
+    <FileHeader description="&#8706;RISK scenario d9726503-e04a-4e8b-b487-8805ef790c92 subject to the &#8706;RISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-02-23T11:34:33.735591" flavor="A passive scenario where the ego vehicle makes slight lateral deviations (weaves within a lane). Possibly a sign of drunk driving."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario 41dac6fa-6f83-461e-a145-08692da5f3c7 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:14:19.512351"/>
+    <FileHeader description="dRISK scenario 41dac6fa-6f83-461e-a145-08692da5f3c7 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:14:19.512351" flavor="A safe scenario where the ego vehicle manoeuvres around a roundabout and accelerates past neighboring vehicle. Observe the continuous unified risk metric being relatively low (at 0.3) until the ego vehicle accelerates past the vehicle in another lane."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario 3fee6507-fd24-432f-b781-ca5676c834ef subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:14:10.324377"/>
+    <FileHeader description="dRISK scenario 35915513-77b7-42bb-be37-68c28a5263f3 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-11T12:41:44.400629" flavor="A near miss scenario involving two pedestrians (one off-road and one crossing road) and another vehicle. Initial trajectory not on a collision course, and misses pedestrian. Risk primarily comes from last-second change in direction and variety of actors involved."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

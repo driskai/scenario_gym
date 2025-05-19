@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario a5e43fe4-646a-49ba-82ce-5f0063776566 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:14:58.469858"/>
+    <FileHeader description="dRISK scenario a5e43fe4-646a-49ba-82ce-5f0063776566 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:14:58.469858" flavor="A near miss scenario involving another vehicle passing through an intersection. Risk comes from latitudinal risk and distance-to-ego gradient."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

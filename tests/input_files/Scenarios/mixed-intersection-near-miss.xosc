@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario fbb6b5ca-3fcb-4a7b-9757-b8554a753e69 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:15:54.048780"/>
+    <FileHeader description="dRISK scenario fbb6b5ca-3fcb-4a7b-9757-b8554a753e69 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:15:54.048780" flavor="A near miss scenario in a non-standard intersection/highway merging conflict area."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

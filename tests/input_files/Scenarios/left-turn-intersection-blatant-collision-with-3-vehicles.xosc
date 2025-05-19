@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario a98d5c7d-76aa-49bf-b88c-97db5d5c7433 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:15:12.560560"/>
+    <FileHeader description="dRISK scenario a98d5c7d-76aa-49bf-b88c-97db5d5c7433 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-07T10:15:12.560560" flavor="A blatant collision at an intersection while attempting to make a left turn."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>

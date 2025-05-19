@@ -1,5 +1,5 @@
 <OpenSCENARIO>
-    <FileHeader description="dRISK scenario a2281876-e0b4-4048-a08a-1ce69f94c085 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-11T12:38:14.122492"/>
+    <FileHeader description="dRISK scenario a2281876-e0b4-4048-a08a-1ce69f94c085 subject to the dRISK License Agreement (https://drisk.ai/license/)" author="&#8706;RISK" revMajor="1" revMinor="0" date="2022-04-11T12:38:14.122492" flavor="Collision scenario involving five other vehicular traffic participants. Space occupancy, longitudinal and latitudinal risk, and time-to-collision are all leverged to assay risk."/>
     <ParameterDeclarations/>
     <CatalogLocations>
         <VehicleCatalog>
