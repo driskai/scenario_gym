@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from scenario_gym.agent import Agent, _create_agent
@@ -307,13 +308,59 @@ class ScenarioGym:
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get the current metric states."""
-        values = {}
+        merged_dict = {}
+        extra_metrics = {}
+
+        # Iterate through each metric
         for metric in self.metrics:
-            value = metric.get_state()
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    if isinstance(k, str):
-                        values[f"{metric.name}_{k}"] = v
-            elif value is not None:
-                values[metric.name] = value
-        return values
+            value = (
+                metric.get_state()
+            )  # Can return a dictionary, tuple, or single float value
+
+            # Handle extra metrics that are not dictionaries
+            # (like floats or booleans)
+            if isinstance(value, (float, bool)):
+                extra_metrics[metric.name] = value
+                continue
+
+            # Handle case where value is a tuple of dictionaries
+            # or a single dictionary
+            dicts_to_process = []
+            if isinstance(value, tuple) and all(isinstance(v, dict) for v in value):
+                dicts_to_process.extend(value)
+            elif isinstance(value, dict):
+                dicts_to_process.append(value)
+
+            # Process each dictionary
+            for current_dict in dicts_to_process:
+                for key, val in current_dict.items():
+                    rounded_key = round(key, 2)
+                    if rounded_key not in merged_dict:
+                        merged_dict[rounded_key] = defaultdict(dict)
+
+                    for item in val:
+                        for metric_key, metric_value in item.items():
+                            if metric_key in merged_dict[rounded_key]:
+                                merged_dict[rounded_key][metric_key].update(
+                                    metric_value
+                                )
+                            else:
+                                merged_dict[rounded_key][metric_key] = metric_value
+
+        # Convert defaultdict back to regular dictionary
+        # with lists of dictionaries as values
+        result = {
+            key: [
+                {metric_key: metric_value}
+                for metric_key, metric_value in metrics.items()
+            ]
+            for key, metrics in merged_dict.items()
+        }
+
+        # Sort the result by time keys in ascending order
+        sorted_dict = dict(sorted(result.items()))
+
+        # Append the extra metrics to the sorted dictionary
+        sorted_dict["Lagging Metrics Post-Runtime"] = extra_metrics
+
+        return sorted_dict
